@@ -180,6 +180,7 @@ export class GameEngine {
     this._timer   = null;
     this._queue   = [];
     this._draining= false;
+    this._skipping= false;
   }
 
   start() {
@@ -195,6 +196,12 @@ export class GameEngine {
       this._checkVoteCompletion(snap.val() || {});
     });
     this._unsubs.push(unsub2);
+
+    // Watch player connections to skip rounds when transmitter drops
+    const unsub3 = onValue(rref(this.roomCode, 'players'), snap => {
+      this._onPlayersChanged(snap.val() || {});
+    });
+    this._unsubs.push(unsub3);
   }
 
   stop() { this._unsubs.forEach(u => u()); this._unsubs = []; this._clearTimer(); }
@@ -232,7 +239,7 @@ export class GameEngine {
     const room = await getRoom(this.roomCode);
     if (!room) return;
 
-    const players = allPlayers(room);
+    const players = allPlayers(room).filter(p => p.isBot || p.connected !== false);
     if (players.length < 2) return;
 
     const startId = room.startingTransmitterId || room.transmitterId || this.hostId;
@@ -335,7 +342,7 @@ export class GameEngine {
   async _checkVoteCompletion(votes) {
     const room = await getRoom(this.roomCode);
     if (!room || room.phase !== 'voting') return;
-    const voters = allPlayers(room).filter(p => p.id !== room.psychicId);
+    const voters = allPlayers(room).filter(p => p.id !== room.psychicId && (p.isBot || p.connected !== false));
     if (voters.length > 0 && voters.every(p => votes[p.id] !== undefined)) {
       this._clearTimer();
       await this._finalizeVoting();
@@ -459,13 +466,9 @@ export class GameEngine {
     });
   }
 
-  async _advanceRound() {
-    const room = await getRoom(this.roomCode);
-    if (!room || room.phase !== 'reveal') return;
-
-    const nextRound = room.round + 1;
+  async _doNextRound(room) {
+    const nextRound = (room.round || 0) + 1;
     if (nextRound >= (room.settings?.rounds ?? 7)) {
-      // Determine winner from playerScores
       const [scoresSnap, damageSnap] = await Promise.all([
         get(rref(this.roomCode, 'playerScores')),
         get(rref(this.roomCode, 'playerDamage')),
@@ -477,16 +480,45 @@ export class GameEngine {
       const tied = entries.filter(([, score]) => score === topScore);
       const bestDamage = tied.reduce((best, [id]) => Math.min(best, damage[id] || 0), MAX_DAMAGE);
       const winnerIds = tied.filter(([id]) => (damage[id] || 0) === bestDamage).map(([id]) => id);
-      await roomUpdate(this.roomCode, {
-        phase: 'gameover',
-        winner:    winnerIds[0] || null,
-        winnerIds,
-      });
+      await roomUpdate(this.roomCode, { phase: 'gameover', winner: winnerIds[0] || null, winnerIds });
+      return;
+    }
+    await roomUpdate(this.roomCode, { round: nextRound });
+    await this._startRound();
+  }
+
+  async _advanceRound() {
+    const room = await getRoom(this.roomCode);
+    if (!room || room.phase !== 'reveal') return;
+    await this._doNextRound(room);
+  }
+
+  async _skipRound() {
+    this._clearTimer();
+    const room = await getRoom(this.roomCode);
+    if (!room) return;
+    await this._doNextRound(room);
+  }
+
+  async _onPlayersChanged(players) {
+    const room = await getRoom(this.roomCode);
+    if (!room) return;
+
+    // During voting: re-check completion in case a voter just disconnected
+    if (room.phase === 'voting') {
+      const votesSnap = await get(rref(this.roomCode, 'votes'));
+      await this._checkVoteCompletion(votesSnap.val() || {});
       return;
     }
 
-    await roomUpdate(this.roomCode, { round: nextRound });
-    await this._startRound();
+    // During pre-voting phases: skip round if transmitter disconnected
+    if (!['roulette', 'spinning', 'psychic'].includes(room.phase)) return;
+    if (this._skipping) return;
+    const transmitter = players[room.psychicId];
+    if (!transmitter || transmitter.connected === false) {
+      this._skipping = true;
+      try { await this._skipRound(); } finally { this._skipping = false; }
+    }
   }
 
   async _resetToLobby() {

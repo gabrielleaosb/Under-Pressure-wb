@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PressurePanel from './PressurePanel.jsx';
-import { tTheme, tCard } from '../i18n.js';
+import { tCard } from '../i18n.js';
 import { EMOJI_REACTIONS } from '../gameData.js';
 import { playVoteSubmit, playTimerTick, playAlarmTick, playClick } from '../sounds.js';
 
@@ -41,7 +41,7 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
   const canVote   = !isPsychic;
 
   const submittedIds     = gameState.submittedVotes || [];
-  const nonPsychicVoters = gameState.players.filter(p => p.id !== gameState.psychicId);
+  const nonPsychicVoters = gameState.players.filter(p => p.id !== gameState.psychicId && (p.isBot || p.connected !== false));
   const votedCount       = submittedIds.filter(id => nonPsychicVoters.some(p => p.id === id)).length;
 
   // Emoji reactions

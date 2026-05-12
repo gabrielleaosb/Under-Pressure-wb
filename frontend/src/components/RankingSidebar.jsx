@@ -99,7 +99,7 @@ export function RankingSidebar({ gameState, myId, lang, onSettings }) {
 
   const transmitter = players.find(p => p.id === transmitterId);
   const voters      = players
-    .filter(p => p.id !== transmitterId)
+    .filter(p => p.id !== transmitterId && (p.isBot || p.connected !== false))
     .map(p => ({ ...p, score: playerScores?.[p.id]||0, damage: playerDamage?.[p.id]||0, isMe: p.id===myId }))
     .sort((a,b) => (b.score - a.score) || (a.damage - b.damage));
 
@@ -162,7 +162,7 @@ export function RankingTopBar({ gameState, myId, lang, onSettings }) {
 
   const transmitter = players.find(p => p.id === transmitterId);
   const voters      = players
-    .filter(p => p.id !== transmitterId)
+    .filter(p => p.id !== transmitterId && (p.isBot || p.connected !== false))
     .map(p => ({ ...p, score: playerScores?.[p.id]||0, damage: playerDamage?.[p.id]||0, isMe: p.id===myId }))
     .sort((a,b) => (b.score - a.score) || (a.damage - b.damage));
 
