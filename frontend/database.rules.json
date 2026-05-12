@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "rooms": {
+      "$code": {
+        ".read": true,
+        ".write": true,
+        "psychicSecret": {
+          ".read": true,
+          ".write": true
+        }
+      }
+    }
+  }
+}

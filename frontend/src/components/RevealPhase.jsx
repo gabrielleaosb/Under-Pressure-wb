@@ -1,7 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PressurePanel from './PressurePanel.jsx';
 import { t, tTheme, tGrade } from '../i18n.js';
 import { playRevealDrum, playPerfect, playGoodResult, playDamageHit, playClick } from '../sounds.js';
+
+const LOCK_SECONDS = 5; // mandatory viewing time before anyone can advance
 
 const GRADE_COLORS = {
   'PERFECT':    'var(--green)',
@@ -12,68 +14,69 @@ const GRADE_COLORS = {
 };
 
 export default function RevealPhase({ gameState, myId, lang, send, isHost }) {
-  const result = gameState.revealResult;
-  const activeTeam = gameState.teams[gameState.activeTeamIndex];
-  const psychicPlayer = gameState.players.find(p => p.id === gameState.psychicId);
-  const revealed = useRef(false);
+  const result      = gameState.revealResult;
+  const activeTeam  = gameState.teams[gameState.activeTeamIndex];
+  const psychic     = gameState.players.find(p => p.id === gameState.psychicId);
+  const revealed    = useRef(false);
+  const [lockLeft,  setLockLeft]  = useState(LOCK_SECONDS);
+  const [unlocked,  setUnlocked]  = useState(false);
 
   useEffect(() => {
     if (!result || revealed.current) return;
     revealed.current = true;
-    // Reveal drum roll, then result sound
     playRevealDrum();
     setTimeout(() => {
       if (result.grade === 'PERFECT') playPerfect();
       else if (result.damage > 0) playDamageHit(result.damage >= 2);
       else playGoodResult();
     }, 350);
+
+    // Countdown lock
+    setLockLeft(LOCK_SECONDS);
+    setUnlocked(false);
+    const id = setInterval(() => {
+      setLockLeft(prev => {
+        if (prev <= 1) { clearInterval(id); setUnlocked(true); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
   }, [result]);
 
   if (!result) return null;
 
   const gradeColor = GRADE_COLORS[result.grade] || 'var(--white)';
-  const didDamage = result.damage > 0;
-  const isMyTeamActive = gameState.players.find(p => p.id === myId)?.teamIndex === gameState.activeTeamIndex;
-
-  // Build vote list
-  const allVotes = gameState.votes || {};
+  const allVotes   = gameState.votes || {};
   const activeTeamPlayers = gameState.players.filter(p => p.teamIndex === gameState.activeTeamIndex);
 
   return (
     <div className="flex-col gap-16" style={{ paddingBottom: 32 }}>
 
-      {/* Header */}
-      <div className="text-center">
-        <h2 className="pixel-title" style={{ fontSize: 'clamp(8px,2.5vw,12px)', color: 'var(--cyan)', marginBottom: 8 }}>
-          {t('reveal_title', lang)}
-        </h2>
-        <div style={{ fontFamily: 'var(--f-vt)', fontSize: 20, color: activeTeam.color, letterSpacing: 2 }}>
-          {activeTeam.name} — {t('round_n', lang)} {gameState.round + 1}
-        </div>
-      </div>
-
-      {/* Grade result — big */}
+      {/* Grade result */}
       <div className="text-center" style={{
-        padding: '20px',
-        border: `3px solid ${gradeColor}`,
+        padding: '18px 24px',
+        border: `2px solid ${gradeColor}`,
         borderRadius: 8,
-        background: `rgba(0,0,0,0.7)`,
-        boxShadow: `0 0 20px ${gradeColor}44, 0 0 60px ${gradeColor}22`,
+        background: 'rgba(0,0,0,0.6)',
+        boxShadow: `0 0 24px ${gradeColor}44`,
         animation: 'theme-pop 0.4s cubic-bezier(0.34,1.56,0.64,1)',
       }}>
-        <div className="pixel-title" style={{ fontSize: 'clamp(12px,4vw,22px)', color: gradeColor, textShadow: `0 0 20px ${gradeColor}` }}>
+        {/* Grade label */}
+        <div className="pixel-title" style={{ fontSize: 'clamp(13px,3.5vw,20px)', color: gradeColor, textShadow: `0 0 16px ${gradeColor}` }}>
           {tGrade(result, lang)}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginTop: 12, flexWrap: 'wrap' }}>
-          <StatBubble label={t('target_was', lang)} value={result.target} color="var(--green)" />
-          <StatBubble label={t('team_avg', lang)} value={Math.round(result.avg)} color="var(--cyan)" />
-          <StatBubble label={t('diff_label', lang)} value={`±${Math.round(result.diff)}`} color={gradeColor} />
-          <StatBubble label={t('points_label', lang)} value={`+${result.points}`} color="var(--yellow)" />
-          {result.damage > 0 && <StatBubble label={t('damage_label', lang)} value={`-${result.damage} 💥`} color="var(--red)" />}
+
+        {/* Key numbers in one row */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 28, marginTop: 14, flexWrap: 'wrap' }}>
+          <Stat label={lang === 'pt' ? 'ALVO' : 'TARGET'} value={result.target} color="var(--green)" />
+          <Stat label={lang === 'pt' ? 'MÉDIA' : 'AVERAGE'} value={Math.round(result.avg)} color="var(--yellow)" />
+          <Stat label={lang === 'pt' ? 'DIFF' : 'DIFF'} value={`±${Math.round(result.diff)}`} color={gradeColor} />
+          {result.points > 0 && <Stat label={lang === 'pt' ? 'PONTOS' : 'POINTS'} value={`+${result.points}`} color="var(--cyan)" />}
+          {result.damage > 0 && <Stat label={lang === 'pt' ? 'DANO' : 'DAMAGE'} value={`-${result.damage} 💥`} color="var(--red)" />}
         </div>
       </div>
 
-      {/* Spectrum with target + votes */}
+      {/* Gauge: target (green) + average (yellow) + individual vote dots */}
       <PressurePanel
         card={gameState.currentCard}
         lang={lang}
@@ -85,55 +88,43 @@ export default function RevealPhase({ gameState, myId, lang, send, isHost }) {
         players={gameState.players}
       />
 
-      {/* Clue recap */}
-      <div className="pixel-box-yellow p-16">
-        <div className="flex items-center gap-16" style={{ flexWrap: 'wrap' }}>
+      {/* Clue + votes — compact */}
+      <div className="pixel-box p-16 flex-col gap-12">
+
+        {/* Clue row */}
+        <div className="flex items-center gap-12" style={{ flexWrap: 'wrap' }}>
+          <div style={{ fontFamily:'var(--f-body)', fontWeight:900, fontSize:12, color:gameState.currentTheme?.color, letterSpacing:2 }}>
+            {lang === 'en' ? gameState.currentTheme?.shortEN : gameState.currentTheme?.shortPT}
+          </div>
           <div>
-            <div className="pixel-title mb-4" style={{ fontSize: 7, color: 'var(--dim)' }}>
-              {lang === 'pt' ? 'PSÍQUICO' : 'PSYCHIC'}: {psychicPlayer?.name}
+            <div className="label" style={{ color: 'var(--dim2)', marginBottom: 4 }}>
+              📡 {psychic?.name} · {lang === 'pt' ? 'transmissor' : 'transmitter'}
             </div>
-            <div className="pixel-title mb-4" style={{ fontSize: 7, color: 'var(--dim)' }}>
-              {lang === 'pt' ? 'DICA' : 'CLUE'}:
-            </div>
-            <div style={{ fontFamily: 'var(--f-vt)', fontSize: 36, color: 'var(--yellow)', textShadow: '0 0 12px var(--yellow)' }}>
+            <div style={{ fontFamily: 'var(--f-vt)', fontSize: 32, color: 'var(--yellow)', lineHeight: 1 }}>
               {gameState.clue}
             </div>
           </div>
-          <div>
-            <div className="pixel-title mb-4" style={{ fontSize: 7, color: 'var(--dim)' }}>
-              TEMA / THEME:
-            </div>
-            <div style={{ fontFamily: 'var(--f-vt)', fontSize: 26, color: gameState.currentTheme?.color || 'var(--white)' }}>
-              {gameState.currentTheme?.emoji} {tTheme(gameState.currentTheme, lang)}
-            </div>
-          </div>
         </div>
-      </div>
 
-      {/* Individual votes */}
-      <div className="pixel-box p-16">
-        <div className="pixel-title mb-12" style={{ fontSize: 7, color: 'var(--dim)' }}>
-          {lang === 'pt' ? 'VOTOS DA EQUIPE' : 'TEAM VOTES'}
-        </div>
-        <div className="flex-col gap-8">
+        <div className="divider" style={{ margin: '4px 0' }} />
+
+        {/* Individual votes */}
+        <div className="flex-col gap-6">
           {activeTeamPlayers.filter(p => p.id !== gameState.psychicId).map(p => {
-            const voteVal = allVotes[p.id];
-            const diff = voteVal !== undefined ? Math.abs(voteVal - result.target) : null;
+            const v    = allVotes[p.id];
+            const diff = v !== undefined ? Math.abs(v - result.target) : null;
+            const col  = diff === null ? 'var(--dim2)' : diff <= 15 ? 'var(--green)' : diff <= 30 ? 'var(--yellow)' : 'var(--red)';
             return (
-              <div key={p.id} className="player-row">
-                <div className="avatar" style={{ color: p.color, background: `${p.color}22`, width: 36, height: 36 }}>
-                  {p.name.slice(0, 2).toUpperCase()}
-                </div>
-                <span style={{ flex: 1, fontFamily: 'var(--f-body)', fontSize: 13 }}>{p.name}</span>
-                {voteVal !== undefined ? (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
+                <span style={{ fontFamily: 'var(--f-body)', fontSize: 13, flex: 1 }}>{p.name}</span>
+                {v !== undefined ? (
                   <>
-                    <span style={{ fontFamily: 'var(--f-vt)', fontSize: 24, color: p.color }}>{voteVal}</span>
-                    <span style={{ fontFamily: 'var(--f-vt)', fontSize: 18, color: diff <= 15 ? 'var(--green)' : diff <= 30 ? 'var(--yellow)' : 'var(--red)' }}>
-                      ±{Math.round(diff)}
-                    </span>
+                    <span style={{ fontFamily: 'var(--f-vt)', fontSize: 24, color: 'var(--white)', minWidth: 36, textAlign: 'right' }}>{v}</span>
+                    <span style={{ fontFamily: 'var(--f-vt)', fontSize: 20, color: col, minWidth: 44, textAlign: 'right' }}>±{Math.round(diff)}</span>
                   </>
                 ) : (
-                  <span style={{ fontFamily: 'var(--f-vt)', fontSize: 18, color: 'var(--dim)' }}>—</span>
+                  <span style={{ fontFamily: 'var(--f-vt)', fontSize: 20, color: 'var(--dim2)' }}>—</span>
                 )}
               </div>
             );
@@ -141,52 +132,42 @@ export default function RevealPhase({ gameState, myId, lang, send, isHost }) {
         </div>
       </div>
 
-      {/* Damage notification */}
-      {didDamage && (
-        <div className="pixel-box-red p-16 text-center" style={{ animation: 'theme-pop 0.4s ease' }}>
-          <div className="pixel-title" style={{ fontSize: 'clamp(8px,2.5vw,12px)', color: 'var(--red)' }}>
-            💥 {lang === 'pt'
-              ? `NAVE SOFREU ${result.damage} DANO${result.damage > 1 ? 'S' : ''}!`
-              : `SHIP TOOK ${result.damage} DAMAGE!`}
-          </div>
-          <div style={{ fontFamily: 'var(--f-vt)', fontSize: 20, color: 'var(--dim)', marginTop: 8 }}>
-            {lang === 'pt'
-              ? `${gameState.damage[gameState.activeTeamIndex]}/${gameState.settings.maxDamage} danos acumulados`
-              : `${gameState.damage[gameState.activeTeamIndex]}/${gameState.settings.maxDamage} damage accumulated`}
-          </div>
-        </div>
-      )}
-
-      {!didDamage && (
-        <div className="pixel-box-green p-16 text-center" style={{ animation: 'theme-pop 0.4s ease' }}>
-          <div className="pixel-title" style={{ fontSize: 'clamp(8px,2.5vw,12px)', color: 'var(--green)' }}>
-            🛡 {lang === 'pt' ? 'NAVE PROTEGIDA!' : 'SHIP PROTECTED!'}
-          </div>
-        </div>
-      )}
-
-      {/* Next round button — host only */}
-      {isHost && (
-        <div className="text-center">
-          <button className="btn btn-cyan btn-lg" onClick={() => { playClick(); send('advance_round'); }}>
-            ▶ {t('next_round', lang)}
+      {/* Next round — any player, after lock period */}
+      <div className="text-center" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+        {!unlocked ? (
+          <>
+            <div style={{ width: '100%', maxWidth: 280, height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${(lockLeft / LOCK_SECONDS) * 100}%`,
+                background: 'var(--cyan)',
+                borderRadius: 3,
+                transition: 'width 0.9s linear',
+              }}/>
+            </div>
+            <span style={{ fontFamily: 'var(--f-body)', fontSize: 12, color: 'var(--dim2)' }}>
+              {lang === 'pt' ? `disponível em ${lockLeft}s...` : `available in ${lockLeft}s...`}
+            </span>
+          </>
+        ) : (
+          <button
+            className="btn btn-cyan btn-lg"
+            onClick={() => { playClick(); send('advance_round'); }}
+            style={{ minWidth: 240, animation: 'theme-pop 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}
+          >
+            ▶ {lang === 'pt' ? 'PRÓXIMA RODADA' : 'NEXT ROUND'}
           </button>
-        </div>
-      )}
-      {!isHost && (
-        <div style={{ fontFamily: 'var(--f-vt)', fontSize: 20, color: 'var(--dim)', textAlign: 'center', letterSpacing: 2 }}>
-          📡 {lang === 'pt' ? 'Aguardando capitão...' : 'Waiting for captain...'}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
-function StatBubble({ label, value, color }) {
+function Stat({ label, value, color }) {
   return (
     <div style={{ textAlign: 'center' }}>
-      <div style={{ fontFamily: 'var(--f-pixel)', fontSize: 6, color: 'var(--dim)', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontFamily: 'var(--f-vt)', fontSize: 36, color, textShadow: `0 0 10px ${color}` }}>
+      <div className="label mb-4" style={{ color: 'var(--dim2)' }}>{label}</div>
+      <div style={{ fontFamily: 'var(--f-vt)', fontSize: 34, color, lineHeight: 1, textShadow: `0 0 8px ${color}` }}>
         {value}
       </div>
     </div>

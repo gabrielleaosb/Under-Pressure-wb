@@ -1,216 +1,232 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import StarField from './components/StarField.jsx';
-import HomeScreen from './components/HomeScreen.jsx';
-import Lobby from './components/Lobby.jsx';
-import Roulette from './components/Roulette.jsx';
+import { db, ref, set, push, update, onValue, onDisconnect } from './firebase.js';
+import { genId, normalizeRoom } from './gameData.js';
+import { generateRoomCode, createRoom, addPlayerToRoom, GameEngine } from './gameEngine.js';
+import StarField    from './components/StarField.jsx';
+import HomeScreen   from './components/HomeScreen.jsx';
+import Lobby        from './components/Lobby.jsx';
+import Roulette     from './components/Roulette.jsx';
 import PsychicPhase from './components/PsychicPhase.jsx';
-import VotingPhase from './components/VotingPhase.jsx';
-import RevealPhase from './components/RevealPhase.jsx';
-import GameOver from './components/GameOver.jsx';
-import ScoreBoard from './components/ScoreBoard.jsx';
+import VotingPhase  from './components/VotingPhase.jsx';
+import RevealPhase  from './components/RevealPhase.jsx';
+import GameOver     from './components/GameOver.jsx';
+import ScoreBoard   from './components/ScoreBoard.jsx';
+import DevPanel     from './components/DevPanel.jsx';
+import Settings     from './components/Settings.jsx';
+import RoundIntro   from './components/RoundIntro.jsx';
 import { t } from './i18n.js';
 import { playPhaseChange, playVotingStart, playError as playSoundError } from './sounds.js';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001';
+const DEV_MODE = new URLSearchParams(window.location.search).has('dev');
+
+// Persist player ID across sessions
+function getOrCreatePlayerId() {
+  let id = sessionStorage.getItem('up_pid');
+  if (!id) { id = genId(); sessionStorage.setItem('up_pid', id); }
+  return id;
+}
 
 export default function App() {
-  const [lang, setLang] = useState(() => localStorage.getItem('sp_lang') || 'pt');
-  const [screen, setScreen] = useState('home'); // home | lobby | game
-  const [gameState, setGameState] = useState(null);
-  const [myId, setMyId] = useState(() => sessionStorage.getItem('sp_pid') || null);
-  const [myRoomCode, setMyRoomCode] = useState(() => sessionStorage.getItem('sp_room') || null);
+  const [lang,        setLang]        = useState(() => localStorage.getItem('up_lang') || 'pt');
+  const [screen,      setScreen]      = useState('home'); // home | lobby | game
+  const [rawRoom,     setRawRoom]     = useState(null);   // raw Firebase snapshot
+  const [myId]                        = useState(getOrCreatePlayerId);
+  const [roomCode,    setRoomCode]    = useState(() => sessionStorage.getItem('up_room'));
   const [myTargetPos, setMyTargetPos] = useState(null);
-  const [connStatus, setConnStatus] = useState('disconnected');
-  const [error, setError] = useState(null);
-  const [scanFlash, setScanFlash] = useState(false);
-  const [damageFlash, setDamageFlash] = useState(false);
+  const [error,        setError]       = useState(null);
+  const [scanFlash,    setScanFlash]   = useState(false);
+  const [dmgFlash,     setDmgFlash]    = useState(false);
+  const [status,       setStatus]      = useState('idle');
+  const [showSettings,   setShowSettings]   = useState(false);
+  const [showRoundIntro, setShowRoundIntro] = useState(false); // idle | connecting | connected | error
 
-  const wsRef = useRef(null);
-  const reconnectTimer = useRef(null);
-  const prevDamage = useRef([0, 0]);
+  const engineRef  = useRef(null);
   const prevPhase  = useRef(null);
-  const soundReady = useRef(false);
+  const presenceUnsub = useRef(null);
 
+  // ── Derived state ─────────────────────────────────────────────────────────
+  const gameState = rawRoom ? normalizeRoom(rawRoom) : null;
+  const me        = gameState?.players?.find(p => p.id === myId);
+  const isHost    = rawRoom?.hostId === myId;
+
+  // ── Lang persistence ──────────────────────────────────────────────────────
+  useEffect(() => { localStorage.setItem('up_lang', lang); }, [lang]);
+
+  // ── Error toast ───────────────────────────────────────────────────────────
   const showError = useCallback((msg) => {
-    setError(msg);
-    playSoundError();
+    setError(msg); playSoundError();
     setTimeout(() => setError(null), 3500);
   }, []);
 
   const flash = useCallback((withDamage = false) => {
-    setScanFlash(true);
-    setTimeout(() => setScanFlash(false), 500);
-    if (withDamage) {
-      setDamageFlash(true);
-      setTimeout(() => setDamageFlash(false), 2500);
-    }
+    setScanFlash(true); setTimeout(() => setScanFlash(false), 500);
+    if (withDamage) { setDmgFlash(true); setTimeout(() => setDmgFlash(false), 2500); }
   }, []);
 
-  const send = useCallback((type, data = {}) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type, ...data }));
-    }
-  }, []);
+  // ── Subscribe to room in Firebase ─────────────────────────────────────────
+  useEffect(() => {
+    if (!roomCode) return;
+    setStatus('connecting');
+    const roomRef = ref(db, `rooms/${roomCode}`);
+    const unsub = onValue(roomRef, snap => {
+      const raw = snap.val();
+      if (!raw) { setStatus('error'); showError(t('err_room_not_found', lang)); return; }
+      setStatus('connected');
+      setRawRoom(raw);
 
-  const handleMessage = useCallback((raw) => {
-    let msg;
-    try { msg = JSON.parse(raw); } catch { return; }
-
-    if (msg.type === 'room_state') {
-      const state = msg.state;
-      setGameState(prev => {
-        if (prev && prev.phase !== state.phase) {
-          const hadDamage = state.damage.some((d, i) => d > (prev?.damage?.[i] ?? 0));
-          flash(hadDamage);
-          // Phase-specific sounds
-          if (state.phase === 'roulette') playPhaseChange();
-          if (state.phase === 'voting')   playVotingStart();
-          if (state.phase === 'psychic')  playPhaseChange();
-        }
-        prevPhase.current = state.phase;
-        return state;
-      });
-      if (state.phase === 'lobby') setScreen('lobby');
+      // Screen routing
+      if (raw.phase === 'lobby') setScreen('lobby');
       else setScreen('game');
-      sessionStorage.setItem('sp_room', state.code);
-      setMyRoomCode(state.code);
-    } else if (msg.type === 'joined' || msg.type === 'reconnected') {
-      setMyId(msg.playerId);
-      sessionStorage.setItem('sp_pid', msg.playerId);
-    } else if (msg.type === 'psychic_target') {
-      setMyTargetPos(msg.targetPosition);
-    } else if (msg.type === 'error') {
-      const errKey = `err_${msg.message}`;
-      showError(t(errKey, lang) !== errKey ? t(errKey, lang) : msg.message);
-    }
-  }, [lang, flash, showError]);
 
-  const connect = useCallback(() => {
-    if (wsRef.current) {
-      try { wsRef.current.close(); } catch {}
-    }
-    setConnStatus('connecting');
-    const ws = new WebSocket(WS_URL);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      setConnStatus('connected');
-      clearTimeout(reconnectTimer.current);
-      // Try to reconnect to existing session
-      const pid = sessionStorage.getItem('sp_pid');
-      const room = sessionStorage.getItem('sp_room');
-      if (pid && room) {
-        ws.send(JSON.stringify({ type: 'reconnect', playerId: pid, roomCode: room }));
+      // Phase change effects
+      if (prevPhase.current && prevPhase.current !== raw.phase) {
+        const prev = prevPhase.current;
+        const hadDamage = raw.damage0 > (rawRoom?.damage0 ?? 0) || raw.damage1 > (rawRoom?.damage1 ?? 0);
+        flash(hadDamage);
+        if (raw.phase === 'roulette') { playPhaseChange(); setShowRoundIntro(true); }
+        if (raw.phase === 'spinning') setShowRoundIntro(false);
+        if (raw.phase === 'voting')   playVotingStart();
+        if (raw.phase === 'psychic')  playPhaseChange();
       }
-    };
+      prevPhase.current = raw.phase;
 
-    ws.onmessage = (e) => handleMessage(e.data);
+      // Secret target — only visible to psychic
+      if (raw.psychicId === myId && raw.psychicSecret?.targetPosition !== undefined) {
+        setMyTargetPos(raw.psychicSecret.targetPosition);
+      }
+      if (!['psychic','voting','reveal'].includes(raw.phase)) setMyTargetPos(null);
+    });
 
-    ws.onclose = () => {
-      setConnStatus('disconnected');
-      clearTimeout(reconnectTimer.current);
-      reconnectTimer.current = setTimeout(connect, 3000);
-    };
+    // Player presence (Firebase onDisconnect marks offline)
+    const playerRef = ref(db, `rooms/${roomCode}/players/${myId}`);
+    const infoRef   = ref(db, '.info/connected');
+    const presUnsub = onValue(infoRef, snap => {
+      if (!snap.val()) return;
+      update(playerRef, { connected: true });
+      onDisconnect(playerRef).update({ connected: false });
+    });
+    presenceUnsub.current = presUnsub;
 
-    ws.onerror = () => { try { ws.close(); } catch {} };
-  }, [handleMessage]);
+    return () => { unsub(); presUnsub(); };
+  }, [roomCode]);
 
+  // ── Run game engine when I'm the host ─────────────────────────────────────
   useEffect(() => {
-    connect();
-    return () => {
-      clearTimeout(reconnectTimer.current);
-      wsRef.current?.close();
-    };
-  }, []);
+    if (!isHost || !roomCode) return;
+    const engine = new GameEngine(roomCode, myId);
+    engine.start();
+    engineRef.current = engine;
+    return () => { engine.stop(); engineRef.current = null; };
+  }, [isHost, roomCode]);
 
-  useEffect(() => {
-    localStorage.setItem('sp_lang', lang);
-  }, [lang]);
+  // ── Action sender ─────────────────────────────────────────────────────────
+  const send = useCallback((type, data = {}) => {
+    if (!roomCode) return;
+    push(ref(db, `rooms/${roomCode}/actions`), { type, ...data, by: myId, ts: Date.now() })
+      .catch(err => showError(err.message));
+  }, [roomCode, myId, showError]);
 
-  // Reset target when leaving psychic/voting
-  useEffect(() => {
-    if (gameState && !['psychic', 'voting', 'reveal'].includes(gameState.phase)) {
-      setMyTargetPos(null);
+  // ── Create room ───────────────────────────────────────────────────────────
+  const handleCreate = async (playerName) => {
+    try {
+      const code = await generateRoomCode();
+      await createRoom(code, myId, playerName);
+      sessionStorage.setItem('up_room', code);
+      setRoomCode(code);
+    } catch (e) { showError(e.message); }
+  };
+
+  // ── Join room ─────────────────────────────────────────────────────────────
+  const handleJoin = async (code, playerName) => {
+    const upper = code.toUpperCase();
+    const result = await addPlayerToRoom(upper, myId, playerName);
+    if (result.error) { showError(t(`err_${result.error}`, lang)); return; }
+    if (result.rejoin) {
+      // Rejoin with existing ID
+      sessionStorage.setItem('up_pid', result.playerId);
     }
-  }, [gameState?.phase]);
-
-  const me = gameState?.players?.find(p => p.id === myId);
-  const isHost = me?.id === gameState?.hostId;
+    sessionStorage.setItem('up_room', upper);
+    setRoomCode(upper);
+  };
 
   const sharedProps = { gameState, myId, lang, send, isHost, me };
+
+  const hideIntro = useCallback(() => setShowRoundIntro(false), []);
+
+  const leaveRoom = () => {
+    sessionStorage.removeItem('up_room');
+    sessionStorage.removeItem('up_pid');
+    setRoomCode(null);
+    setRawRoom(null);
+    setScreen('home');
+    setShowSettings(false);
+  };
 
   return (
     <>
       <StarField />
       {scanFlash && <div className="scanflash" />}
-      {damageFlash && <div className="damage-overlay" />}
+      {dmgFlash  && <div className="damage-overlay" />}
 
       {/* Error toast */}
       {error && (
         <div style={{
-          position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
-          zIndex: 9995, padding: '10px 20px',
-          border: '2px solid var(--red)', background: 'rgba(12,0,4,0.96)',
-          color: 'var(--red)', fontFamily: 'var(--f-pixel)', fontSize: '8px',
-          letterSpacing: '1px', borderRadius: '4px',
-          boxShadow: 'var(--glow-r)', maxWidth: '90vw', textAlign: 'center',
+          position:'fixed', top:16, left:'50%', transform:'translateX(-50%)',
+          zIndex:9995, padding:'10px 20px',
+          border:'2px solid var(--red)', background:'rgba(12,0,4,.96)',
+          color:'var(--red)', fontFamily:'var(--f-pixel)', fontSize:'9px',
+          letterSpacing:'1px', borderRadius:'4px', boxShadow:'var(--glow-r)',
+          maxWidth:'90vw', textAlign:'center',
         }}>
           ⚠ {error}
         </div>
       )}
 
-      {/* Connection status indicator */}
-      {connStatus !== 'connected' && (
-        <div style={{
-          position: 'fixed', bottom: 8, right: 8, zIndex: 9990,
-          padding: '6px 10px', border: '1px solid var(--orange)',
-          background: 'rgba(0,0,0,0.9)', color: 'var(--orange)',
-          fontFamily: 'var(--f-pixel)', fontSize: '6px', borderRadius: '3px',
-          letterSpacing: '1px',
-        }}>
-          {connStatus === 'disconnected' ? '● ' + t('reconnecting', lang) : '● ' + t('connecting', lang)}
-        </div>
+      {/* Dev panel */}
+      {DEV_MODE && <DevPanel gameState={gameState} myId={myId} send={send} isHost={isHost} />}
+
+      {/* Round intro overlay */}
+      {showRoundIntro && gameState && (
+        <RoundIntro
+          gameState={gameState}
+          myId={myId}
+          lang={lang}
+          onDone={hideIntro}
+        />
+      )}
+
+      {/* Settings modal */}
+      {showSettings && (
+        <Settings
+          lang={lang}
+          setLang={setLang}
+          onLeaveRoom={screen !== 'home' ? leaveRoom : null}
+          onClose={() => setShowSettings(false)}
+          inGame={screen !== 'home'}
+        />
       )}
 
       {screen === 'home' && (
-        <HomeScreen
-          {...sharedProps}
-          lang={lang}
-          setLang={setLang}
-          connStatus={connStatus}
-        />
+        <HomeScreen lang={lang} setLang={setLang} onCreate={handleCreate} onJoin={handleJoin} />
       )}
 
       {screen === 'lobby' && gameState && (
-        <Lobby
-          {...sharedProps}
-          lang={lang}
-          setLang={setLang}
-        />
+        <Lobby {...sharedProps} lang={lang} setLang={setLang} onSettings={() => setShowSettings(true)} />
       )}
 
       {screen === 'game' && gameState && (
         <div className="screen">
-          <ScoreBoard {...sharedProps} />
-          <div className="container" style={{ paddingTop: 16 }}>
-            {gameState.phase === 'roulette' && (
-              <Roulette {...sharedProps} myTargetPos={myTargetPos} />
+          <ScoreBoard {...sharedProps} onSettings={() => setShowSettings(true)} />
+          <div className="container" style={{ paddingTop:16 }}>
+            {(gameState.phase==='roulette'||gameState.phase==='spinning') && (
+              <Roulette {...sharedProps} spinning={gameState.phase==='spinning'} />
             )}
-            {gameState.phase === 'spinning' && (
-              <Roulette {...sharedProps} myTargetPos={myTargetPos} spinning />
-            )}
-            {gameState.phase === 'psychic' && (
+            {gameState.phase==='psychic' && (
               <PsychicPhase {...sharedProps} myTargetPos={myTargetPos} />
             )}
-            {gameState.phase === 'voting' && (
-              <VotingPhase {...sharedProps} />
-            )}
-            {gameState.phase === 'reveal' && (
-              <RevealPhase {...sharedProps} />
-            )}
-            {gameState.phase === 'gameover' && (
-              <GameOver {...sharedProps} />
-            )}
+            {gameState.phase==='voting' && <VotingPhase {...sharedProps} />}
+            {gameState.phase==='reveal' && <RevealPhase {...sharedProps} />}
+            {gameState.phase==='gameover' && <GameOver {...sharedProps} />}
           </div>
         </div>
       )}

@@ -1,116 +1,99 @@
-# 🚀 Space Pressure / Pressão no Espaço
+# 🎮 Under Pressure
 
-Multiplayer party game de calibração espacial — 100% humano, sem IA.
+Party game multiplayer de calibração — 100% humanos, sem IA.
 
-## Estrutura
+**Stack:** React + Vite + Firebase Realtime Database → deploy gratuito na Vercel.
+Sem backend separado. O estado do jogo vive no Firebase; a lógica roda no browser do host.
 
-```
-waveweb/
-├── backend/   Node.js WebSocket server
-└── frontend/  React + Vite SPA
-```
+---
 
-## Desenvolvimento local
+## 🔥 Configurar Firebase (5 min)
 
-### 1. Backend (servidor WebSocket)
-```bash
-cd backend
-npm install
-npm run dev       # hot-reload com node --watch
-# Server: ws://localhost:3001
-```
+1. Acesse [console.firebase.google.com](https://console.firebase.google.com) e crie um projeto
+2. No projeto → **Build → Realtime Database → Create database** → escolha região → modo **test** por enquanto
+3. No projeto → **Project Settings → Your apps → `</>`** (Web) → registre o app → copie o `firebaseConfig`
+4. Nas regras do banco (**Realtime Database → Rules**), cole:
+   ```json
+   {
+     "rules": {
+       "rooms": {
+         "$code": {
+           ".read": true,
+           ".write": true
+         }
+       }
+     }
+   }
+   ```
+5. Copie `frontend/.env.example` → `frontend/.env.local` e preencha com os valores do `firebaseConfig`
 
-### 2. Frontend
+---
+
+## 🚀 Deploy na Vercel (grátis, sem backend)
+
+1. Faça push do repositório pro GitHub
+2. Acesse [vercel.com](https://vercel.com) → **Add New Project** → importe o repo
+3. Em **Root Directory**, selecione: `frontend`
+4. Build command: `npm run build` | Output directory: `dist`
+5. Em **Environment Variables**, adicione todas as `VITE_FB_*` do seu `.env.local`
+6. Deploy! 🎉
+
+---
+
+## 💻 Rodar localmente
+
 ```bash
 cd frontend
+cp .env.example .env.local   # preencha com suas credenciais Firebase
 npm install
-npm run dev       # Vite dev server
-# App: http://localhost:5173
+npm run dev                  # http://localhost:5173
 ```
 
-A URL do servidor WebSocket padrão é `ws://localhost:3001`.  
-Para apontar para outro servidor, defina a variável de ambiente:
-```
-VITE_WS_URL=wss://seu-servidor.com
-```
+Dev mode (testa o fluxo solo): `http://localhost:5173?dev`
 
 ---
 
-## Deploy: Vercel (frontend) + Railway/Render (backend)
+## 🎮 Como jogar
 
-### Backend no Railway
-
-1. Criar novo projeto no Railway e conectar este repositório
-2. Selecionar pasta `backend` como **Root Directory** (ou usar monorepo config)
-3. **Start command**: `node server.js`
-4. Copiar a URL pública gerada (ex: `wss://space-pressure-server.up.railway.app`)
-
-### Backend no Render
-
-1. Criar **Web Service** no Render
-2. Root Directory: `backend`
-3. Build command: `npm install`
-4. Start command: `node server.js`
-5. Copiar a URL gerada
-
-### Frontend no Vercel
-
-1. Criar novo projeto no Vercel conectando este repositório
-2. **Root Directory**: `frontend`
-3. **Build command**: `npm run build`
-4. **Output directory**: `dist`
-5. Em **Environment Variables**, adicionar:
-   - `VITE_WS_URL` = `wss://sua-url-do-backend.railway.app`
-6. Deploy!
-
----
-
-## Como jogar
-
-1. **Criar sala**: Um jogador entra, cria a sala e compartilha o código de 4 letras
-2. **Entrar na sala**: Outros jogadores entram com o código
-3. **Configurar**: O capitão (host) divide os jogadores em 2 equipes e configura rodadas/danos
-4. **Iniciar missão**: Host clica em "Iniciar Missão"
+1. Host cria a sala → compartilha o código de 4 letras
+2. Outros jogadores entram com o código
+3. Host divide em 2 equipes (mín. 2 por equipe) e configura a partida
+4. Host inicia a missão
 
 ### Fluxo por rodada
+- **Roleta**: navegador gira para sortear o tema
+- **Psíquico**: vê a posição secreta (0–100) no espectro e dá UMA palavra de dica
+- **Votação**: equipe calibra o painel de pressão (arrasta a agulha)
+- **Revelação**: posição revelada, danos aplicados, pontos computados
 
-- **Roleta**: O Psíquico da equipe ativa gira a roleta para sortear um tema
-- **Psíquico**: Vê a posição secreta (0–100) no espectro e digita UMA palavra-dica
-- **Votação**: Toda a equipe ativa arrasta o cursor para onde acha que o alvo está
-- **Revelação**: O alvo é revelado, danos são aplicados, pontos computados
-
-### Pontuação (diferença entre média da equipe e alvo)
-
+### Pontuação
 | Diferença | Pontos | Danos |
 |-----------|--------|-------|
-| ±5        | 3      | 0 — PERFEITO |
-| ±15       | 2      | 0 — MUITO PRÓXIMO |
-| ±25       | 1      | 1 — PRÓXIMO |
-| ±40       | 0      | 1 — RAZOÁVEL |
-| >40       | 0      | 2 — LONGE |
+| ±5 | 3 | 0 — PERFEITO |
+| ±15 | 2 | 0 — MUITO PRÓXIMO |
+| ±25 | 1 | 1 — PRÓXIMO |
+| ±40 | 0 | 1 — RAZOÁVEL |
+| >40 | 0 | 2 — LONGE |
 
-A nave da equipe ativa explode se acumular danos demais!
+A nave explode ao acumular danos demais → equipe adversária vence!
 
 ---
 
-## Features implementadas
+## 🏗 Arquitetura
 
-- ✅ Bilíngue PT / EN (toggle na UI)
-- ✅ 60 cartas de espectro (5 por tema × 12 temas)
-- ✅ Roleta animada com 12 temas
-- ✅ Painel de pressão com slider drag/touch
-- ✅ Timer server-side com countdown visual
-- ✅ Reações com emojis em tempo real
-- ✅ Naves pixel art com 5 estágios de dano
-- ✅ Reconexão automática (mesmo nome em sala aberta)
-- ✅ Responsivo (mobile 360px+)
-- ✅ Easter egg 👾
-- ✅ Estatísticas pós-jogo
-- ✅ Confetes na vitória
+```
+frontend/src/
+├── firebase.js       Firebase init + exports
+├── gameEngine.js     Lógica do jogo (roda no browser do host)
+├── gameData.js       60 cartas de espectro, utilitários
+├── App.jsx           App principal + Firebase subscriptions
+├── i18n.js           Traduções PT/EN
+├── sounds.js         Web Audio API (sem arquivos externos)
+└── components/       UI components
+```
 
-## Tecnologias
-
-- **Frontend**: React 18 + Vite, CSS puro (pixel art, glow neon, scanlines)
-- **Backend**: Node.js + ws (WebSocket)
-- **Fontes**: Press Start 2P + VT323 (Google Fonts)
-- **Sem banco de dados** — salas vivem em memória durante a sessão
+**O host é o servidor:** quando o host abre a sala, o `GameEngine` instanciado no browser dele:
+- Ouve requisições de ação no Firebase (`/rooms/{code}/actions`)
+- Executa a lógica do jogo
+- Escreve o novo estado de volta no Firebase
+- Todos os outros clientes recebem o estado atualizado via `onValue`

@@ -2,269 +2,325 @@ import React, { useState } from 'react';
 import { t } from '../i18n.js';
 import { playClick, playJoin } from '../sounds.js';
 
-export default function Lobby({ gameState, myId, lang, setLang, send, isHost }) {
+export default function Lobby({ gameState, myId, lang, setLang, send, isHost, onSettings }) {
   const { code, players, teams, settings } = gameState;
-  const [copied, setCopied] = useState(false);
+  const [copied,   setCopied]   = useState(false);
   const [editTeam, setEditTeam] = useState(null);
   const [editName, setEditName] = useState('');
 
-  const me = players.find(p => p.id === myId);
+  const me      = players.find(p => p.id === myId);
+  const team0   = players.filter(p => p.teamIndex === 0);
+  const team1   = players.filter(p => p.teamIndex === 1);
+  const unassigned = players.filter(p => p.teamIndex === null);
+
+  const canStart = () => {
+    const hasBots = players.some(p => p.isBot);
+    const min = hasBots ? 1 : 2;
+    return team0.length >= min && team1.length >= min;
+  };
 
   const copyLink = () => {
-    const url = `${window.location.origin}${window.location.pathname}?room=${code}`;
-    navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+    navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?room=${code}`);
+    setCopied(true); setTimeout(() => setCopied(false), 2000);
     playClick();
   };
 
-  const canStart = () => {
-    const t0 = players.filter(p => p.teamIndex === 0).length;
-    const t1 = players.filter(p => p.teamIndex === 1).length;
-    return t0 >= 2 && t1 >= 2;
-  };
+  const moveSelf = (ti) => { playJoin(); send('assign_team', { targetPlayerId: myId, teamIndex: ti }); };
+  const moveOther = (pid, ti) => { playClick(); send('assign_team', { targetPlayerId: pid, teamIndex: ti }); };
 
-  const unassigned = players.filter(p => p.teamIndex === null);
-  const team0 = players.filter(p => p.teamIndex === 0);
-  const team1 = players.filter(p => p.teamIndex === 1);
-
-  const startEditTeam = (idx) => { playClick(); setEditTeam(idx); setEditName(teams[idx].name); };
-  const saveTeamName = () => {
+  const startEdit = (idx) => { playClick(); setEditTeam(idx); setEditName(teams[idx].name); };
+  const saveEdit  = () => {
     if (editName.trim()) send('rename_team', { teamIndex: editTeam, name: editName.trim() });
     setEditTeam(null);
   };
 
-  // Allow any player to move themselves; host can move anyone
-  const moveSelf = (teamIndex) => {
-    playJoin();
-    send('assign_team', { targetPlayerId: myId, teamIndex });
-  };
-  const movePlayer = (targetId, teamIndex) => {
-    playClick();
-    send('assign_team', { targetPlayerId: targetId, teamIndex });
-  };
-
-  // Read room from URL on mount
-  React.useEffect(() => {
-    const url = new URL(window.location.href);
-    if (url.searchParams.get('room')) {
-      url.searchParams.delete('room');
-      window.history.replaceState({}, '', url.toString());
-    }
-  }, []);
+  const TEAM_COLORS = ['var(--team0)', 'var(--team1)'];
+  const TEAM_BG     = ['rgba(255,51,85,0.08)', 'rgba(0,180,255,0.08)'];
+  const TEAM_BORDER = ['rgba(255,51,85,0.4)',  'rgba(0,180,255,0.4)'];
 
   return (
     <div className="screen" style={{ minHeight: '100vh' }}>
-      <div className="container" style={{ paddingTop: 16, paddingBottom: 40 }}>
+      <div className="container" style={{ paddingTop: 16, paddingBottom: 80 }}>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-16">
-          <h1 className="pixel-title" style={{ fontSize: 'clamp(9px,3vw,14px)', color: 'var(--cyan)' }}>
-            {t('lobby_title', lang)}
+        {/* Top bar */}
+        <div className="flex items-center justify-between mb-16" style={{ flexWrap: 'wrap', gap: 8 }}>
+          <h1 className="pixel-title" style={{ fontSize: 'clamp(11px,3vw,15px)', color: 'var(--cyan)' }}>
+            UNDER PRESSURE
           </h1>
           <div className="flex gap-8 items-center">
             {['pt','en'].map(l => (
               <button key={l} className={`btn btn-sm ${lang===l?'btn-cyan':'btn-ghost'}`}
                 onClick={() => { playClick(); setLang(l); }}>{l.toUpperCase()}</button>
             ))}
+            <button
+              onClick={() => { playClick(); onSettings?.(); }}
+              style={{
+                background:'rgba(255,255,255,0.05)', border:'1px solid var(--dim)', color:'var(--dim2)',
+                borderRadius:6, width:36, height:36, fontSize:16,
+                cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+              }}
+            >⚙</button>
           </div>
         </div>
 
-        {/* Room code */}
-        <div className="pixel-box p-16 mb-16">
-          <div className="flex items-center justify-between gap-12" style={{ flexWrap: 'wrap' }}>
+        {/* Room code + copy */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
+          padding: '14px 20px', borderRadius: 8,
+          border: '2px solid rgba(255,224,0,0.4)', background: 'rgba(255,224,0,0.05)',
+          marginBottom: 20,
+        }}>
+          <div>
+            <div className="label mb-4" style={{ color: 'var(--dim2)' }}>{t('room_code', lang)}</div>
+            <div style={{ fontFamily: 'var(--f-pixel)', fontSize: 'clamp(18px,5vw,28px)', color: 'var(--yellow)', letterSpacing: 8, textShadow: '0 0 16px var(--yellow)' }}>
+              {code}
+            </div>
+          </div>
+          <button className={`btn ${copied ? 'btn-green' : 'btn-yellow'}`} onClick={copyLink}>
+            {copied ? '✓ ' + t('copied', lang) : '🔗 ' + t('copy_link', lang)}
+          </button>
+        </div>
+
+        {/* MY TEAM CHOICE — always visible */}
+        <div style={{ marginBottom: 20, padding: '14px 18px', borderRadius: 8, border: '2px solid rgba(0,212,255,0.25)', background: 'rgba(0,212,255,0.04)' }}>
+          <div className="label mb-12" style={{ color: 'var(--dim2)' }}>
+            {lang === 'pt' ? 'SUA EQUIPE' : 'YOUR TEAM'}
+          </div>
+          <div className="flex items-center gap-12" style={{ flexWrap: 'wrap' }}>
+            {/* Avatar */}
+            <div style={{
+              width: 48, height: 48, borderRadius: 8,
+              background: `${me?.color}22`,
+              border: `2px solid ${me?.color || 'var(--dim)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'var(--f-pixel)', fontSize: 12, color: me?.color,
+            }}>
+              {me?.name?.slice(0,2).toUpperCase()}
+            </div>
             <div>
-              <div className="pixel-title" style={{ fontSize: 7, color: 'var(--dim)', marginBottom: 6 }}>{t('room_code', lang)}</div>
-              <div style={{ fontFamily: 'var(--f-pixel)', fontSize: 'clamp(20px,6vw,36px)', color: 'var(--yellow)', textShadow: '0 0 16px var(--yellow)', letterSpacing: 8 }}>
-                {code}
-              </div>
+              <div style={{ fontFamily: 'var(--f-body)', fontWeight: 800, fontSize: 15 }}>{me?.name}</div>
+              {isHost && <span className="tag tag-yellow" style={{ marginTop: 4, display: 'inline-block' }}>👑 {t('host_badge', lang)}</span>}
             </div>
-            <button className={`btn ${copied ? 'btn-green' : 'btn-yellow'}`} onClick={copyLink}>
-              {copied ? '✓ ' + t('copied', lang) : '🔗 ' + t('copy_link', lang)}
-            </button>
+            <div className="flex gap-8" style={{ marginLeft: 'auto', flexWrap: 'wrap' }}>
+              {[0, 1].map(ti => (
+                <button key={ti}
+                  className={`btn ${me?.teamIndex === ti ? (ti===0?'btn-red':'btn-cyan') : 'btn-ghost'}`}
+                  onClick={() => moveSelf(me?.teamIndex === ti ? null : ti)}
+                  style={{ borderColor: TEAM_COLORS[ti], color: me?.teamIndex === ti ? '#fff' : TEAM_COLORS[ti], background: me?.teamIndex === ti ? `${TEAM_COLORS[ti]}33` : 'transparent', minWidth: 110 }}
+                >
+                  {me?.teamIndex === ti ? '✓ ' : ''}{teams[ti]?.name}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* TEAM COLUMNS */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+          {[0, 1].map(ti => {
+            const teamPlayers = ti === 0 ? team0 : team1;
+            const color       = TEAM_COLORS[ti];
+            const bg          = TEAM_BG[ti];
+            const border      = TEAM_BORDER[ti];
+            const hasBots     = players.some(p => p.isBot);
+            const minReq      = hasBots ? 1 : 2;
+            const ready       = teamPlayers.length >= minReq;
 
-          {/* ── My team selection (self-service) ── */}
-          <div className="pixel-box-yellow p-16">
-            <div className="pixel-title mb-12" style={{ fontSize: 8, color: 'var(--dim)' }}>
-              {lang === 'pt' ? 'SUA EQUIPE' : 'YOUR TEAM'}
-            </div>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div className="avatar" style={{ color: me?.color, background: `${me?.color}22`, width: 40, height: 40, fontSize: 9 }}>
-                {me?.name?.slice(0, 2).toUpperCase()}
-              </div>
-              <span style={{ fontFamily: 'var(--f-body)', fontWeight: 700, fontSize: 15 }}>{me?.name}</span>
-              <div style={{ flex: 1 }} />
-              <button
-                className={`btn btn-sm ${me?.teamIndex === 0 ? 'btn-red' : 'btn-ghost'}`}
-                style={{ borderColor: teams[0].color, color: me?.teamIndex === 0 ? '#fff' : teams[0].color,
-                         background: me?.teamIndex === 0 ? `${teams[0].color}33` : 'transparent' }}
-                onClick={() => moveSelf(me?.teamIndex === 0 ? null : 0)}
-              >
-                {me?.teamIndex === 0 ? '✓ ' : ''}{teams[0].name}
-              </button>
-              <button
-                className={`btn btn-sm ${me?.teamIndex === 1 ? 'btn-cyan' : 'btn-ghost'}`}
-                style={{ borderColor: teams[1].color, color: me?.teamIndex === 1 ? '#fff' : teams[1].color,
-                         background: me?.teamIndex === 1 ? `${teams[1].color}33` : 'transparent' }}
-                onClick={() => moveSelf(me?.teamIndex === 1 ? null : 1)}
-              >
-                {me?.teamIndex === 1 ? '✓ ' : ''}{teams[1].name}
-              </button>
-            </div>
-          </div>
-
-          {/* ── Team columns ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {[0, 1].map(tIdx => {
-              const teamPlayers = tIdx === 0 ? team0 : team1;
-              const color = tIdx === 0 ? 'var(--team0)' : 'var(--team1)';
-              return (
-                <div key={tIdx} className="pixel-box p-12">
-                  {/* Team header */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, borderBottom: `2px solid ${color}`, paddingBottom: 8 }}>
-                    {editTeam === tIdx && isHost ? (
-                      <div className="flex gap-4 w-full items-center">
-                        <input
-                          className="pixel-input"
-                          value={editName}
-                          onChange={e => setEditName(e.target.value.slice(0, 30))}
-                          onKeyDown={e => e.key === 'Enter' && saveTeamName()}
-                          style={{ fontSize: 14, padding: '4px 8px', flex: 1 }}
-                          autoFocus
-                        />
-                        <button className="btn btn-green btn-sm" onClick={saveTeamName}>✓</button>
-                      </div>
-                    ) : (
-                      <>
-                        <span style={{ fontFamily: 'var(--f-pixel)', fontSize: 7, color, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {tIdx === 0 ? '🔴' : '🔵'} {teams[tIdx].name}
-                        </span>
-                        <span style={{ fontFamily: 'var(--f-vt)', fontSize: 18, color: 'var(--dim)' }}>
-                          {teamPlayers.length}
-                        </span>
-                        {isHost && (
-                          <button className="btn btn-ghost btn-sm" style={{ fontSize: 7, padding: '2px 6px', minHeight: 24 }}
-                            onClick={() => startEditTeam(tIdx)}>✏</button>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Players in team */}
-                  <div className="flex-col gap-4">
-                    {teamPlayers.map(p => (
-                      <div key={p.id} className="player-row" style={{ borderColor: p.id === myId ? color : undefined }}>
-                        <div className="avatar" style={{ color: p.color, background: `${p.color}22`, width: 34, height: 34, fontSize: 8 }}>
-                          {p.name.slice(0, 2).toUpperCase()}
-                          {!p.connected && <span style={{ position: 'absolute', top: -4, right: -4, fontSize: 8 }}>💤</span>}
-                        </div>
-                        <div style={{ flex: 1, overflow: 'hidden' }}>
-                          <div style={{ fontFamily: 'var(--f-body)', fontWeight: 700, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {p.name}
-                            {p.id === myId && <span className="tag tag-cyan" style={{ marginLeft: 4, fontSize: 5 }}>YOU</span>}
-                          </div>
-                          {p.isHost && <span className="tag tag-yellow" style={{ fontSize: 5 }}>CAPTAIN</span>}
-                        </div>
-                        {/* Host can remove others from team */}
-                        {isHost && p.id !== myId && (
-                          <button className="btn btn-ghost btn-sm" style={{ fontSize: 6, padding: '2px 6px', minHeight: 24, color: 'var(--dim)' }}
-                            onClick={() => movePlayer(p.id, null)}>✕</button>
-                        )}
-                      </div>
-                    ))}
-                    {teamPlayers.length === 0 && (
-                      <div style={{ fontFamily: 'var(--f-vt)', fontSize: 18, color: 'var(--dim)', textAlign: 'center', padding: '6px 0' }}>
-                        {lang === 'pt' ? 'Vazio' : 'Empty'}
-                      </div>
-                    )}
-                    {teamPlayers.length < 2 && (
-                      <div style={{ fontFamily: 'var(--f-pixel)', fontSize: 6, color: 'var(--dim)', textAlign: 'center' }}>
-                        {lang === 'pt' ? `(mín. 2)` : `(min. 2)`}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* ── Unassigned players ── */}
-          {unassigned.length > 0 && (
-            <div className="pixel-box p-12">
-              <div className="pixel-title mb-8" style={{ fontSize: 7, color: 'var(--dim)' }}>
-                {t('unassigned', lang)} ({unassigned.length})
-              </div>
-              <div className="flex-col gap-4">
-                {unassigned.map(p => (
-                  <div key={p.id} className="player-row">
-                    <div className="avatar" style={{ color: p.color, background: `${p.color}22`, width: 34, height: 34, fontSize: 8 }}>
-                      {p.name.slice(0, 2).toUpperCase()}
+            return (
+              <div key={ti} style={{ borderRadius: 10, border: `2px solid ${border}`, background: bg, overflow: 'hidden' }}>
+                {/* Team header */}
+                <div style={{ padding: '12px 14px', borderBottom: `2px solid ${border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}`, flexShrink: 0 }} />
+                  {editTeam === ti && isHost ? (
+                    <div className="flex gap-4 w-full items-center">
+                      <input className="pixel-input" value={editName} onChange={e => setEditName(e.target.value.slice(0,30))}
+                        onKeyDown={e => e.key==='Enter' && saveEdit()}
+                        style={{ fontSize:14, padding:'4px 8px', flex:1 }} autoFocus />
+                      <button className="btn btn-green btn-sm" onClick={saveEdit}>✓</button>
                     </div>
-                    <span style={{ flex: 1, fontFamily: 'var(--f-body)', fontSize: 13 }}>
-                      {p.name}
-                      {p.id === myId && <span className="tag tag-cyan" style={{ marginLeft: 6, fontSize: 5 }}>YOU</span>}
-                    </span>
-                    {/* Host can move others */}
-                    {isHost && p.id !== myId && (
-                      <div className="flex gap-4">
-                        {[0, 1].map(ti => (
-                          <button key={ti} className="btn btn-ghost btn-sm"
-                            style={{ fontSize: 6, borderColor: ti === 0 ? 'var(--team0)' : 'var(--team1)', color: ti === 0 ? 'var(--team0)' : 'var(--team1)' }}
-                            onClick={() => movePlayer(p.id, ti)}>
-                            → {ti === 0 ? '🔴' : '🔵'}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  ) : (
+                    <>
+                      <span style={{ fontFamily:'var(--f-body)', fontWeight:900, fontSize:14, color, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {teams[ti]?.name}
+                      </span>
+                      <span style={{ fontFamily:'var(--f-vt)', fontSize:20, color:'rgba(255,255,255,0.3)' }}>
+                        {teamPlayers.length}
+                      </span>
+                      {isHost && (
+                        <button onClick={() => startEdit(ti)} style={{ background:'none', border:'none', color:'var(--dim2)', cursor:'pointer', fontSize:14, padding:'2px 4px' }}>✏</button>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Player list */}
+                <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 6, minHeight: 80 }}>
+                  {teamPlayers.length === 0 && (
+                    <div style={{ fontFamily:'var(--f-body)', fontSize:12, color:'var(--dim2)', textAlign:'center', padding:'16px 0' }}>
+                      {lang === 'pt' ? 'Nenhum jogador' : 'No players'}
+                    </div>
+                  )}
+                  {teamPlayers.map(p => (
+                    <PlayerCard key={p.id} player={p} myId={myId} isHost={isHost}
+                      teamColor={color} lang={lang}
+                      onRemove={() => moveOther(p.id, null)}
+                    />
+                  ))}
+                  {/* Status */}
+                  {!ready && (
+                    <div style={{ fontFamily:'var(--f-body)', fontSize:11, color: 'var(--orange)', textAlign:'center', marginTop:4 }}>
+                      ⚠ {lang === 'pt' ? `mín. ${minReq}` : `min. ${minReq}`}
+                    </div>
+                  )}
+                  {ready && (
+                    <div style={{ fontFamily:'var(--f-body)', fontSize:11, color:'var(--green)', textAlign:'center', marginTop:4 }}>
+                      ✓ {lang === 'pt' ? 'pronto' : 'ready'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Host: assign unassigned players to this team */}
+                {isHost && unassigned.filter(p => !p.isBot).length > 0 && (
+                  <div style={{ padding:'6px 10px', borderTop:`1px solid ${border}`, display:'flex', flexWrap:'wrap', gap:4 }}>
+                    {unassigned.filter(p => !p.isBot).map(p => (
+                      <button key={p.id} onClick={() => moveOther(p.id, ti)}
+                        style={{ background:'none', border:`1px solid ${color}`, color, borderRadius:4, fontSize:11, padding:'3px 8px', cursor:'pointer', fontFamily:'var(--f-body)', fontWeight:700 }}>
+                        + {p.name}
+                      </button>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          )}
+            );
+          })}
+        </div>
 
-          {/* ── Settings (host only) ── */}
-          {isHost && (
-            <div className="pixel-box p-16">
-              <div className="pixel-title mb-16" style={{ fontSize: 8, color: 'var(--dim)' }}>{t('settings', lang)}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <SettingRow label={t('rounds', lang)}     options={[5,10,15]}  value={settings.rounds}
-                  onChange={v => { playClick(); send('update_settings', { ...settings, rounds: v }); }} />
-                <SettingRow label={t('max_damage', lang)} options={[3,5,7]}    value={settings.maxDamage}
-                  onChange={v => { playClick(); send('update_settings', { ...settings, maxDamage: v }); }} />
-                <SettingRow label={t('clue_timer', lang)} options={[30,60,90]} value={settings.clueTimer} suffix="s"
-                  onChange={v => { playClick(); send('update_settings', { ...settings, clueTimer: v }); }} />
-                <SettingRow label={t('vote_timer', lang)} options={[30,60,90]} value={settings.voteTimer} suffix="s"
-                  onChange={v => { playClick(); send('update_settings', { ...settings, voteTimer: v }); }} />
-              </div>
+        {/* Unassigned (non-bots) */}
+        {unassigned.filter(p => !p.isBot).length > 0 && (
+          <div style={{ marginBottom:20, padding:'12px 16px', borderRadius:8, border:'1px solid var(--dim)', background:'rgba(255,255,255,0.02)' }}>
+            <div className="label mb-8" style={{ color:'var(--dim2)' }}>{t('unassigned', lang)}</div>
+            <div className="flex-col gap-6">
+              {unassigned.filter(p => !p.isBot).map(p => (
+                <PlayerCard key={p.id} player={p} myId={myId} isHost={isHost}
+                  teamColor="var(--dim2)" lang={lang}
+                  onAssignTeam={ti => moveOther(p.id, ti)}
+                  showAssign={isHost}
+                  teams={teams}
+                />
+              ))}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* ── Start / waiting ── */}
-          <div className="text-center">
-            {isHost ? (
-              <div className="flex-col items-center gap-8">
-                <button
-                  className="btn btn-green btn-lg"
-                  onClick={() => { playClick(); send('start_game'); }}
-                  disabled={!canStart()}
-                  style={{ opacity: canStart() ? 1 : 0.4 }}
-                >
-                  🚀 {t('start_mission', lang)}
-                </button>
-                <span style={{ fontFamily: 'var(--f-pixel)', fontSize: 7, color: 'var(--dim)' }}>
+        {/* Settings */}
+        {isHost && (
+          <div className="pixel-box p-16 mb-20">
+            <div className="label mb-14" style={{ color:'var(--dim2)' }}>{t('settings', lang)}</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <SettingRow label={t('rounds', lang)}     options={[5,10,15]}  value={settings.rounds}
+                onChange={v => send('update_settings', { ...settings, rounds:v })} />
+              <SettingRow label={t('max_damage', lang)} options={[3,5,7]}    value={settings.maxDamage}
+                onChange={v => send('update_settings', { ...settings, maxDamage:v })} />
+              <SettingRow label={t('clue_timer', lang)} options={[30,60,90]} value={settings.clueTimer} suffix="s"
+                onChange={v => send('update_settings', { ...settings, clueTimer:v })} />
+              <SettingRow label={t('vote_timer', lang)} options={[30,60,90]} value={settings.voteTimer} suffix="s"
+                onChange={v => send('update_settings', { ...settings, voteTimer:v })} />
+            </div>
+          </div>
+        )}
+
+        {/* Start / waiting — sticky footer so it's always visible */}
+        <div style={{
+          position:'sticky', bottom:0,
+          background:'linear-gradient(0deg, rgba(5,5,16,1) 70%, transparent 100%)',
+          padding:'16px 0 8px',
+          textAlign:'center',
+        }}>
+          {isHost ? (
+            <div className="flex-col items-center gap-8">
+              <button
+                className="btn btn-green btn-lg btn-full"
+                onClick={() => { playClick(); send('start_game'); }}
+                disabled={!canStart()}
+                style={{ opacity: canStart() ? 1 : 0.35, maxWidth:360 }}
+              >
+                🚀 {t('start_mission', lang)}
+              </button>
+              {!canStart() && (
+                <span style={{ fontFamily:'var(--f-body)', fontSize:12, color:'var(--dim2)' }}>
                   {t('min_players_note', lang)}
                 </span>
-              </div>
-            ) : (
-              <div style={{ fontFamily: 'var(--f-vt)', fontSize: 24, color: 'var(--dim)', letterSpacing: 2 }}>
-                📡 {t('waiting_host', lang)}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ fontFamily:'var(--f-body)', fontSize:15, color:'var(--dim2)', letterSpacing:1, padding:'10px 0' }}>
+              📡 {t('waiting_host', lang)}
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function PlayerCard({ player, myId, isHost, teamColor, lang, onRemove, onAssignTeam, showAssign, teams }) {
+  const isMe   = player.id === myId;
+  const isBot  = player.isBot;
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '7px 10px', borderRadius: 6,
+      border: `1px solid ${isMe ? teamColor : 'rgba(255,255,255,0.08)'}`,
+      background: isMe ? `${teamColor}15` : 'rgba(255,255,255,0.025)',
+    }}>
+      {/* Avatar */}
+      <div style={{
+        width: 34, height: 34, borderRadius: 6, flexShrink: 0,
+        background: `${player.color}20`,
+        border: `2px solid ${player.color}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'var(--f-pixel)', fontSize: 9, color: player.color,
+        position: 'relative',
+      }}>
+        {player.name.slice(0,2).toUpperCase()}
+        {!player.connected && !isBot && (
+          <span style={{ position:'absolute', top:-5, right:-5, fontSize:10 }}>💤</span>
+        )}
+      </div>
+
+      {/* Name + badges */}
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        <div style={{ fontFamily:'var(--f-body)', fontWeight:800, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color: isBot ? 'var(--dim2)' : 'var(--white)' }}>
+          {player.name}
+          {isBot && <span style={{ fontFamily:'var(--f-body)', fontSize:10, color:'var(--dim2)', marginLeft:6 }}>BOT</span>}
+        </div>
+        <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginTop:2 }}>
+          {isMe   && <span className="tag tag-cyan"   style={{ fontSize:8 }}>{lang==='pt'?'VOCÊ':'YOU'}</span>}
+          {player.isHost && <span className="tag tag-yellow" style={{ fontSize:8 }}>👑 {lang==='pt'?'CAPITÃO':'CAPTAIN'}</span>}
+        </div>
+      </div>
+
+      {/* Assign buttons (host mode) */}
+      {showAssign && teams && (
+        <div className="flex gap-4">
+          {[0,1].map(ti => (
+            <button key={ti} onClick={() => onAssignTeam(ti)}
+              style={{
+                border: `1px solid ${ti===0?'var(--team0)':'var(--team1)'}`,
+                color: ti===0?'var(--team0)':'var(--team1)',
+                background:'none', borderRadius:4, padding:'3px 8px',
+                cursor:'pointer', fontFamily:'var(--f-body)', fontSize:10, fontWeight:700,
+              }}>
+              {ti===0?'🔴':'🔵'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Remove button */}
+      {isHost && onRemove && !isMe && (
+        <button onClick={onRemove} style={{ background:'none', border:'none', color:'var(--dim2)', cursor:'pointer', fontSize:14, padding:'2px 4px', flexShrink:0 }}>✕</button>
+      )}
     </div>
   );
 }
@@ -272,11 +328,11 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost }) 
 function SettingRow({ label, options, value, onChange, suffix = '' }) {
   return (
     <div>
-      <div className="pixel-title mb-8" style={{ fontSize: 7, color: 'var(--dim)' }}>{label}</div>
+      <div className="label mb-8" style={{ color:'var(--dim2)' }}>{label}</div>
       <div className="flex gap-4">
         {options.map(o => (
-          <button key={o} className={`btn btn-sm ${value === o ? 'btn-cyan' : 'btn-ghost'}`}
-            onClick={() => onChange(o)} style={{ flex: 1, fontSize: 8 }}>
+          <button key={o} className={`btn btn-sm ${value===o?'btn-cyan':'btn-ghost'}`}
+            onClick={() => { playClick(); onChange(o); }} style={{ flex:1, fontSize:9 }}>
             {o}{suffix}
           </button>
         ))}

@@ -129,7 +129,7 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%', maxWidth: 500 }}>
           {/* Winner */}
           <div className="pixel-box-green p-16 text-center">
-            <div className="pixel-title mb-8" style={{ fontSize: 8, color: 'var(--green)' }}>🏆 {t('winners', lang)}</div>
+            <div className="pixel-title mb-8" style={{ fontSize: 14, color: 'var(--green)' }}>🏆 {t('winners', lang)}</div>
             <ShipDisplay teamIndex={winner} damage={0} maxDamage={settings.maxDamage} size={64} animate />
             <div style={{ fontFamily: 'var(--f-vt)', fontSize: 22, color: 'var(--green)', marginTop: 8 }}>
               {winnerTeam?.name}
@@ -141,7 +141,7 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
 
           {/* Loser */}
           <div className="pixel-box-red p-16 text-center">
-            <div className="pixel-title mb-8" style={{ fontSize: 8, color: 'var(--red)' }}>💥 {t('losers', lang)}</div>
+            <div className="pixel-title mb-8" style={{ fontSize: 14, color: 'var(--red)' }}>💥 {t('losers', lang)}</div>
             <ShipDisplay teamIndex={loserIdx} damage={settings.maxDamage} maxDamage={settings.maxDamage} size={64} animate={false} />
             <div style={{ fontFamily: 'var(--f-vt)', fontSize: 22, color: 'var(--red)', marginTop: 8 }}>
               {loserTeam?.name}
@@ -162,21 +162,21 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
             {stats.bestPsychic && (
               <div className="text-center">
-                <div style={{ fontFamily: 'var(--f-pixel)', fontSize: 6, color: 'var(--dim)', marginBottom: 6 }}>{t('best_psychic', lang)}</div>
+                <div className="label mb-4" style={{ color: 'var(--dim2)' }}>{t('best_psychic', lang)}</div>
                 <div style={{ fontFamily: 'var(--f-vt)', fontSize: 22, color: 'var(--cyan)' }}>{stats.bestPsychic.name}</div>
                 <div style={{ fontFamily: 'var(--f-vt)', fontSize: 18, color: 'var(--dim)' }}>~±{stats.bestPsychic.avg}</div>
               </div>
             )}
             {stats.best && (
               <div className="text-center">
-                <div style={{ fontFamily: 'var(--f-pixel)', fontSize: 6, color: 'var(--dim)', marginBottom: 6 }}>{t('best_hit', lang)}</div>
+                <div className="label mb-4" style={{ color: 'var(--dim2)' }}>{t('best_hit', lang)}</div>
                 <div style={{ fontFamily: 'var(--f-vt)', fontSize: 22, color: 'var(--green)' }}>±{Math.round(stats.best.diff)}</div>
                 <div style={{ fontFamily: 'var(--f-vt)', fontSize: 16, color: 'var(--dim)' }}>{stats.best.clue}</div>
               </div>
             )}
             {stats.worst && (
               <div className="text-center">
-                <div style={{ fontFamily: 'var(--f-pixel)', fontSize: 6, color: 'var(--dim)', marginBottom: 6 }}>{t('worst_miss', lang)}</div>
+                <div className="label mb-4" style={{ color: 'var(--dim2)' }}>{t('worst_miss', lang)}</div>
                 <div style={{ fontFamily: 'var(--f-vt)', fontSize: 22, color: 'var(--red)' }}>±{Math.round(stats.worst.diff)}</div>
                 <div style={{ fontFamily: 'var(--f-vt)', fontSize: 16, color: 'var(--dim)' }}>{stats.worst.clue}</div>
               </div>
