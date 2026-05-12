@@ -12,12 +12,28 @@ function PlayerRow({ p, rank, compact, lang, transmitterId, maxDamage = 6 }) {
 
   return (
     <div style={{
-      display:'flex', alignItems:'center', gap: compact ? 8 : 12,
-      padding: compact ? '8px 10px' : '12px 14px',
-      background: p.isMe ? 'rgba(0,255,255,0.08)' : isTx ? 'rgba(255,224,0,0.05)' : 'rgba(255,255,255,0.02)',
       border:`1px solid ${p.isMe ? 'rgba(0,255,255,0.35)' : isTx ? 'rgba(255,224,0,0.25)' : 'rgba(255,255,255,0.06)'}`,
       borderRadius:4,
+      overflow:'hidden',
+      background: p.isMe ? 'rgba(0,255,255,0.08)' : isTx ? 'rgba(255,224,0,0.05)' : 'rgba(255,255,255,0.02)',
     }}>
+      {isTx && (
+        <div style={{
+          padding: compact ? '3px 10px' : '4px 14px',
+          background:'rgba(255,224,0,0.10)',
+          borderBottom:'1px solid rgba(255,224,0,0.2)',
+          fontFamily:'var(--f-title)',
+          fontSize: compact ? 7 : 8,
+          color:'var(--neon-amber)',
+          letterSpacing:'0.1em',
+        }}>
+          {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
+        </div>
+      )}
+      <div style={{
+        display:'flex', alignItems:'center', gap: compact ? 8 : 12,
+        padding: compact ? '8px 10px' : '12px 14px',
+      }}>
       {/* Rank */}
       <div className="t-title" style={{
         fontSize: compact ? 8 : 10,
@@ -43,19 +59,13 @@ function PlayerRow({ p, rank, compact, lang, transmitterId, maxDamage = 6 }) {
         }}>
           {p.name}{p.isMe ? ' ◀' : ''}
         </div>
-        {isTx ? (
-          <div className="t-mono" style={{ fontSize: compact ? 9 : 11, color:'var(--neon-amber)', marginTop: compact ? 2 : 4 }}>
-            {lang === 'pt' ? 'transmissor' : 'transmitter'}
-          </div>
-        ) : (
-          <div className="hpbar" style={{ height:7, marginTop:6, borderColor:'rgba(255,255,255,0.1)' }}>
-            <div className="hpbar-fill" style={{
-              width:`${damagePct}%`,
-              background:'linear-gradient(90deg,var(--neon-amber),var(--neon-coral))',
-              boxShadow:'none',
-            }}/>
-          </div>
-        )}
+        <div className="hpbar" style={{ height:7, marginTop:6, borderColor:'rgba(255,255,255,0.1)' }}>
+          <div className="hpbar-fill" style={{
+            width:`${damagePct}%`,
+            background:'linear-gradient(90deg,var(--neon-amber),var(--neon-coral))',
+            boxShadow:'none',
+          }}/>
+        </div>
       </div>
 
       {/* Score */}
@@ -68,11 +78,12 @@ function PlayerRow({ p, rank, compact, lang, transmitterId, maxDamage = 6 }) {
         }}>
           {p.score || 0}
         </div>
-        {(p.damage || 0) > 0 && !isTx && (
+        {(p.damage || 0) > 0 && (
           <div className="t-mono" style={{ fontSize:11, color:'var(--neon-coral)', marginTop:3 }}>
             DMG {p.damage}/{maxDamage}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

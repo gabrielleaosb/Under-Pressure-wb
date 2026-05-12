@@ -103,7 +103,7 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
           "{gameState.clue}"
         </div>
         <div className="t-title text-dim" style={{ fontSize: 9, marginTop: 6 }}>
-          ▸ {psychic?.name || '?'} · TX
+          ▸ {psychic?.name || '?'} · {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
         </div>
       </div>
 
@@ -171,7 +171,10 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
             border: '1px solid rgba(255,224,0,.3)',
             background: 'rgba(255,224,0,.05)',
           }}>
-            <div className="t-body" style={{ fontWeight: 800, fontSize: 15, color: 'var(--neon-amber)' }}>TX</div>
+            <div style={{ minWidth: 0 }}>
+              <div className="t-body" style={{ fontWeight: 800, fontSize: 15, color: 'var(--neon-amber)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{psychic?.name || '?'}</div>
+              <div className="t-title text-dim" style={{ fontSize: 8, marginTop: 2 }}>{lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}</div>
+            </div>
             <div className="t-read glow-text-amber" style={{ fontSize: 26 }}>+{txBonus}</div>
           </div>
           {voters.map((player) => {

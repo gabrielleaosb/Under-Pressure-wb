@@ -79,7 +79,7 @@ export default function Roulette({ gameState, myId, lang, send, spinning, isHost
       </h2>
 
       <div style={{ fontFamily:'var(--f-body)', fontSize:14, color:'var(--ink-dim)' }}>
-        TX {lang==='pt'?'Transmissor:':'Transmitter:'}
+        {lang==='pt'?'TRANSMISSOR:':'TRANSMITTER:'}
         {' '}<span style={{ color:'var(--neon-amber)', fontWeight:800 }}>{psychicPlayer?.name || '?'}</span>
       </div>
 
