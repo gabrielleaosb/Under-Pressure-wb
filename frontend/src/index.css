@@ -148,6 +148,7 @@ body::before {
   100% { transform:translateY(105vh) rotate(720deg); opacity:0; }
 }
 @keyframes blink-bar { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+@keyframes progress-shrink { from{transform:scaleX(1);} to{transform:scaleX(0);} }
 @keyframes pulse-cyan {
   0%,100%{ box-shadow:0 4px 0 #002a35,0 0 14px rgba(0,255,255,.4),inset 0 1px 0 rgba(255,255,255,.4); }
   50%    { box-shadow:0 4px 0 #002a35,0 0 32px rgba(0,255,255,.85),inset 0 1px 0 rgba(255,255,255,.4); }
@@ -378,7 +379,7 @@ body::before {
 }
 
 /* ── Wheel ── */
-.wheel-wrap { position:relative; }
+.wheel-wrap { position:relative; display:inline-block; }
 .wheel-pointer {
   position:absolute; top:-2px; left:50%; transform:translateX(-50%);
   width:0; height:0;
@@ -386,6 +387,17 @@ body::before {
   border-top:22px solid var(--neon-amber);
   filter:drop-shadow(0 0 8px rgba(255,224,0,.8));
   z-index:3;
+}
+.wheel-hub {
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  width:28%; height:28%;
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, #2b2f55, #0a0a1e 70%);
+  border:3px solid var(--metal-2);
+  box-shadow:0 0 20px rgba(0,255,255,0.3),inset 0 0 14px rgba(0,0,0,0.8);
+  display:flex; align-items:center; justify-content:center;
+  z-index:2;
 }
 
 /* ── Pressure gauge ── */
@@ -438,11 +450,11 @@ body::before {
   .scoreboard { padding:7px 10px; }
 }
 /* Sidebar: desktop only. Mobile uses topbar. */
-.sidebar-desktop { display:flex; }
+.sidebar-desktop { display:block; }
 .topbar-mobile   { display:none; }
 @media (max-width:780px) {
   .sidebar-desktop { display:none !important; }
-  .topbar-mobile   { display:flex !important; }
+  .topbar-mobile   { display:block !important; }
 }
 
 /* ── Utilities ── */

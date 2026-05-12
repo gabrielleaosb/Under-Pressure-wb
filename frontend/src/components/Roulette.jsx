@@ -63,15 +63,15 @@ export default function Roulette({ gameState, myId, lang, send, spinning, isHost
     }
   }, [spinning, selectedTheme]);
 
-  const SIZE   = 360;
-  const radius = SIZE / 2;      // 180
+  const SIZE   = Math.min(360, typeof window !== 'undefined' ? window.innerWidth - 48 : 360);
+  const radius = SIZE / 2;
   const segArc = (2 * Math.PI) / THEMES.length;
 
   const themeName = (th) => lang === 'en' ? th.shortEN : th.shortPT;
   const fullName  = (th) => lang === 'en' ? th.nameEN  : th.namePT;
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14, paddingBottom:20 }}>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14, paddingBottom:20, width:'100%' }}>
 
       <h2 className="t-title glow-text-cyan text-center" style={{ fontSize:'clamp(10px,2.2vw,13px)' }}>
         {lang==='pt'?'ROLETA DE TEMAS':'THEME ROULETTE'}
