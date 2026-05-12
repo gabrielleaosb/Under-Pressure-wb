@@ -26,7 +26,7 @@ function PlayerRow({ p, rank, compact, lang, transmitterId, maxDamage = 6 }) {
         textShadow: (isTx||rank===1) ? '0 0 8px var(--neon-amber)' : 'none',
         minWidth: compact ? 22 : 30, textAlign:'center',
       }}>
-        {isTx ? 'TX' : rank===1 ? '01' : `#${rank}`}
+        {isTx ? 'TX' : `#${rank}`}
       </div>
 
       {/* Ship icon */}
