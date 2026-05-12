@@ -59,7 +59,7 @@ const strings = {
     send_clue: 'TRANSMITIR DICA',
     left_side: 'ESQUERDA',
     right_side: 'DIREITA',
-    time_up_clue: 'TEMPO ESGOTADO — 1 DANO APLICADO',
+    time_up_clue: 'TEMPO ESGOTADO',
     // Voting
     voting_title: 'CALIBRAR PAINEL DE PRESSÃO',
     psychic_clue: 'DICA DO TRANSMISSOR',
@@ -156,7 +156,7 @@ const strings = {
     send_clue: 'TRANSMIT CLUE',
     left_side: 'LEFT',
     right_side: 'RIGHT',
-    time_up_clue: 'TIME UP — 1 DAMAGE APPLIED',
+    time_up_clue: 'TIME UP',
     voting_title: 'CALIBRATE PRESSURE PANEL',
     psychic_clue: 'TRANSMITTER\'S CLUE',
     drag_needle: 'DRAG THE NEEDLE',

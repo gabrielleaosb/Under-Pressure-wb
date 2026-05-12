@@ -3,7 +3,7 @@
  * Runs in the HOST's browser.
  * Transmitter rotates through ALL players. Everyone else votes individually.
  * Points awarded per-player by proximity. No teams.
- * Damage, streaks, and overdrive create round-to-round pressure.
+ * Streaks and BOOST create round-to-round pressure.
  */
 import { db, ref, get, set, update, remove, push, onValue, onChildAdded } from './firebase.js';
 import { PLAYER_COLORS, TEAM_NAME_PAIRS, CARDS, THEMES, selectCard, genId } from './gameData.js';
@@ -17,31 +17,31 @@ function scoreFromDiff(diff) {
   if (diff <= 25) return 3;
   if (diff <= 40) return 2;
   if (diff <= 60) return 1;
-  return 0;
+  return -1;
 }
 
-function transmitterBonus(avgDiff) {
-  if (avgDiff <= 10) return 3;
-  if (avgDiff <= 25) return 2;
-  if (avgDiff <= 40) return 1;
-  return 0;
+function boostBonus(diff) {
+  if (diff <= 15) return 3;
+  if (diff <= 25) return 1;
+  return -2;
 }
 
-const MAX_DAMAGE = 6;
-
-function damageFromDiff(diff) {
-  if (diff <= 25) return 0;
-  if (diff <= 40) return 1;
-  if (diff <= 60) return 2;
-  return 3;
+function transmitterScore(voters, votes, target) {
+  const hitters = voters.filter(p => {
+    const vote = votes[p.id];
+    if (!vote) return false;
+    return Math.abs(vote.position - target) <= 25;
+  });
+  const cleanSweep = hitters.length === voters.length && voters.length > 0 ? 1 : 0;
+  return hitters.length + cleanSweep;
 }
 
 function normalizeVote(raw) {
   if (typeof raw === 'number') {
-    return { position: Math.max(0, Math.min(100, Math.round(raw))), overdrive: false };
+    return { position: Math.max(0, Math.min(100, Math.round(raw))), boost: false };
   }
   const position = Math.max(0, Math.min(100, Math.round(Number(raw?.position) || 50)));
-  return { position, overdrive: !!raw?.overdrive };
+  return { position, boost: !!(raw?.boost ?? raw?.surge ?? raw?.overdrive) };
 }
 
 function buildHighlight(type, playerId, playerName, value = null) {
@@ -121,10 +121,8 @@ export async function createRoom(code, hostId, playerName, loadout = {}) {
       },
     },
     playerScores: {},
-    playerDamage: {},
     playerStreaks: {},
     startingTransmitterId: hostId,
-    maxDamage: MAX_DAMAGE,
     createdAt: Date.now(),
   };
   await set(ref(db, `rooms/${code}`), roomData);
@@ -365,10 +363,8 @@ export class GameEngine {
 
     const voters = allPlayers(room).filter(p => p.id !== room.psychicId);
     const roundScores = {};
-    const roundDamage = {};
     const roundStreaks = {};
     const highlights = [];
-    const diffs = [];
     const previousStreaks = room.playerStreaks || {};
 
     voters.forEach(p => {
@@ -376,21 +372,17 @@ export class GameEngine {
       if (!vote) return;
       const diff = Math.abs(vote.position - target);
       const baseScore = scoreFromDiff(diff);
-      const overdriveHit = vote.overdrive && diff <= 25;
-      const overdriveMiss = vote.overdrive && diff > 25;
+      const bonus = vote.boost ? boostBonus(diff) : 0;
       const streak = diff <= 15 ? (previousStreaks[p.id] || 0) + 1 : 0;
       const streakBonus = streak >= 3 ? 1 : 0;
-      const points = (overdriveHit ? baseScore * 2 : baseScore) + streakBonus;
-      const damage = damageFromDiff(diff) + (overdriveMiss ? 1 : 0);
+      const points = baseScore + bonus + streakBonus;
 
       roundScores[p.id] = points;
-      roundDamage[p.id] = damage;
       roundStreaks[p.id] = streak;
-      diffs.push(diff);
 
       if (diff <= 5) highlights.push(buildHighlight('perfect', p.id, p.name, diff));
-      else if (overdriveHit) highlights.push(buildHighlight('overdrive_hit', p.id, p.name, points));
-      else if (overdriveMiss) highlights.push(buildHighlight('overdrive_burn', p.id, p.name, damage));
+      else if (vote.boost && diff <= 25) highlights.push(buildHighlight('boost_hit', p.id, p.name, points));
+      else if (vote.boost && diff > 25) highlights.push(buildHighlight('boost_miss', p.id, p.name, bonus));
       else if (streak >= 3) highlights.push(buildHighlight('streak', p.id, p.name, streak));
     });
 
@@ -398,32 +390,29 @@ export class GameEngine {
     const averageVote = numericVotes.length
       ? Math.round(numericVotes.reduce((sum, pos) => sum + pos, 0) / numericVotes.length)
       : target;
-    const avgDiff  = diffs.length ? diffs.reduce((a,b)=>a+b,0)/diffs.length : 100;
-    const txBonus  = transmitterBonus(avgDiff);
+    const txPoints = transmitterScore(voters, votes, target);
     if (room.psychicId) {
-      const txStreak = avgDiff <= 25 ? (previousStreaks[room.psychicId] || 0) + 1 : 0;
-      roundScores[room.psychicId] = txBonus + (txStreak >= 3 ? 1 : 0);
-      roundDamage[room.psychicId] = avgDiff > 40 ? 1 : 0;
+      const txStreak = voters.length > 0 && voters.every(p => {
+        const vote = votes[p.id];
+        return vote && Math.abs(vote.position - target) <= 25;
+      }) ? (previousStreaks[room.psychicId] || 0) + 1 : 0;
+      roundScores[room.psychicId] = txPoints + (txStreak >= 3 ? 1 : 0);
       roundStreaks[room.psychicId] = txStreak;
       const tx = allPlayers(room).find(p => p.id === room.psychicId);
-      if (txBonus >= 2) highlights.push(buildHighlight('clean_tx', room.psychicId, tx?.name || '?', Math.round(avgDiff)));
+      if (txPoints >= voters.length && voters.length >= 2) {
+        highlights.push(buildHighlight('clean_tx', room.psychicId, tx?.name || '?', txPoints));
+      }
     }
 
-    // Update cumulative pressure state
     const existing = (await get(rref(this.roomCode, 'playerScores'))).val() || {};
-    const existingDamage = (await get(rref(this.roomCode, 'playerDamage'))).val() || {};
     const scoreUpdates = {};
-    const damageUpdates = {};
     const streakUpdates = {};
     allPlayers(room).forEach((player) => {
       scoreUpdates[player.id] = (existing[player.id] || 0) + (roundScores[player.id] || 0);
-      const damage = roundDamage[player.id] || 0;
-      damageUpdates[player.id] = Math.min(MAX_DAMAGE, (existingDamage[player.id] || 0) + damage);
       streakUpdates[player.id] = roundStreaks[player.id] || 0;
     });
     await Promise.all([
       set(rref(this.roomCode, 'playerScores'), scoreUpdates),
-      set(rref(this.roomCode, 'playerDamage'), damageUpdates),
       set(rref(this.roomCode, 'playerStreaks'), streakUpdates),
     ]);
 
@@ -439,12 +428,9 @@ export class GameEngine {
       votes,
       averageVote,
       roundScores,
-      roundDamage,
-      playerDamage: damageUpdates,
       streaks: streakUpdates,
       highlights: highlights.slice(0, 5),
-      transmitterBonus: txBonus,
-      avgDiff: Math.round(avgDiff),
+      transmitterScore: txPoints,
     });
 
     await roomUpdate(this.roomCode, {
@@ -454,13 +440,9 @@ export class GameEngine {
         votes,
         averageVote,
         roundScores,
-        roundDamage,
-        playerDamage: damageUpdates,
         streaks: streakUpdates,
         highlights: highlights.slice(0, 5),
-        maxDamage: MAX_DAMAGE,
-        transmitterBonus: txBonus,
-        avgDiff: Math.round(avgDiff),
+        transmitterScore: txPoints,
       },
       timerEnd: null,
     });
@@ -469,17 +451,11 @@ export class GameEngine {
   async _doNextRound(room) {
     const nextRound = (room.round || 0) + 1;
     if (nextRound >= (room.settings?.rounds ?? 7)) {
-      const [scoresSnap, damageSnap] = await Promise.all([
-        get(rref(this.roomCode, 'playerScores')),
-        get(rref(this.roomCode, 'playerDamage')),
-      ]);
+      const scoresSnap = await get(rref(this.roomCode, 'playerScores'));
       const scores = scoresSnap.val() || {};
-      const damage = damageSnap.val() || {};
       const entries = allPlayers(room).map((p) => [p.id, scores[p.id] || 0]);
-      const topScore = entries.reduce((best, [, score]) => Math.max(best, score), -1);
-      const tied = entries.filter(([, score]) => score === topScore);
-      const bestDamage = tied.reduce((best, [id]) => Math.min(best, damage[id] || 0), MAX_DAMAGE);
-      const winnerIds = tied.filter(([id]) => (damage[id] || 0) === bestDamage).map(([id]) => id);
+      const topScore = entries.reduce((best, [, score]) => Math.max(best, score), -Infinity);
+      const winnerIds = entries.filter(([, score]) => score === topScore).map(([id]) => id);
       await roomUpdate(this.roomCode, { phase: 'gameover', winner: winnerIds[0] || null, winnerIds });
       return;
     }
@@ -537,7 +513,6 @@ export class GameEngine {
       remove(rref(this.roomCode, 'emojiReactions')),
       remove(rref(this.roomCode, 'actions')),
       remove(rref(this.roomCode, 'playerScores')),
-      remove(rref(this.roomCode, 'playerDamage')),
       remove(rref(this.roomCode, 'playerStreaks')),
     ]);
   }
@@ -578,7 +553,6 @@ export class GameEngine {
       winner: null,
       winnerIds: null,
       startingTransmitterId: room?.transmitterId || this.hostId,
-      maxDamage: MAX_DAMAGE,
     });
     await Promise.all([
       remove(rref(this.roomCode, 'roundHistory')),
@@ -587,7 +561,6 @@ export class GameEngine {
       remove(rref(this.roomCode, 'psychicSecret')),
       remove(rref(this.roomCode, 'emojiReactions')),
       set(rref(this.roomCode, 'playerScores'), {}),
-      set(rref(this.roomCode, 'playerDamage'), {}),
       set(rref(this.roomCode, 'playerStreaks'), {}),
     ]);
   }
@@ -658,7 +631,7 @@ export class GameEngine {
       case 'submit_vote': {
         if (room.phase !== 'voting' || by === room.psychicId) return;
         const pos = Math.max(0, Math.min(100, Math.round(Number(data.position) || 50)));
-        await set(rref(this.roomCode, 'votes', by), { position: pos, overdrive: !!data.overdrive });
+        await set(rref(this.roomCode, 'votes', by), { position: pos, boost: !!data.boost });
         break;
       }
 

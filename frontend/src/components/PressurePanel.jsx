@@ -9,8 +9,10 @@ export default function PressurePanel({
   value = 50,
   onChange,
   disabled = false,
+  showNeedle = false,
   showTarget = null,
   showAverage = null,
+  showMyVote = null,
   readoutLabel,
   otherVotes = [],
   players = [],
@@ -171,20 +173,31 @@ export default function PressurePanel({
     if (!player) return null;
     const angle = valToAngle(position);
     const point = polar(angle, trackR - 22);
+    const rank = player.rank != null ? `#${player.rank}` : null;
     return (
-      <circle
-        key={playerId}
-        cx={point.x}
-        cy={point.y}
-        r={5}
-        fill={player.color}
-        stroke="#000"
-        strokeWidth={1.5}
-        opacity={0.95}
-        style={{ filter: `drop-shadow(0 0 6px ${player.color})` }}
-      />
+      <g key={playerId} style={{ filter: `drop-shadow(0 0 5px ${player.color})` }}>
+        <circle cx={point.x} cy={point.y} r={rank ? 10 : 5} fill={player.color} stroke="#000" strokeWidth={1.5} opacity={0.95} />
+        {rank && (
+          <text x={point.x} y={point.y + 4} textAnchor="middle" style={{ fontFamily: 'var(--f-read)', fontSize: 9, fill: '#000', fontWeight: 700, pointerEvents: 'none' }}>
+            {rank}
+          </text>
+        )}
+      </g>
     );
   });
+
+  let myVoteMarker = null;
+  if (showMyVote !== null) {
+    const angle = valToAngle(showMyVote);
+    const start = polar(angle, trackR - 18);
+    const end = polar(angle, trackR + 18);
+    myVoteMarker = (
+      <g style={{ filter: 'drop-shadow(0 0 6px rgba(0,255,255,0.85))' }}>
+        <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="var(--neon-cyan)" strokeWidth={3} strokeDasharray="4 3" />
+        <circle cx={end.x} cy={end.y} r={4} fill="var(--neon-cyan)" />
+      </g>
+    );
+  }
 
   const leftLabel = tCard(card, 'left', lang);
   const rightLabel = tCard(card, 'right', lang);
@@ -260,10 +273,11 @@ export default function PressurePanel({
         {ticks}
         {tickLabels}
         {targetMarker}
+        {myVoteMarker}
         {voteDots}
         {avgMarker}
 
-        {!disabled && (
+        {(!disabled || showNeedle) && (
           <g className="needle-glow-yellow" style={{ transition: dragging.current ? 'none' : 'transform 0.2s cubic-bezier(.4,1.6,.5,1)' }}>
             <polygon
               points={`${needleTip.x},${needleTip.y} ${needleBaseA.x},${needleBaseA.y} ${needleBaseB.x},${needleBaseB.y}`}
@@ -275,7 +289,7 @@ export default function PressurePanel({
           </g>
         )}
 
-        {!disabled && (
+        {(!disabled || showNeedle) && (
           <g style={{ pointerEvents: 'none' }}>
             <rect x={tipLabel.x - 18} y={tipLabel.y - 11} width={36} height={20} rx={3} fill="var(--space-0)" stroke="var(--neon-amber)" strokeWidth={1.5} />
             <text x={tipLabel.x} y={tipLabel.y + 4} textAnchor="middle" style={{ fontFamily: 'var(--f-read)', fontSize: 16, fill: 'var(--neon-amber)' }}>

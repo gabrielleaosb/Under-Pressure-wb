@@ -147,7 +147,6 @@ export function normalizeRoom(raw) {
     ? rawPlayers.filter((player) => player.connected !== false || player.isBot)
     : rawPlayers;
   const playerScores   = raw.playerScores || {};
-  const playerDamage   = raw.playerDamage || {};
   const playerStreaks  = raw.playerStreaks || {};
   const roundHistory   = Object.values(raw.roundHistory || {});
   const emojiReactions = Object.values(raw.emojiReactions || {}).slice(-15);
@@ -158,13 +157,11 @@ export function normalizeRoom(raw) {
     ...raw,
     players,
     playerScores,
-    playerDamage,
     playerStreaks,
     roundHistory,
     emojiReactions,
     votes: ['reveal','gameover'].includes(raw.phase) ? votes : null,
     submittedVotes,
-    maxDamage: raw.maxDamage ?? 6,
     totalRounds: raw.settings?.rounds ?? 7,
   };
 }

@@ -20,7 +20,7 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
   const [position,       setPosition]       = useState(50);
   const [confirmedOnce,  setConfirmedOnce]  = useState(false);
   const [lastVoted,      setLastVoted]      = useState(null);
-  const [overdrive,      setOverdrive]      = useState(false);
+  const [boost,          setBoost]          = useState(false);
   const [floatingEmojis, setFloatingEmojis] = useState([]);
   const lastTickRef = useRef(null);
 
@@ -64,7 +64,7 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
 
   // Submit / re-submit vote
   const handleConfirm = () => {
-    send('submit_vote', { position, overdrive });
+    send('submit_vote', { position, boost });
     setLastVoted(position);
     setConfirmedOnce(true);
     playVoteSubmit();
@@ -99,14 +99,14 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
 
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', width: 'min(560px, 100%)' }}>
             <button
-              className={`btn btn-sm ${overdrive ? 'btn-yellow' : 'btn-ghost'}`}
+              className={`btn btn-sm ${boost ? 'btn-yellow' : 'btn-ghost'}`}
               onClick={() => {
-                setOverdrive((value) => !value);
+                setBoost((value) => !value);
                 playClick();
               }}
               style={{ fontSize: 9, minWidth: 132, minHeight: 40 }}
             >
-              OVR x2 / DMG
+              BOOST
             </button>
             <span className="t-title text-dim" style={{ fontSize: 9, alignSelf: 'center' }}>
               {votedCount}/{nonPsychicVoters.length}
@@ -129,7 +129,7 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
 
           {!confirmedOnce ? (
             <button className="btn btn-primary btn-lg" onClick={handleConfirm} style={{ minWidth: 340, fontSize: 13, minHeight: 60 }}>
-              {lang === 'pt' ? 'CONFIRMAR' : 'CONFIRM'} · {Math.round(position)}{overdrive ? ' · OVR' : ''}
+              {lang === 'pt' ? 'CONFIRMAR' : 'CONFIRM'} · {Math.round(position)}{boost ? ' · BOOST' : ''}
             </button>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: 'min(460px, 100%)' }}>
@@ -137,11 +137,11 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
                 <span className="t-title glow-text-mint" style={{ fontSize: 10 }}>
                   OK
                 </span>
-                <div className="t-read glow-text-amber" style={{ fontSize: 44, marginTop: 4 }}>{lastVoted}{overdrive ? ' OVR' : ''}</div>
+                <div className="t-read glow-text-amber" style={{ fontSize: 44, marginTop: 4 }}>{lastVoted}{boost ? ' BOOST' : ''}</div>
               </div>
               {Math.round(position) !== lastVoted && (
                 <button className="btn btn-yellow" onClick={handleConfirm} style={{ width: '100%', fontSize: 12, minHeight: 52 }}>
-                  {lang === 'pt' ? 'AJUSTAR' : 'ADJUST'} · {Math.round(position)}
+                  {lang === 'pt' ? 'AJUSTAR' : 'ADJUST'} · {Math.round(position)}{boost ? ' · BOOST' : ''}
                 </button>
               )}
             </div>

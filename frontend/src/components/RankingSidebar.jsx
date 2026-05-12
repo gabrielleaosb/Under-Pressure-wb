@@ -5,10 +5,9 @@
 import React from 'react';
 import { ShipIcon } from './ShipRoster.jsx';
 
-function PlayerRow({ p, rank, compact, lang, transmitterId, maxDamage = 6 }) {
+function PlayerRow({ p, rank, compact, lang, transmitterId }) {
   const isTx = p.id === transmitterId;
   const nameColor = isTx ? 'var(--neon-amber)' : (p.isMe ? 'var(--neon-cyan)' : 'var(--ink)');
-  const damagePct = Math.min(100, Math.max(0, ((p.damage || 0) / maxDamage) * 100));
 
   return (
     <div style={{
@@ -59,13 +58,6 @@ function PlayerRow({ p, rank, compact, lang, transmitterId, maxDamage = 6 }) {
         }}>
           {p.name}{p.isMe ? ' ◀' : ''}
         </div>
-        <div className="hpbar" style={{ height:7, marginTop:6, borderColor:'rgba(255,255,255,0.1)' }}>
-          <div className="hpbar-fill" style={{
-            width:`${damagePct}%`,
-            background:'linear-gradient(90deg,var(--neon-amber),var(--neon-coral))',
-            boxShadow:'none',
-          }}/>
-        </div>
       </div>
 
       {/* Score */}
@@ -78,11 +70,6 @@ function PlayerRow({ p, rank, compact, lang, transmitterId, maxDamage = 6 }) {
         }}>
           {p.score || 0}
         </div>
-        {(p.damage || 0) > 0 && (
-          <div className="t-mono" style={{ fontSize:11, color:'var(--neon-coral)', marginTop:3 }}>
-            DMG {p.damage}/{maxDamage}
-          </div>
-        )}
       </div>
       </div>
     </div>
@@ -92,12 +79,12 @@ function PlayerRow({ p, rank, compact, lang, transmitterId, maxDamage = 6 }) {
 // ── Full sidebar (desktop) ─────────────────────────────────────────────────────
 export function RankingSidebar({ gameState, myId, lang, onSettings }) {
   if (!gameState) return null;
-  const { players, playerScores, playerDamage = {}, round, totalRounds, maxDamage } = gameState;
+  const { players, playerScores, round, totalRounds } = gameState;
   const transmitterId = gameState.psychicId || gameState.transmitterId;
 
   const sorted = players
     .filter(p => p.isBot || p.connected !== false)
-    .map(p => ({ ...p, score: playerScores?.[p.id] || 0, damage: playerDamage?.[p.id] || 0, isMe: p.id === myId }))
+    .map(p => ({ ...p, score: playerScores?.[p.id] || 0, isMe: p.id === myId }))
     .sort((a, b) => (b.score - a.score) || (a.damage - b.damage));
 
   return (
@@ -130,7 +117,7 @@ export function RankingSidebar({ gameState, myId, lang, onSettings }) {
 
       <div style={{ display:'flex', flexDirection:'column', gap:8, flex:1, overflowY:'auto' }}>
         {sorted.map((p, i) => (
-          <PlayerRow key={p.id} p={p} rank={i + 1} compact={false} lang={lang} transmitterId={transmitterId} maxDamage={maxDamage} />
+          <PlayerRow key={p.id} p={p} rank={i + 1} compact={false} lang={lang} transmitterId={transmitterId} />
         ))}
       </div>
     </div>
@@ -140,12 +127,12 @@ export function RankingSidebar({ gameState, myId, lang, onSettings }) {
 // ── Compact top bar (mobile) ───────────────────────────────────────────────────
 export function RankingTopBar({ gameState, myId, lang, onSettings }) {
   if (!gameState) return null;
-  const { players, playerScores, playerDamage = {}, round, totalRounds } = gameState;
+  const { players, playerScores, round, totalRounds } = gameState;
   const transmitterId = gameState.psychicId || gameState.transmitterId;
 
   const sorted = players
     .filter(p => p.isBot || p.connected !== false)
-    .map(p => ({ ...p, score: playerScores?.[p.id] || 0, damage: playerDamage?.[p.id] || 0, isMe: p.id === myId }))
+    .map(p => ({ ...p, score: playerScores?.[p.id] || 0, isMe: p.id === myId }))
     .sort((a, b) => (b.score - a.score) || (a.damage - b.damage));
 
   return (

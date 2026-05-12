@@ -46,7 +46,6 @@ export default function App() {
   const [myTargetPos, setMyTargetPos] = useState(null);
   const [error, setError] = useState(null);
   const [scanFlash, setScanFlash] = useState(false);
-  const [dmgFlash, setDmgFlash] = useState(false);
   const [, setStatus] = useState('idle');
   const [showSettings, setShowSettings] = useState(false);
   const [showRoundIntro, setShowRoundIntro] = useState(false);
@@ -81,13 +80,9 @@ export default function App() {
     setTimeout(() => setError(null), 3500);
   }, []);
 
-  const flash = useCallback((withDamage = false) => {
+  const flash = useCallback(() => {
     setScanFlash(true);
     setTimeout(() => setScanFlash(false), 500);
-    if (withDamage) {
-      setDmgFlash(true);
-      setTimeout(() => setDmgFlash(false), 2500);
-    }
   }, []);
 
   const clearActiveRoom = useCallback(() => {
@@ -121,11 +116,7 @@ export default function App() {
       setScreen(raw.phase === 'lobby' ? 'lobby' : 'game');
 
       if (prevPhase.current && prevPhase.current !== raw.phase) {
-        const previousRoom = prevRoom.current;
-        const hadDamage =
-          (raw.damage0 ?? 0) > (previousRoom?.damage0 ?? 0) ||
-          (raw.damage1 ?? 0) > (previousRoom?.damage1 ?? 0);
-        flash(hadDamage);
+        flash();
         if (raw.phase === 'roulette') {
           playPhaseChange();
           setShowRoundIntro(true);
@@ -274,7 +265,7 @@ export default function App() {
     <>
       <StarField />
       {scanFlash && <div className="scanflash" />}
-      {dmgFlash && <div className="damage-overlay" />}
+
 
       {error && (
         <div

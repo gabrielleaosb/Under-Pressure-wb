@@ -27,10 +27,10 @@ function highlightLabel(highlight, lang) {
   const name = highlight.playerName || '?';
   const labels = {
     perfect: lang === 'pt' ? `${name} cravou` : `${name} nailed it`,
-    overdrive_hit: lang === 'pt' ? `${name} dobrou pontos` : `${name} doubled points`,
-    overdrive_burn: lang === 'pt' ? `${name} queimou no OVR` : `${name} burned OVR`,
-    streak: lang === 'pt' ? `${name} em serie x${highlight.value}` : `${name} streak x${highlight.value}`,
-    clean_tx: lang === 'pt' ? `${name} guiou bem` : `${name} guided well`,
+    boost_hit: lang === 'pt' ? `${name} boost acertou` : `${name} boost paid off`,
+    boost_miss: lang === 'pt' ? `${name} boost errou` : `${name} boost backfired`,
+    streak: lang === 'pt' ? `${name} em série x${highlight.value}` : `${name} streak x${highlight.value}`,
+    clean_tx: lang === 'pt' ? `${name} guiou todos` : `${name} guided everyone`,
   };
   return labels[highlight.type] || name;
 }
@@ -83,15 +83,20 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
 
   const allVotes = result.votes || {};
   const roundScores = result.roundScores || {};
-  const roundDamage = result.roundDamage || {};
   const highlights = result.highlights || [];
-  const txBonus = result.transmitterBonus ?? 0;
+  const txScore = result.transmitterScore ?? 0;
   const averageVote = result.averageVote ?? result.target;
+  const isPsychic = gameState.psychicId === myId;
   const voters = gameState.players.filter((player) => player.id !== gameState.psychicId);
+
+  const sortedVoters = [...voters].sort((a, b) => (roundScores[b.id] ?? 0) - (roundScores[a.id] ?? 0));
+  const rankMap = {};
+  sortedVoters.forEach((p, i) => { rankMap[p.id] = i + 1; });
+  const rankedPlayers = gameState.players.map(p => ({ ...p, rank: rankMap[p.id] ?? null }));
 
   const myVote = votePosition(allVotes[myId]);
   const myDiff = myVote !== null ? Math.abs(myVote - result.target) : Math.abs(averageVote - result.target);
-  const headline = gradeFromDiff(myDiff, lang);
+  const headline = gradeFromDiff(isPsychic ? Math.abs(averageVote - result.target) : myDiff, lang);
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, paddingBottom: 28 }}>
@@ -111,14 +116,15 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
         <PressurePanel
           card={gameState.currentCard}
           lang={lang}
-          value={averageVote}
+          value={isPsychic ? averageVote : (myVote ?? averageVote)}
           onChange={() => {}}
           disabled
           showTarget={result.target}
-          showAverage={averageVote}
-          readoutLabel={lang === 'pt' ? 'MEDIA' : 'AVERAGE'}
-          otherVotes={Object.entries(allVotes).map(([id, vote]) => ({ playerId: id, position: votePosition(vote) })).filter((vote) => vote.position !== null)}
-          players={gameState.players}
+          showNeedle={!isPsychic && myVote !== null}
+          showMyVote={!isPsychic && myVote !== null ? myVote : null}
+          readoutLabel={isPsychic ? (lang === 'pt' ? 'MEDIA' : 'AVERAGE') : (lang === 'pt' ? 'SEU PALPITE' : 'YOUR GUESS')}
+          otherVotes={Object.entries(allVotes).map(([id, vote]) => ({ playerId: id, position: votePosition(vote) })).filter(v => v.position !== null)}
+          players={rankedPlayers}
         />
       </div>
 
@@ -134,9 +140,11 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
       }}>
         <div style={{ textAlign: 'center' }}>
           <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 6 }}>
-            TARGET / AVG
+            {isPsychic ? (lang === 'pt' ? 'MEDIA / ALVO' : 'AVG / TARGET') : (lang === 'pt' ? 'PALPITE / ALVO' : 'GUESS / TARGET')}
           </div>
-          <div className="t-read glow-text-mint" style={{ fontSize: 34 }}>{result.target} / {averageVote}</div>
+          <div className="t-read glow-text-mint" style={{ fontSize: 34 }}>
+            {isPsychic ? averageVote : (myVote ?? '--')} / {result.target}
+          </div>
         </div>
         <div style={{ width: 1, height: 36, background: 'var(--metal-2)' }} />
         <div style={{ textAlign: 'center' }}>
@@ -144,7 +152,7 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
             {headline.label}
           </div>
           <div className="t-mono" style={{ fontSize: 17, marginTop: 6, color: headline.color }}>
-            ±{Math.round(myDiff)} · +{roundScores[myId] ?? 0} PTS{roundDamage[myId] ? ` · DMG +${roundDamage[myId]}` : ''}
+            ±{Math.round(myDiff)} · {(roundScores[myId] ?? 0) >= 0 ? '+' : ''}{roundScores[myId] ?? 0}
           </div>
         </div>
       </div>
@@ -175,15 +183,15 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
               <div className="t-body" style={{ fontWeight: 800, fontSize: 15, color: 'var(--neon-amber)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{psychic?.name || '?'}</div>
               <div className="t-title text-dim" style={{ fontSize: 8, marginTop: 2 }}>{lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}</div>
             </div>
-            <div className="t-read glow-text-amber" style={{ fontSize: 26 }}>+{txBonus}</div>
+            <div className="t-read glow-text-amber" style={{ fontSize: 26 }}>{txScore >= 0 ? '+' : ''}{txScore}</div>
           </div>
-          {voters.map((player) => {
+          {sortedVoters.map((player) => {
             const rawVote = allVotes[player.id];
             const vote = votePosition(rawVote);
             const diff = vote !== null ? Math.abs(vote - result.target) : null;
             const grade = diff !== null ? gradeFromDiff(diff, lang) : null;
             const points = roundScores[player.id] ?? 0;
-            const damage = roundDamage[player.id] ?? 0;
+            const usedSurge = rawVote?.boost;
             const isMe = player.id === myId;
             return (
               <div key={player.id} style={{
@@ -196,12 +204,17 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
                 border: `1px solid ${isMe ? player.color : 'rgba(255,255,255,.06)'}`,
                 background: isMe ? `${player.color}12` : 'rgba(255,255,255,.02)',
               }}>
-                <div className="t-body" style={{ fontWeight: 800, fontSize: 15, color: isMe ? player.color : 'var(--ink)' }}>{player.name}</div>
-                <div className="t-read" style={{ fontSize: 22, color: grade?.color || 'var(--ink-faint)' }}>
-                  {vote ?? '--'} {voteOverdrive(rawVote) ? 'OVR' : ''} {diff !== null ? `±${Math.round(diff)}` : ''}
+                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div className="t-body" style={{ fontWeight: 800, fontSize: 15, color: isMe ? player.color : 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</div>
+                  {usedSurge && (
+                    <span style={{ fontSize: 8, color: 'var(--neon-amber)', border: '1px solid rgba(255,224,0,0.5)', borderRadius: 2, padding: '1px 4px', whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'var(--f-title)' }}>BOOST</span>
+                  )}
                 </div>
-                <div className="t-read" style={{ fontSize: 20, color: points > 0 ? grade?.color || 'var(--ink)' : 'var(--ink-faint)' }}>
-                  +{points} PTS{damage ? ` · DMG +${damage}` : ''}
+                <div className="t-read" style={{ fontSize: 22, color: grade?.color || 'var(--ink-faint)' }}>
+                  {vote ?? '--'} {diff !== null ? `±${Math.round(diff)}` : ''}
+                </div>
+                <div className="t-read" style={{ fontSize: 20, color: points > 0 ? (grade?.color || 'var(--ink)') : points < 0 ? 'var(--neon-coral)' : 'var(--ink-faint)' }}>
+                  {points >= 0 ? '+' : ''}{points}
                 </div>
               </div>
             );
