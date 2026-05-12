@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 
 export const SHIP_SWATCHES = {
   red: '#ff5468',
@@ -57,6 +57,9 @@ export const SHIP_LABELS = {
 const GRID_W = 24;
 const GRID_H = 16;
 const CY = 8;
+const SPRITE_CACHE = new Map();
+const DAMAGE_CACHE = new Map();
+const PALETTE_CACHE = new Map();
 
 function shadeColor(hex, amount) {
   const raw = hex.replace('#', '');
@@ -69,8 +72,9 @@ function shadeColor(hex, amount) {
 }
 
 function makePalette(color) {
+  if (PALETTE_CACHE.has(color)) return PALETTE_CACHE.get(color);
   const base = SHIP_SWATCHES[color] || SHIP_SWATCHES.blue;
-  return {
+  const palette = {
     '0': base,
     '1': shadeColor(base, -56),
     '2': shadeColor(base, 38),
@@ -85,6 +89,8 @@ function makePalette(color) {
     b: '#ffd54a',
     c: '#ff3758',
   };
+  PALETTE_CACHE.set(color, palette);
+  return palette;
 }
 
 function blankGrid() {
@@ -169,6 +175,7 @@ function addOutline(grid) {
 }
 
 function buildSprite(model) {
+  if (SPRITE_CACHE.has(model.id)) return SPRITE_CACHE.get(model.id);
   const grid = blankGrid();
   const bodyStart = 4;
   const bodyEnd = 17;
@@ -210,11 +217,15 @@ function buildSprite(model) {
   addAccent(grid, bodyStart, bodyEnd);
   addEngines(grid, model, bodyStart);
 
-  return addOutline(grid).map((row) => row.join(''));
+  const rows = addOutline(grid).map((row) => row.join(''));
+  SPRITE_CACHE.set(model.id, rows);
+  return rows;
 }
 
-function applyDamage(rows, level, seed = 0) {
+function applyDamage(rows, level, seed = 0, cacheKey = '') {
   if (!level) return rows;
+  const key = `${cacheKey}:${level}:${seed}`;
+  if (DAMAGE_CACHE.has(key)) return DAMAGE_CACHE.get(key);
   const next = rows.map((row) => row.split(''));
   const hull = [];
   const rand = (n) => {
@@ -241,7 +252,9 @@ function applyDamage(rows, level, seed = 0) {
   if (level >= 3) burnPixels(Math.max(6, Math.floor(hull.length * 0.2)), ['.', 'c', 'a', '9']);
   if (level >= 4) burnPixels(Math.max(12, Math.floor(hull.length * 0.35)), ['.', 'a', 'b', 'c', '9']);
 
-  return next.map((row) => row.join(''));
+  const damaged = next.map((row) => row.join(''));
+  DAMAGE_CACHE.set(key, damaged);
+  return damaged;
 }
 
 function PixelArt({ rows, palette, pixel, glow = false, shake = false }) {
@@ -266,7 +279,7 @@ function PixelArt({ rows, palette, pixel, glow = false, shake = false }) {
   );
 }
 
-export function ShipIcon({
+export const ShipIcon = memo(function ShipIcon({
   ship = SHIP_MODELS[0].id,
   color = 'blue',
   pixel = 4,
@@ -276,7 +289,7 @@ export function ShipIcon({
 }) {
   const model = useMemo(() => getShipModel(ship), [ship]);
   const baseSprite = useMemo(() => buildSprite(model), [model]);
-  const rows = useMemo(() => applyDamage(baseSprite, damage, ship.length + pixel), [baseSprite, damage, ship, pixel]);
+  const rows = useMemo(() => applyDamage(baseSprite, damage, ship.length, ship), [baseSprite, damage, ship]);
   const palette = useMemo(() => makePalette(color), [color]);
 
   return (
@@ -284,7 +297,7 @@ export function ShipIcon({
       <PixelArt rows={rows} palette={palette} pixel={pixel} glow={glow} shake={shake || damage >= 3} />
     </div>
   );
-}
+});
 
 export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'blue', lang = 'pt', onConfirm, onClose }) {
   const [ship, setShip] = useState(currentShip);

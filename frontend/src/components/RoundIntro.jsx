@@ -41,17 +41,17 @@ export default function RoundIntro({ gameState, myId, lang, onDone }) {
       style={{
         position: 'fixed', inset: 0, zIndex: 8500,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(8px)',
+        background: 'rgba(5,5,16,0.78)', backdropFilter: 'blur(12px) saturate(110%)',
         cursor: 'pointer',
         opacity: fading ? 0 : 1,
         transition: 'opacity 0.35s ease',
       }}
     >
       <div style={{
-        width: '88%', maxWidth: 340,
-        background: 'rgba(4,6,18,0.97)',
+        width: 'min(580px, calc(100% - 32px))',
+        background: 'linear-gradient(180deg, rgba(18,21,50,0.98), rgba(6,8,24,0.98))',
         border: `2px solid ${color}`,
-        borderRadius: 14,
+        borderRadius: 6,
         boxShadow: `0 0 60px ${color}44`,
         overflow: 'hidden',
         animation: 'theme-pop 0.3s cubic-bezier(0.34,1.56,0.64,1)',
@@ -69,7 +69,7 @@ export default function RoundIntro({ gameState, myId, lang, onDone }) {
         </div>
 
         <div style={{
-          padding: '28px 28px 24px',
+          padding: '30px 28px 26px',
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', gap: 20, textAlign: 'center',
         }}>
@@ -77,7 +77,7 @@ export default function RoundIntro({ gameState, myId, lang, onDone }) {
           <div>
             <div className="label" style={{ color: 'var(--ink-dim)', marginBottom: 4 }}>
               {lang === 'pt' ? 'RODADA' : 'ROUND'}&nbsp;
-              {(gameState.round ?? 0) + 1} / {gameState.totalRounds ?? '?'}
+              {String((gameState.round ?? 0) + 1).padStart(2, '0')} / {String(gameState.totalRounds ?? '?').padStart(2, '0')}
             </div>
           </div>
 
@@ -101,8 +101,8 @@ export default function RoundIntro({ gameState, myId, lang, onDone }) {
             border: `2px solid ${color}`,
             background: `${color}09`,
           }}>
-            <div style={{ fontSize: 28, marginBottom: 6 }}>{roleIcon}</div>
-            <div className="pixel-title" style={{ fontSize: 'clamp(9px,2.5vw,11px)', color, lineHeight: 2 }}>
+            <div style={{ fontSize: 26, marginBottom: 6 }}>{roleIcon}</div>
+            <div className="pixel-title" style={{ fontSize: 'clamp(10px,2.8vw,13px)', color, lineHeight: 2 }}>
               {roleLine}
             </div>
             <div style={{ fontFamily: 'var(--f-body)', fontSize: 12, color: 'var(--ink-dim)', marginTop: 6 }}>

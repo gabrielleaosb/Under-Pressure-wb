@@ -24,7 +24,9 @@ export default function Settings({ lang, setLang, onLeaveRoom, onClose, inGame }
       <div className="settings-panel panel bevel glow-cyan">
         <div className="settings-panel__header">
           <div>
-            <div className="home-eyebrow">{lang === 'pt' ? 'PAINEL DE CONTROLE' : 'CONTROL PANEL'}</div>
+            <div className="t-title text-dim" style={{ fontSize: 7 }}>
+              ▸ {lang === 'pt' ? 'PAINEL DE CONTROLE' : 'CONTROL PANEL'}
+            </div>
             <h2 className="t-title glow-text-cyan" style={{ fontSize: 'clamp(10px,2.4vw,13px)', marginTop: 14 }}>
               {lang === 'pt' ? 'CONFIGURACOES' : 'SETTINGS'}
             </h2>

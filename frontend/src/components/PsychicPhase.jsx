@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PressurePanel from './PressurePanel.jsx';
-import { t, tTheme, tCard } from '../i18n.js';
+import { t, tCard } from '../i18n.js';
 import { playTimerTick, playAlarmTick, playClick } from '../sounds.js';
 
 function useCountdown(timerEnd) {
@@ -9,7 +9,7 @@ function useCountdown(timerEnd) {
     if (!timerEnd) { setRemaining(0); return; }
     const tick = () => setRemaining(Math.max(0, Math.ceil((timerEnd - Date.now()) / 1000)));
     tick();
-    const id = setInterval(tick, 250);
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [timerEnd]);
   return remaining;
@@ -37,77 +37,22 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
   };
 
   return (
-    <div className="flex-col gap-16" style={{ paddingBottom: 32 }}>
-
-      {/* Phase header */}
-      <div className="flex items-center justify-between gap-12" style={{ flexWrap: 'wrap' }}>
-        <div className="label" style={{ color: 'var(--ink-dim)' }}>
-          {t('round_n', lang)} {gameState.round + 1} / {gameState.totalRounds}
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, paddingBottom: 28 }}>
+      <div className="panel bevel glow-amber" style={{ padding: '10px 18px', textAlign: 'center', width: 'min(420px, 100%)' }}>
+        <div className="t-title text-dim" style={{ fontSize: 7, marginBottom: 4 }}>
+          ▸ {psychicPlayer?.name || '?'} · {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
         </div>
-        <div style={{
-          padding: '8px 14px', borderRadius: 6, textAlign: 'center',
-          border: `1px solid ${isPsychic ? 'rgba(255,224,0,0.5)' : 'var(--metal-2)'}`,
-          background: isPsychic ? 'rgba(255,224,0,0.06)' : 'rgba(255,255,255,0.02)',
-        }}>
-          <div className="label mb-4" style={{ color: 'var(--ink-dim)' }}>
-            📡 {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
-          </div>
-          <div style={{ fontFamily: 'var(--f-vt)', fontSize: 26, color: 'var(--neon-amber)', lineHeight: 1 }}>
-            {psychicPlayer?.name}
-          </div>
-          {isPsychic && (
-            <div style={{ fontFamily: 'var(--f-body)', fontSize: 11, color: 'var(--neon-amber)', marginTop: 4, fontWeight: 700 }}>
-              {lang === 'pt' ? '← você' : '← you'}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Timer */}
-      <div>
-        <div className="flex justify-between mb-8">
-          <span className="label" style={{ color: 'var(--dim2)' }}>
-            {isPsychic ? t('clue_label', lang) : t('psychic_watch', lang)}
-          </span>
-          <span style={{
-            fontFamily: 'var(--f-vt)', fontSize: 22,
-            color: pct < .25 ? 'var(--red)' : pct < .5 ? 'var(--orange)' : 'var(--cyan)',
-          }}>
-            {remaining}s
-          </span>
-        </div>
-        <div className="timer-bar-outer">
-          <div className={`timer-bar-inner${pct<.25?' danger':pct<.5?' warn':''}`} style={{ width:`${pct*100}%` }} />
-        </div>
-      </div>
-
-      {/* Theme & spectrum card */}
-      <div className="pixel-box-yellow p-16 text-center">
-        <div style={{ fontFamily:'var(--f-body)', fontWeight:900, fontSize:13, color:gameState.currentTheme?.color, letterSpacing:2, marginBottom:8 }}>
+        <div className="t-title glow-text-amber" style={{ fontSize: 'clamp(14px, 3vw, 20px)' }}>
           {lang === 'en' ? gameState.currentTheme?.shortEN : gameState.currentTheme?.shortPT}
         </div>
-        <div className="label mb-4" style={{ color: 'var(--dim2)' }}>TEMA / THEME</div>
-        <div className="pixel-title" style={{ fontSize: 'clamp(14px,3.5vw,18px)', color: 'var(--yellow)', textShadow: '0 0 14px var(--yellow)' }}>
-          {tTheme(gameState.currentTheme, lang)}
-        </div>
-        <div className="divider" />
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ fontFamily: 'var(--f-body)', fontWeight: 800, fontSize: 13, color: '#88aaff' }}>
-            ← {tCard(gameState.currentCard, 'left', lang)}
-          </span>
-          <span style={{ fontFamily: 'var(--f-body)', fontWeight: 800, fontSize: 13, color: '#ffaa88' }}>
-            {tCard(gameState.currentCard, 'right', lang)} →
-          </span>
+        <div className="t-mono text-dim" style={{ fontSize: 13, marginTop: 6 }}>
+          {tCard(gameState.currentCard, 'left', lang)} ← → {tCard(gameState.currentCard, 'right', lang)}
         </div>
       </div>
 
-      {/* Psychic: target + clue input */}
       {isPsychic && myTargetPos !== null && (
         <>
-          <div className="pixel-box-red p-16">
-            <div className="label mb-12" style={{ color: 'var(--dim2)' }}>
-              {t('target_label', lang)}
-            </div>
+          <div className="panel bevel glow-cyan" style={{ width: 'min(420px, 100%)', padding: 14 }}>
             <PressurePanel
               card={gameState.currentCard}
               lang={lang}
@@ -115,16 +60,17 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
               onChange={() => {}}
               disabled
               showTarget={myTargetPos}
+              readoutLabel={t('target_label', lang)}
             />
           </div>
 
-          <div className="pixel-box p-16">
-            <label className="label" style={{ color: 'var(--dim2)', display: 'block', marginBottom: 10 }}>
-              {t('clue_label', lang)}
+          <div className="panel bevel" style={{ width: 'min(420px, 100%)', padding: 14 }}>
+            <label className="t-title text-dim" style={{ display: 'block', fontSize: 8, marginBottom: 8 }}>
+              ▸ {t('clue_label', lang)}
             </label>
-            <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <input
-                className="pixel-input"
+                className="input"
                 value={clue}
                 onChange={e => setClue(e.target.value.replace(/\s/g, ''))}
                 placeholder={t('clue_ph', lang)}
@@ -133,12 +79,8 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
                 style={{ flex: 1, minWidth: 160 }}
                 autoFocus
               />
-              <button
-                className="btn btn-green"
-                onClick={() => { playClick(); handleSubmit(); }}
-                disabled={!clue.trim()}
-              >
-                📡 {t('send_clue', lang)}
+              <button className="btn btn-primary" onClick={() => { playClick(); handleSubmit(); }} disabled={!clue.trim()}>
+                ▸ {t('send_clue', lang)}
               </button>
             </div>
           </div>
@@ -146,25 +88,49 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
       )}
 
       {isPsychic && myTargetPos === null && (
-        <div className="pixel-box p-16 text-center">
-          <div style={{ fontFamily: 'var(--f-body)', fontSize: 15, color: 'var(--dim2)' }}>
-            ⏳ {lang === 'pt' ? 'Recebendo posição secreta...' : 'Receiving secret position...'}
+        <div className="panel bevel glow-cyan" style={{ width: 'min(420px, 100%)', padding: 20, textAlign: 'center' }}>
+          <div className="t-title glow-text-cyan" style={{ fontSize: 10 }}>
+            {lang === 'pt' ? 'RECEBENDO ALVO...' : 'RECEIVING TARGET...'}
           </div>
         </div>
       )}
 
       {!isPsychic && (
-        <div className="pixel-box p-16 text-center">
-          <div style={{ fontFamily: 'var(--f-body)', fontSize: 15, color: 'var(--dim2)', marginBottom: 6 }}>
-            📡 {t('psychic_watch', lang)}
-          </div>
-          <div style={{ fontFamily: 'var(--f-body)', fontSize: 14, color: 'var(--dim2)' }}>
-            {lang === 'pt'
-              ? `Aguardando dica de ${psychicPlayer?.name}...`
-              : `Waiting for ${psychicPlayer?.name}'s clue...`}
+        <div className="panel bevel glow-cyan" style={{
+          width: 'min(420px, 100%)',
+          padding: 22,
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 14,
+        }}>
+          <div className="t-title glow-text-amber" style={{ fontSize: 12 }}>{psychicPlayer?.name || '?'}</div>
+          <div className="t-mono text-dim" style={{ fontSize: 16 }}>{t('psychic_watch', lang)}</div>
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+            {[0, 1, 2].map((i) => (
+              <span key={i} style={{
+                width: 8,
+                height: 8,
+                background: 'var(--neon-cyan)',
+                borderRadius: '50%',
+                boxShadow: '0 0 6px var(--neon-cyan)',
+                animation: `flicker 1.4s steps(4) ${i * .2}s infinite`,
+              }} />
+            ))}
           </div>
         </div>
       )}
+
+      <div style={{ width: 'min(380px, 100%)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--f-read)', fontSize: 13, color: pct < .25 ? 'var(--neon-coral)' : 'var(--ink-dim)', marginBottom: 4 }}>
+          <span>{lang === 'pt' ? 'TEMPO' : 'TIME'}</span>
+          <span>{remaining}s</span>
+        </div>
+        <div className="timer-bar-outer">
+          <div className={`timer-bar-inner${pct < .25 ? ' danger' : pct < .5 ? ' warn' : ''}`} style={{ width: `${pct * 100}%` }} />
+        </div>
+      </div>
     </div>
   );
 }

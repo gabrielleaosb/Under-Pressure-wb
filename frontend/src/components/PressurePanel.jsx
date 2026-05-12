@@ -76,6 +76,7 @@ export default function PressurePanel({
   }, []);
 
   useEffect(() => {
+    if (disabled) return undefined;
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     window.addEventListener('touchmove', onMove, { passive: false });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { db, ref, push, update, onValue, onDisconnect } from './firebase.js';
 import { genId, normalizeRoom } from './gameData.js';
 import { generateRoomCode, createRoom, addPlayerToRoom, GameEngine } from './gameEngine.js';
@@ -55,7 +55,7 @@ export default function App() {
   const prevPhase = useRef(null);
   const prevRoom = useRef(null);
 
-  const gameState = rawRoom ? normalizeRoom(rawRoom) : null;
+  const gameState = useMemo(() => (rawRoom ? normalizeRoom(rawRoom) : null), [rawRoom]);
   const me = gameState?.players?.find((player) => player.id === myId);
   const isHost = rawRoom?.hostId === myId;
   const activeTransmitterId = gameState?.psychicId || gameState?.transmitterId;

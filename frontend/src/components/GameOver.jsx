@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { t } from '../i18n.js';
 import { playWin, playLose, playClick } from '../sounds.js';
+import { ShipIcon } from './ShipRoster.jsx';
 
 function useConfetti(active) {
   const [pieces, setPieces] = useState([]);
@@ -28,6 +29,8 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
   const iAmWinner  = winnerIds?.includes(myId);
   const isTie      = (winnerIds?.length || 0) > 1;
   const pieces     = useConfetti(iAmWinner);
+  const winningPlayer = players.find(p => p.id === winner);
+  const runnerUp = ranked.find(p => p.id !== winner);
 
   useEffect(() => {
     if (soundPlayed.current) return;
@@ -84,6 +87,27 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
       <h1 className="pixel-title glow-text-cyan" style={{ fontSize:'clamp(14px,5vw,22px)' }}>
         {t('gameover_title', lang)}
       </h1>
+
+      <div style={{ display: 'flex', gap: 34, alignItems: 'flex-end', justifyContent: 'center', flexWrap: 'wrap' }}>
+        {runnerUp && (
+          <div className="text-center">
+            <div className="t-title glow-text-coral" style={{ fontSize: 8, marginBottom: 10 }}>
+              {lang === 'pt' ? 'NAVE AVARIADA' : 'SHIP DAMAGED'}
+            </div>
+            <ShipIcon ship={runnerUp.ship || 'nova_01'} color={runnerUp.shipColor || 'red'} damage={3} pixel={6} shake />
+            <div className="t-mono text-dim" style={{ fontSize: 14, marginTop: 10 }}>{runnerUp.name}</div>
+          </div>
+        )}
+        {winningPlayer && (
+          <div className="text-center">
+            <div className="t-title glow-text-mint" style={{ fontSize: 8, marginBottom: 10 }}>
+              {lang === 'pt' ? 'NAVE SOBREVIVEU' : 'SHIP SURVIVED'}
+            </div>
+            <ShipIcon ship={winningPlayer.ship || 'nova_01'} color={winningPlayer.shipColor || 'blue'} damage={0} pixel={7} glow />
+            <div className="t-mono glow-text-amber" style={{ fontSize: 16, marginTop: 10 }}>{winningPlayer.name}</div>
+          </div>
+        )}
+      </div>
 
       {/* Winner or Tie */}
       {isTie ? (

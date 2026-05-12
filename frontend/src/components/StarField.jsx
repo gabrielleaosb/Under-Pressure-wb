@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
 
-export default function StarField({ density = 85 }) {
+function StarField({ density = 56 }) {
   const stars = useMemo(() => Array.from({ length: density }, (_, i) => ({
     id: i,
     left:  Math.random() * 110,   // slight overshoot for drift effect
@@ -14,7 +14,7 @@ export default function StarField({ density = 85 }) {
   return (
     <div className="starfield">
       {/* Drifting star layer */}
-      <div style={{ position:'absolute', inset:0, animation:'drift 60s linear infinite' }}>
+      <div style={{ position:'absolute', inset:0, animation:'drift 80s linear infinite', transform:'translate3d(0,0,0)' }}>
         {stars.map(s => (
           <span key={s.id} className="star" style={{
             left:  s.left + '%',
@@ -32,3 +32,5 @@ export default function StarField({ density = 85 }) {
     </div>
   );
 }
+
+export default memo(StarField);
