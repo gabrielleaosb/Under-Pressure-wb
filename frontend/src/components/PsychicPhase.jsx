@@ -19,7 +19,6 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
   const [clue, setClue] = useState('');
   const psychicPlayer = gameState.players?.find(p => p.id === gameState.psychicId);
   const isPsychic     = gameState.psychicId === myId || (psychicPlayer?.isBot && isHost);
-  const activeTeam    = gameState.teams[gameState.activeTeamIndex];
   const remaining     = useCountdown(gameState.timerEnd);
   const total         = gameState.settings.clueTimer;
   const pct           = total > 0 ? remaining / total : 0;
@@ -42,28 +41,22 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
 
       {/* Phase header */}
       <div className="flex items-center justify-between gap-12" style={{ flexWrap: 'wrap' }}>
-        <div>
-          {/* Readable round label */}
-          <div className="label mb-4" style={{ color: 'var(--dim2)' }}>
-            {t('round_n', lang)} {gameState.round + 1} / {gameState.totalRounds}
-          </div>
-          <div className="pixel-title" style={{ fontSize: 'clamp(13px,3vw,17px)', color: activeTeam.color, textShadow: `0 0 14px ${activeTeam.color}` }}>
-            {activeTeam.name}
-          </div>
+        <div className="label" style={{ color: 'var(--ink-dim)' }}>
+          {t('round_n', lang)} {gameState.round + 1} / {gameState.totalRounds}
         </div>
         <div style={{
-          padding: '8px 14px', borderRadius: 8, textAlign: 'center',
-          border: `2px solid ${isPsychic ? 'var(--yellow)' : 'var(--dim)'}`,
-          background: isPsychic ? 'rgba(255,224,0,0.08)' : 'transparent',
+          padding: '8px 14px', borderRadius: 6, textAlign: 'center',
+          border: `1px solid ${isPsychic ? 'rgba(255,224,0,0.5)' : 'var(--metal-2)'}`,
+          background: isPsychic ? 'rgba(255,224,0,0.06)' : 'rgba(255,255,255,0.02)',
         }}>
-          <div className="label mb-4" style={{ color: 'var(--dim2)' }}>
+          <div className="label mb-4" style={{ color: 'var(--ink-dim)' }}>
             📡 {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
           </div>
-          <div style={{ fontFamily: 'var(--f-vt)', fontSize: 26, color: 'var(--yellow)', lineHeight: 1 }}>
+          <div style={{ fontFamily: 'var(--f-vt)', fontSize: 26, color: 'var(--neon-amber)', lineHeight: 1 }}>
             {psychicPlayer?.name}
           </div>
           {isPsychic && (
-            <div style={{ fontFamily: 'var(--f-body)', fontSize: 11, color: 'var(--yellow)', marginTop: 4, fontWeight: 700 }}>
+            <div style={{ fontFamily: 'var(--f-body)', fontSize: 11, color: 'var(--neon-amber)', marginTop: 4, fontWeight: 700 }}>
               {lang === 'pt' ? '← você' : '← you'}
             </div>
           )}

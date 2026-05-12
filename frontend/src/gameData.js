@@ -132,22 +132,19 @@ export function selectCard(usedIds = []) {
 // Normalize Firebase RTDB response to the shape components expect
 export function normalizeRoom(raw) {
   if (!raw) return null;
-  const players       = Object.values(raw.players || {});
-  const teamsRaw      = raw.teams || {};
-  const teams         = [teamsRaw['0'] || teamsRaw[0] || {name:'Time 1', color:'#ff3355'},
-                         teamsRaw['1'] || teamsRaw[1] || {name:'Time 2', color:'#00aaff'}];
-  const damage        = [Number(raw.damage0 ?? 0), Number(raw.damage1 ?? 0)];
-  const scores        = [Number(raw.score0  ?? 0), Number(raw.score1  ?? 0)];
-  const psychicIndices= [Number(raw.psychicIdx0 ?? 0), Number(raw.psychicIdx1 ?? 0)];
-  const roundHistory  = Object.values(raw.roundHistory || {});
-  const emojiReactions= Object.values(raw.emojiReactions || {}).slice(-15);
-  const votes         = raw.votes || {};
-  const submittedVotes= Object.keys(votes);
+  const players        = Object.values(raw.players || {});
+  const playerScores   = raw.playerScores || {};
+  const roundHistory   = Object.values(raw.roundHistory || {});
+  const emojiReactions = Object.values(raw.emojiReactions || {}).slice(-15);
+  const votes          = raw.votes || {};
+  const submittedVotes = Object.keys(votes);
 
   return {
     ...raw,
-    players, teams, damage, scores, psychicIndices,
-    roundHistory, emojiReactions,
+    players,
+    playerScores,
+    roundHistory,
+    emojiReactions,
     votes: ['reveal','gameover'].includes(raw.phase) ? votes : null,
     submittedVotes,
     totalRounds: raw.settings?.rounds ?? 10,

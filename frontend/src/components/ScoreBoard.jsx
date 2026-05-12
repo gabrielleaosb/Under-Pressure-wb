@@ -1,79 +1,67 @@
 import React from 'react';
-import ShipDisplay from './ShipDisplay.jsx';
 import { t } from '../i18n.js';
 
 export default function ScoreBoard({ gameState, myId, lang, onSettings }) {
   if (!gameState) return null;
-  const { teams, damage, scores, settings, round, totalRounds, activeTeamIndex } = gameState;
+  const { players, playerScores, round, totalRounds, psychicId } = gameState;
+
+  // Sort players by score descending
+  const ranked = [...players].sort((a, b) => (playerScores[b.id]||0) - (playerScores[a.id]||0));
+  // Show top 3 in scoreboard, condensed
+  const top = ranked.slice(0, 4);
 
   return (
-    <div className="scoreboard">
-      {/* Team 0 */}
-      <TeamPanel idx={0} team={teams[0]} damage={damage[0]}
-        maxDamage={settings.maxDamage} score={scores[0]}
-        active={activeTeamIndex === 0} side="left" />
+    <div className="scoreboard" style={{ gridTemplateColumns:'1fr auto', gap:12 }}>
 
-      {/* Center */}
-      <div style={{ textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
-        <span className="label" style={{ color:'var(--dim2)', fontSize:9 }}>{t('round_n', lang)}</span>
-        <span style={{ fontFamily:'var(--f-vt)', fontSize:26, color:'var(--cyan)', textShadow:'0 0 8px var(--cyan)', lineHeight:1 }}>
-          {round + 1}/{totalRounds}
-        </span>
-        {/* Settings button lives here — safe from overlap */}
-        <button
-          onClick={onSettings}
-          title="Settings"
-          style={{
-            marginTop:4, background:'rgba(255,255,255,0.05)',
-            border:'1px solid var(--dim)', color:'var(--dim2)',
-            borderRadius:6, width:28, height:28, fontSize:14,
-            cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-            transition:'border-color 0.15s, color 0.15s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor='var(--cyan)'; e.currentTarget.style.color='var(--cyan)'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor='var(--dim)';  e.currentTarget.style.color='var(--dim2)'; }}
-        >⚙</button>
+      {/* Player score chips */}
+      <div style={{ display:'flex', gap:6, alignItems:'center', overflow:'hidden', flexWrap:'nowrap' }}>
+        {top.map((p, i) => {
+          const score   = playerScores[p.id] || 0;
+          const isTx    = p.id === psychicId;
+          const isMe    = p.id === myId;
+          return (
+            <div key={p.id} style={{
+              display:'flex', alignItems:'center', gap:5,
+              padding:'4px 8px', borderRadius:4,
+              border:`1.5px solid ${p.color}`,
+              background: isMe ? `${p.color}28` : isTx ? 'rgba(255,224,0,0.08)' : 'rgba(255,255,255,0.03)',
+              flexShrink:0, maxWidth:120, minWidth:0,
+            }}>
+              {/* Rank */}
+              <span style={{ fontFamily:'var(--f-vt)', fontSize:16, color:'var(--ink-dim)', lineHeight:1 }}>
+                {i+1}.
+              </span>
+              {/* Avatar dot */}
+              <div style={{ width:18, height:18, borderRadius:'50%', background:p.color, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--f-pixel)', fontSize:6, color:'#000' }}>
+                {p.name[0]?.toUpperCase()}
+              </div>
+              {/* Name */}
+              <span style={{ fontFamily:'var(--f-body)', fontWeight:800, fontSize:11, color: isMe ? p.color : 'var(--ink)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {p.name}
+                {isTx && <span style={{ color:'var(--neon-amber)', marginLeft:4 }}>📡</span>}
+              </span>
+              {/* Score */}
+              <span style={{ fontFamily:'var(--f-vt)', fontSize:20, color:p.color, lineHeight:1, flexShrink:0 }}>
+                {score}
+              </span>
+            </div>
+          );
+        })}
+        {players.length > 4 && (
+          <span style={{ fontFamily:'var(--f-vt)', fontSize:16, color:'var(--ink-dim)', flexShrink:0 }}>
+            +{players.length - 4}
+          </span>
+        )}
       </div>
 
-      {/* Team 1 */}
-      <TeamPanel idx={1} team={teams[1]} damage={damage[1]}
-        maxDamage={settings.maxDamage} score={scores[1]}
-        active={activeTeamIndex === 1} side="right" />
-    </div>
-  );
-}
-
-function TeamPanel({ idx, team, damage, maxDamage, score, active, side }) {
-  const color = idx === 0 ? 'var(--team0)' : 'var(--team1)';
-  const pct   = damage / maxDamage;
-
-  return (
-    <div style={{
-      display:'flex',
-      flexDirection: side === 'left' ? 'row' : 'row-reverse',
-      alignItems:'center', gap:8,
-    }}>
-      <ShipDisplay teamIndex={idx} damage={damage} maxDamage={maxDamage} size={44} animate={!active} />
-      <div style={{ display:'flex', flexDirection:'column', gap:2, alignItems: side==='left'?'flex-start':'flex-end' }}>
-        <span style={{
-          fontFamily:'var(--f-body)', fontWeight:900, fontSize:11,
-          color, letterSpacing:0.5,
-          textShadow: active ? `0 0 8px ${color}` : 'none',
-          maxWidth:80, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-        }}>
-          {team.name}{active && <span style={{ color:'var(--yellow)', marginLeft:4 }}>▶</span>}
+      {/* Center: round + settings */}
+      <div style={{ textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:2, flexShrink:0 }}>
+        <span className="label" style={{ color:'var(--ink-dim)', fontSize:8 }}>{t('round_n', lang)}</span>
+        <span style={{ fontFamily:'var(--f-vt)', fontSize:24, color:'var(--neon-cyan)', textShadow:'0 0 8px var(--neon-cyan)', lineHeight:1 }}>
+          {round+1}/{totalRounds}
         </span>
-        <span style={{ fontFamily:'var(--f-vt)', fontSize:20, color:'var(--white)', lineHeight:1 }}>
-          {score}pts
-        </span>
-        {/* HP bar */}
-        <div style={{ width:64, height:4, background:'rgba(0,0,0,0.5)', borderRadius:2, border:'1px solid var(--dim)', overflow:'hidden' }}>
-          <div style={{
-            width:`${Math.max(0,(1-pct)*100)}%`, height:'100%',
-            background: pct>0.6?'var(--red)':pct>0.3?'var(--orange)':'var(--green)',
-            borderRadius:2, transition:'width 0.5s, background 0.5s',
-          }}/>
-        </div>
+        <button onClick={onSettings} className="btn btn-ghost" style={{ fontSize:13, padding:'2px 6px', minHeight:26, height:26, marginTop:2 }}
+          title="Settings">⚙</button>
       </div>
     </div>
   );

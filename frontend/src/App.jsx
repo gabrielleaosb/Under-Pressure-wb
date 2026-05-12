@@ -11,9 +11,10 @@ import VotingPhase  from './components/VotingPhase.jsx';
 import RevealPhase  from './components/RevealPhase.jsx';
 import GameOver     from './components/GameOver.jsx';
 import ScoreBoard   from './components/ScoreBoard.jsx';
-import DevPanel     from './components/DevPanel.jsx';
-import Settings     from './components/Settings.jsx';
-import RoundIntro   from './components/RoundIntro.jsx';
+import DevPanel         from './components/DevPanel.jsx';
+import Settings         from './components/Settings.jsx';
+import RoundIntro       from './components/RoundIntro.jsx';
+import { RankingSidebar, RankingTopBar } from './components/RankingSidebar.jsx';
 import { t } from './i18n.js';
 import { playPhaseChange, playVotingStart, playError as playSoundError } from './sounds.js';
 
@@ -215,19 +216,51 @@ export default function App() {
       )}
 
       {screen === 'game' && gameState && (
-        <div className="screen">
-          <ScoreBoard {...sharedProps} onSettings={() => setShowSettings(true)} />
-          <div className="container" style={{ paddingTop:16 }}>
-            {(gameState.phase==='roulette'||gameState.phase==='spinning') && (
-              <Roulette {...sharedProps} spinning={gameState.phase==='spinning'} />
-            )}
-            {gameState.phase==='psychic' && (
-              <PsychicPhase {...sharedProps} myTargetPos={myTargetPos} />
-            )}
-            {gameState.phase==='voting' && <VotingPhase {...sharedProps} />}
-            {gameState.phase==='reveal' && <RevealPhase {...sharedProps} />}
-            {gameState.phase==='gameover' && <GameOver {...sharedProps} />}
-          </div>
+        <div style={{ width:'100%', display:'flex', flexDirection:'column', minHeight:'100vh', position:'relative', zIndex:1 }}>
+
+          {gameState.phase === 'gameover' ? (
+            /* Game over: full width */
+            <div className="container" style={{ paddingTop:24, paddingBottom:40 }}>
+              <GameOver {...sharedProps}/>
+            </div>
+          ) : (
+            <>
+              {/* Mobile top bar */}
+              <div className="topbar-mobile" style={{ padding:'8px 12px', position:'sticky', top:0, zIndex:50 }}>
+                <RankingTopBar {...sharedProps} onSettings={() => setShowSettings(true)}/>
+              </div>
+
+              {/* Desktop: sidebar + content */}
+              <div style={{ display:'flex', flex:1, width:'100%', maxWidth:1140, margin:'0 auto', padding:'0 8px', gap:12, alignItems:'flex-start' }}>
+
+                {/* Main game area */}
+                <div style={{ flex:1, minWidth:0, paddingTop:16, paddingBottom:60 }}>
+                  <div style={{ maxWidth:640, margin:'0 auto' }}>
+                    {(gameState.phase==='roulette'||gameState.phase==='spinning') && (
+                      <Roulette {...sharedProps} spinning={gameState.phase==='spinning'}/>
+                    )}
+                    {gameState.phase==='psychic' && (
+                      <PsychicPhase {...sharedProps} myTargetPos={myTargetPos}/>
+                    )}
+                    {gameState.phase==='voting'  && <VotingPhase {...sharedProps}/>}
+                    {gameState.phase==='reveal'  && <RevealPhase {...sharedProps}/>}
+                  </div>
+                </div>
+
+                {/* Ranking sidebar — sticky on desktop only */}
+                <div className="sidebar-desktop" style={{
+                  width: 240, flexShrink: 0,
+                  flexDirection: 'column',
+                  position: 'sticky', top: 16,
+                  maxHeight: 'calc(100vh - 32px)',
+                  overflowY: 'auto',
+                  paddingTop: 16, paddingBottom: 16,
+                }}>
+                  <RankingSidebar {...sharedProps} onSettings={() => setShowSettings(true)}/>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </>

@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Under Pressure — UI</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <style>
+    html, body { margin: 0; height: 100%; background: #f0eee9; font-family: "Nunito", system-ui, sans-serif; }
+    #root { height: 100%; }
+    /* override DC card bg so our dark screens look right on the warm canvas */
+    .dc-card { background: #050510 !important; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="components.jsx"></script>
+  <script type="text/babel" src="screens.jsx"></script>
+  <script type="text/babel" src="ships-roster.jsx"></script>
+  <script type="text/babel" src="ffa.jsx"></script>
+  <script type="text/babel" src="design-system-section.jsx"></script>
+
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "lang": "pt",
+      "shipStyle": "ftl",
+      "palette": [
+        "#ff3355",
+        "#00aaff"
+      ],
+      "scanlines": "subtle",
+      "easterEgg": false
+    }/*EDITMODE-END*/;
+
+    function App() {
+      const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+      // Apply palette swap via CSS vars on root
+      const styleVars = {
+        '--team-0': t.palette[0],
+        '--team-1': t.palette[1],
+        height: '100%',
+      };
+
+      const screenProps = {
+        lang: t.lang,
+        shipStyle: t.shipStyle,
+        palette: t.palette,
+        scanlines: t.scanlines,
+      };
+
+      // viewport widths
+      const M = 375; const D = 860;
+
+      return (
+        <div style={styleVars}>
+          <DesignCanvas initialZoom={0.5}>
+
+            {/* ───────── DESIGN SYSTEM ───────── */}
+            <DCSection id="ds" title="◢ Design system" subtitle="Palette · type · ship art · components">
+              <DCArtboard id="ds-colors" label="Palette" width={680} height={620}>
+                <div data-screen-label="DS Palette" style={{ width: 680, height: 620, position: 'relative' }}>
+                <DSColorsBoard />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="ds-type" label="Typography" width={680} height={620}>
+                <div data-screen-label="DS Type" style={{ width: 680, height: 620, position: 'relative' }}>
+                <DSTypeBoard />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="ds-comp" label="Components" width={680} height={780}>
+                <div data-screen-label="DS Components" style={{ width: 680, height: 780, position: 'relative' }}>
+                <DSComponentsBoard />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="ds-roster" label="◆ Ship roster · 10 designs" width={780} height={520}>
+                <div data-screen-label="DS Ship Roster" style={{ width: 780, height: 520, position: 'relative' }}>
+                  <DSShipRosterBoard />
+                </div>
+              </DCArtboard>
+              <DCArtboard id="ds-ships" label="Ship · 3 styles × 5 states" width={780} height={780}>
+                <div data-screen-label="DS Ships" style={{ width: 780, height: 780, position: 'relative' }}>
+                <DSShipBoard />
+              </div>
+              </DCArtboard>
+            </DCSection>
+
+            {/* ───────── 01 HOME ───────── */}
+            <DCSection id="s01" title="01 · Home screen" subtitle="Two variations × mobile + desktop">
+              <DCArtboard id="01a-mob" label="A · Mission-control · 375" width={M} height={720}>
+                <div data-screen-label="01a Home Mission Mobile" style={{ width: M, height: 720, position: 'relative' }}>
+                <HomeA viewport="mobile" {...screenProps} />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="01a-desk" label="A · Mission-control · 860" width={D} height={620}>
+                <div data-screen-label="01a Home Mission Desktop" style={{ width: D, height: 620, position: 'relative' }}>
+                <HomeA viewport="desktop" {...screenProps} />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="01b-mob" label="B · Cinematic · 375" width={M} height={720}>
+                <div data-screen-label="01b Home Cinematic Mobile" style={{ width: M, height: 720, position: 'relative' }}>
+                <HomeB viewport="mobile" {...screenProps} />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="01b-desk" label="B · Cinematic · 860" width={D} height={620}>
+                <div data-screen-label="01b Home Cinematic Desktop" style={{ width: D, height: 620, position: 'relative' }}>
+                <HomeB viewport="desktop" {...screenProps} />
+              </div>
+              </DCArtboard>
+            </DCSection>
+
+            {/* ───────── 02 LOBBY · FFA ───────── */}
+            <DCSection id="s02" title="02 · Lobby · FFA" subtitle="Free-for-all · Captain dictates · everyone else races">
+              <DCArtboard id="02-mob" label="Mobile · 375" width={M} height={820}>
+                <div data-screen-label="02 FFA Lobby Mobile" style={{ width: M, height: 820, position: 'relative' }}>
+                  <FFALobbyScreen viewport="mobile" {...screenProps} />
+                </div>
+              </DCArtboard>
+              <DCArtboard id="02-desk" label="Desktop · 860" width={D} height={760}>
+                <div data-screen-label="02 FFA Lobby Desktop" style={{ width: D, height: 760, position: 'relative' }}>
+                  <FFALobbyScreen viewport="desktop" {...screenProps} />
+                </div>
+              </DCArtboard>
+              <DCArtboard id="02-pick-mob" label="Ship picker · 375" width={M} height={780}>
+                <div data-screen-label="02 Ship Picker Mobile" style={{ width: M, height: 780, position: 'relative' }}>
+                  <ShipPickerScreen viewport="mobile" {...screenProps} />
+                </div>
+              </DCArtboard>
+              <DCArtboard id="02-pick-desk" label="Ship picker · 860" width={D} height={680}>
+                <div data-screen-label="02 Ship Picker Desktop" style={{ width: D, height: 680, position: 'relative' }}>
+                  <ShipPickerScreen viewport="desktop" {...screenProps} />
+                </div>
+              </DCArtboard>
+            </DCSection>
+
+            {/* ───────── 02b · FFA GAMEPLAY w/ Ranking sidebar ───────── */}
+            <DCSection id="s02b" title="02b · FFA gameplay · ranking sidebar" subtitle="Captain transmits · pilots calibrate · scores live">
+              <DCArtboard id="2b-cal-desk" label="Calibrate · sidebar · 860" width={D} height={620}>
+                <div data-screen-label="FFA Calibrate Desktop" style={{ width: D, height: 620, position: 'relative' }}>
+                  <FFAGameplayScreen viewport="desktop" {...screenProps} phase="calibrate" />
+                </div>
+              </DCArtboard>
+              <DCArtboard id="2b-cal-mob" label="Calibrate · 375" width={M} height={780}>
+                <div data-screen-label="FFA Calibrate Mobile" style={{ width: M, height: 780, position: 'relative' }}>
+                  <FFAGameplayScreen viewport="mobile" {...screenProps} phase="calibrate" />
+                </div>
+              </DCArtboard>
+              <DCArtboard id="2b-tx" label="Captain transmits · 860" width={D} height={620}>
+                <div data-screen-label="FFA Transmit Desktop" style={{ width: D, height: 620, position: 'relative' }}>
+                  <FFAGameplayScreen viewport="desktop" {...screenProps} phase="transmit" />
+                </div>
+              </DCArtboard>
+              <DCArtboard id="2b-rev" label="Reveal · 860" width={D} height={620}>
+                <div data-screen-label="FFA Reveal Desktop" style={{ width: D, height: 620, position: 'relative' }}>
+                  <FFAGameplayScreen viewport="desktop" {...screenProps} phase="reveal" />
+                </div>
+              </DCArtboard>
+            </DCSection>
+
+            {/* ───────── 03 ROUND INTRO ───────── */}
+            <DCSection id="s03" title="03 · Round intro" subtitle="6s glassmorphism modal · role-aware">
+              <DCArtboard id="03-mob" label="As Transmitter · 375" width={M} height={720}>
+                <div data-screen-label="03 Intro Transmitter Mobile" style={{ width: M, height: 720, position: 'relative' }}>
+                <RoundIntroScreen viewport="mobile" {...screenProps} role="transmitter" />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="03-desk-c" label="As Calibrator · 860" width={D} height={620}>
+                <div data-screen-label="03 Intro Calibrate Desktop" style={{ width: D, height: 620, position: 'relative' }}>
+                <RoundIntroScreen viewport="desktop" {...screenProps} role="calibrate" />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="03-desk-w" label="As Watcher · 860" width={D} height={620}>
+                <div data-screen-label="03 Intro Watch Desktop" style={{ width: D, height: 620, position: 'relative' }}>
+                <RoundIntroScreen viewport="desktop" {...screenProps} role="watch" />
+              </div>
+              </DCArtboard>
+            </DCSection>
+
+            {/* ───────── 04 ROULETTE ───────── */}
+            <DCSection id="s04" title="04 · Roulette" subtitle="12-segment theme wheel · click SPIN">
+              <DCArtboard id="04-mob" label="Mobile · 375" width={M} height={720}>
+                <div data-screen-label="04 Roulette Mobile" style={{ width: M, height: 720, position: 'relative' }}>
+                <RouletteScreen viewport="mobile" {...screenProps} />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="04-desk" label="Desktop · 860" width={D} height={680}>
+                <div data-screen-label="04 Roulette Desktop" style={{ width: D, height: 680, position: 'relative' }}>
+                <RouletteScreen viewport="desktop" {...screenProps} />
+              </div>
+              </DCArtboard>
+            </DCSection>
+
+            {/* ───────── 05 TRANSMITTER ───────── */}
+            <DCSection id="s05" title="05 · Transmitter phase" subtitle="Secret target visible only to clue-giver">
+              <DCArtboard id="05-mob" label="As Transmitter · 375" width={M} height={780}>
+                <div data-screen-label="05 Transmitter Mobile" style={{ width: M, height: 780, position: 'relative' }}>
+                <TransmitterScreen viewport="mobile" {...screenProps} asTransmitter />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="05-desk" label="As Transmitter · 860" width={D} height={680}>
+                <div data-screen-label="05 Transmitter Desktop" style={{ width: D, height: 680, position: 'relative' }}>
+                <TransmitterScreen viewport="desktop" {...screenProps} asTransmitter />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="05-other" label="As Other player · 375" width={M} height={780}>
+                <div data-screen-label="05 Transmitter Other Mobile" style={{ width: M, height: 780, position: 'relative' }}>
+                <TransmitterScreen viewport="mobile" {...screenProps} asTransmitter={false} />
+              </div>
+              </DCArtboard>
+            </DCSection>
+
+            {/* ───────── 06 CALIBRATION ───────── */}
+            <DCSection id="s06" title="06 · Calibration phase" subtitle="Drag the needle · gauge variations">
+              <DCArtboard id="06-mob" label="Classic · 375" width={M} height={820}>
+                <div data-screen-label="06 Calibration Classic Mobile" style={{ width: M, height: 820, position: 'relative' }}>
+                <CalibrationScreen viewport="mobile" {...screenProps} variant="classic" />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="06-desk" label="Classic · 860" width={D} height={720}>
+                <div data-screen-label="06 Calibration Classic Desktop" style={{ width: D, height: 720, position: 'relative' }}>
+                <CalibrationScreen viewport="desktop" {...screenProps} variant="classic" />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="06-horizon" label="Variation · Horizon bar · 860" width={D} height={620}>
+                <div data-screen-label="06 Calibration Horizon" style={{ width: D, height: 620, position: 'relative' }}>
+                <CalibrationScreen viewport="desktop" {...screenProps} variant="horizon" />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="06-pill" label="Variation · Pill panel · 860" width={D} height={620}>
+                <div data-screen-label="06 Calibration Pill" style={{ width: D, height: 620, position: 'relative' }}>
+                <CalibrationScreen viewport="desktop" {...screenProps} variant="pill" />
+              </div>
+              </DCArtboard>
+            </DCSection>
+
+            {/* ───────── 07 REVEAL ───────── */}
+            <DCSection id="s07" title="07 · Reveal phase" subtitle="Outcome grade variants">
+              <DCArtboard id="07-perfect" label="PERFECT · 860" width={D} height={680}>
+                <div data-screen-label="07 Reveal Perfect" style={{ width: D, height: 680, position: 'relative' }}>
+                <RevealScreen viewport="desktop" {...screenProps} grade="perfect" />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="07-vc" label="VERY CLOSE · 375" width={M} height={780}>
+                <div data-screen-label="07 Reveal Very Close" style={{ width: M, height: 780, position: 'relative' }}>
+                <RevealScreen viewport="mobile" {...screenProps} grade="vc" />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="07-far" label="FAR · 860" width={D} height={680}>
+                <div data-screen-label="07 Reveal Far" style={{ width: D, height: 680, position: 'relative' }}>
+                <RevealScreen viewport="desktop" {...screenProps} grade="f" />
+              </div>
+              </DCArtboard>
+            </DCSection>
+
+            {/* ───────── 09 GAME OVER ───────── */}
+            <DCSection id="s09" title="09 · Game over" subtitle="Winner / loser ships · stats · CTAs">
+              <DCArtboard id="09-mob" label="Mobile · 375" width={M} height={780}>
+                <div data-screen-label="09 Game Over Mobile" style={{ width: M, height: 780, position: 'relative' }}>
+                <GameOverScreen viewport="mobile" {...screenProps} />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="09-desk" label="Desktop · 860" width={D} height={680}>
+                <div data-screen-label="09 Game Over Desktop" style={{ width: D, height: 680, position: 'relative' }}>
+                <GameOverScreen viewport="desktop" {...screenProps} />
+              </div>
+              </DCArtboard>
+            </DCSection>
+
+            {/* ───────── 10 SETTINGS ───────── */}
+            <DCSection id="s10" title="10 · Settings modal" subtitle="Over any screen · volume / lang / leave">
+              <DCArtboard id="10-mob" label="Mobile · 375" width={M} height={720}>
+                <div data-screen-label="10 Settings Mobile" style={{ width: M, height: 720, position: 'relative' }}>
+                <SettingsScreen viewport="mobile" {...screenProps} />
+              </div>
+              </DCArtboard>
+              <DCArtboard id="10-desk" label="Desktop · 860" width={D} height={620}>
+                <div data-screen-label="10 Settings Desktop" style={{ width: D, height: 620, position: 'relative' }}>
+                <SettingsScreen viewport="desktop" {...screenProps} />
+              </div>
+              </DCArtboard>
+            </DCSection>
+
+          </DesignCanvas>
+
+          <TweaksPanel>
+            <TweakSection label="Language" />
+            <TweakRadio label="Interface" value={t.lang}
+              options={[
+                { value: 'pt', label: 'PT-BR' },
+                { value: 'en', label: 'EN' },
+              ]}
+              onChange={v => setTweak('lang', v)} />
+
+            <TweakSection label="Ship art" />
+            <TweakRadio label="Style" value={t.shipStyle}
+              options={[
+                { value: 'ftl',   label: 'FTL' },
+                { value: 'rebel', label: 'Rebel' },
+                { value: 'cute',  label: 'Cute' },
+              ]}
+              onChange={v => setTweak('shipStyle', v)} />
+
+            <TweakSection label="Team palette" />
+            <TweakColor label="Crews"
+              value={t.palette}
+              options={[
+                ['#ff3355', '#00aaff'],
+                ['#ff8a00', '#00ff88'],
+                ['#ff66aa', '#b066ff'],
+                ['#ffe000', '#00ffff'],
+                ['#e8e8f0', '#ff3355'],
+              ]}
+              onChange={v => setTweak('palette', v)} />
+
+            <TweakSection label="CRT intensity" />
+            <TweakRadio label="Scanlines" value={t.scanlines}
+              options={[
+                { value: 'off',     label: 'Off' },
+                { value: 'subtle',  label: 'Subtle' },
+                { value: 'heavy',   label: 'Heavy' },
+              ]}
+              onChange={v => setTweak('scanlines', v)} />
+
+            <TweakSection label="Surprises" />
+            <TweakToggle label="Aurora drift" value={t.easterEgg}
+              onChange={v => setTweak('easterEgg', v)} />
+          </TweaksPanel>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

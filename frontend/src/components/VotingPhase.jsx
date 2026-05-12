@@ -35,20 +35,13 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
     else if (remaining <= 10) playTimerTick();
   }, [remaining]);
 
-  const activeTeam = gameState.teams[gameState.activeTeamIndex];
-  const myPlayer   = gameState.players.find(p => p.id === myId);
-  const myTeam     = myPlayer?.teamIndex;
+  // FFA: everyone votes except the transmitter
+  const isPsychic = myId === gameState.psychicId;
+  const canVote   = !isPsychic;
 
-  // In voting, isPsychic is strictly the actual psychic ID — no bot override
-  // (when bot is psychic, the host votes as a regular player)
-  const isPsychic     = myId === gameState.psychicId;
-  const isActiveTeam  = myTeam === gameState.activeTeamIndex;
-  const canVote       = isActiveTeam && !isPsychic;
-
-  const submittedIds  = gameState.submittedVotes || [];
-  const activeTeamPlayers = gameState.players.filter(p => p.teamIndex === gameState.activeTeamIndex);
-  const nonPsychicVoters  = activeTeamPlayers.filter(p => p.id !== gameState.psychicId);
-  const votedCount    = submittedIds.filter(id => nonPsychicVoters.some(p => p.id === id)).length;
+  const submittedIds     = gameState.submittedVotes || [];
+  const nonPsychicVoters = gameState.players.filter(p => p.id !== gameState.psychicId);
+  const votedCount       = submittedIds.filter(id => nonPsychicVoters.some(p => p.id === id)).length;
 
   // Emoji reactions
   useEffect(() => {
@@ -80,12 +73,12 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
     <div className="flex-col gap-16" style={{ paddingBottom: 32 }}>
 
       {/* Header */}
-      <div>
-        <h2 className="pixel-title text-center" style={{ fontSize: 'clamp(13px,2.5vw,16px)', color: 'var(--cyan)', marginBottom: 6 }}>
+      <div className="text-center">
+        <h2 className="pixel-title glow-text-cyan" style={{ fontSize:'clamp(13px,2.5vw,16px)', marginBottom:6 }}>
           {t('voting_title', lang)}
         </h2>
-        <div className="text-center" style={{ fontFamily: 'var(--f-vt)', fontSize: 26, color: activeTeam.color, letterSpacing: 2 }}>
-          {activeTeam.name}
+        <div style={{ fontFamily:'var(--f-body)', fontSize:13, color:'var(--ink-dim)' }}>
+          {votedCount}/{nonPsychicVoters.length} {lang==='pt'?'já votaram':'have voted'}
         </div>
       </div>
 
@@ -230,33 +223,17 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
         </div>
       )}
 
-      {/* ─── OBSERVER: other team ─── */}
-      {!canVote && !isPsychic && (
-        <div className="pixel-box p-16">
-          <div className="label mb-12 text-center" style={{ color: 'var(--dim2)' }}>
-            {t('observer_msg', lang)}
-          </div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {EMOJI_REACTIONS.map(emoji => (
-              <button key={emoji} onClick={() => { sendEmoji(emoji); }}
-                style={{
-                  fontSize: 26, background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid var(--dim)', borderRadius: 8,
-                  padding: '8px 10px', cursor: 'pointer',
-                  minWidth: 48, minHeight: 48, transition: 'transform 0.1s',
-                }}
-                onPointerDown={e => e.currentTarget.style.transform = 'scale(0.85)'}
-                onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-          <div style={{ fontFamily: 'var(--f-vt)', fontSize: 22, color: 'var(--dim2)', textAlign: 'center', marginTop: 12 }}>
-            {votedCount}/{nonPsychicVoters.length} {t('voted_count', lang)}
-          </div>
-        </div>
-      )}
+      {/* Emoji reactions — shown at bottom for everyone */}
+      <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap' }}>
+        {EMOJI_REACTIONS.map(emoji => (
+          <button key={emoji} onClick={() => { sendEmoji(emoji); }}
+            style={{ fontSize:22, background:'rgba(255,255,255,0.04)', border:'1px solid var(--metal-2)', borderRadius:6, padding:'6px 8px', cursor:'pointer', minWidth:42, minHeight:42 }}
+            onPointerDown={e => e.currentTarget.style.transform='scale(0.85)'}
+            onPointerUp={e => e.currentTarget.style.transform='scale(1)'}>
+            {emoji}
+          </button>
+        ))}
+      </div>
 
       {/* Floating emojis */}
       {floatingEmojis.map(e => (
