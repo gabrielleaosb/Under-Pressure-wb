@@ -63,7 +63,8 @@ export default function Roulette({ gameState, myId, lang, send, spinning, isHost
     }
   }, [spinning, selectedTheme]);
 
-  const SIZE   = Math.min(360, typeof window !== 'undefined' ? window.innerWidth - 48 : 360);
+  const viewport = typeof window !== 'undefined' ? window.innerWidth : 1280;
+  const SIZE = Math.max(280, Math.min(420, viewport < 900 ? viewport - 40 : 420));
   const radius = SIZE / 2;
   const segArc = (2 * Math.PI) / THEMES.length;
 

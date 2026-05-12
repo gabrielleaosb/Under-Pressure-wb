@@ -6,6 +6,7 @@
  */
 import { db, ref, get, set, update, remove, push, onValue, onChildAdded } from './firebase.js';
 import { PLAYER_COLORS, TEAM_NAME_PAIRS, CARDS, THEMES, selectCard, genId } from './gameData.js';
+import { SHIP_IDS, SHIP_COLORS } from './components/ShipRoster.jsx';
 
 // ── Scoring ───────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,13 @@ function allPlayers(room) {
   return Object.values(room.players || {});
 }
 
+function getShipLoadout(index = 0) {
+  return {
+    ship: SHIP_IDS[index % SHIP_IDS.length] || 'nova_01',
+    shipColor: SHIP_COLORS[index % SHIP_COLORS.length] || 'blue',
+  };
+}
+
 // ── Room code generator ───────────────────────────────────────────────────────
 
 export async function generateRoomCode() {
@@ -77,7 +85,7 @@ export async function createRoom(code, hostId, playerName) {
       [hostId]: {
         id: hostId, name: playerName,
         color: PLAYER_COLORS[0],
-        ship: 'cruiser', shipColor: 'blue',
+        ...getShipLoadout(0),
         connected: true, isHost: true, isBot: false,
       },
     },
@@ -106,13 +114,11 @@ export async function addPlayerToRoom(code, playerId, playerName) {
 
   const colorIdx  = Object.keys(room.players || {}).length % PLAYER_COLORS.length;
   const shipIdx   = Object.keys(room.players || {}).length;
-  const SHIPS_DEFAULT = ['interceptor','cargo','stealth','saucer','biplane','orb','shark','bug','spade','cruiser'];
-  const COLORS_DEFAULT= ['red','emerald','violet','cyan','pink','bone','toxic','void','amber','blue'];
+  const loadout = getShipLoadout(shipIdx);
   await set(ref(db, `rooms/${code}/players/${playerId}`), {
     id: playerId, name: playerName,
     color: PLAYER_COLORS[colorIdx],
-    ship:      SHIPS_DEFAULT[shipIdx % 10],
-    shipColor: COLORS_DEFAULT[shipIdx % 10],
+    ...loadout,
     connected: true, isHost: false, isBot: false,
   });
   return { ok: true };
@@ -311,6 +317,10 @@ export class GameEngine {
       diffs.push(diff);
     });
 
+    const numericVotes = Object.values(votes).filter(pos => Number.isFinite(pos));
+    const averageVote = numericVotes.length
+      ? Math.round(numericVotes.reduce((sum, pos) => sum + pos, 0) / numericVotes.length)
+      : target;
     const avgDiff  = diffs.length ? diffs.reduce((a,b)=>a+b,0)/diffs.length : 100;
     const txBonus  = transmitterBonus(avgDiff);
     if (room.psychicId) roundScores[room.psychicId] = txBonus;
@@ -333,6 +343,7 @@ export class GameEngine {
       clue: room.clue,
       target,
       votes,
+      averageVote,
       roundScores,
       transmitterBonus: txBonus,
       avgDiff: Math.round(avgDiff),
@@ -340,7 +351,14 @@ export class GameEngine {
 
     await roomUpdate(this.roomCode, {
       phase: 'reveal',
-      revealResult: { target, votes, roundScores, transmitterBonus: txBonus, avgDiff: Math.round(avgDiff) },
+      revealResult: {
+        target,
+        votes,
+        averageVote,
+        roundScores,
+        transmitterBonus: txBonus,
+        avgDiff: Math.round(avgDiff),
+      },
       timerEnd: null,
     });
   }
@@ -388,6 +406,47 @@ export class GameEngine {
     ]);
   }
 
+  async _ensureDevBots(room) {
+    const botSeeds = [
+      ['bot_0', 'Bot-Alpha'],
+      ['bot_1', 'Bot-Beta'],
+      ['bot_2', 'Bot-Gamma'],
+    ];
+    const updates = {};
+
+    botSeeds.forEach(([id, name], index) => {
+      if (room.players?.[id]) return;
+      updates[id] = {
+        id,
+        name,
+        isBot: true,
+        color: PLAYER_COLORS[(allPlayers(room).length + index) % PLAYER_COLORS.length],
+        connected: false,
+        isHost: false,
+        ...getShipLoadout(allPlayers(room).length + index),
+      };
+    });
+
+    if (Object.keys(updates).length) {
+      await update(rref(this.roomCode, 'players'), updates);
+      return getRoom(this.roomCode);
+    }
+
+    return room;
+  }
+
+  async _prepareFreshGame() {
+    await roomUpdate(this.roomCode, { round: 0, winner: null, winnerIds: null });
+    await Promise.all([
+      remove(rref(this.roomCode, 'roundHistory')),
+      remove(rref(this.roomCode, 'usedCardIds')),
+      remove(rref(this.roomCode, 'votes')),
+      remove(rref(this.roomCode, 'psychicSecret')),
+      remove(rref(this.roomCode, 'emojiReactions')),
+      set(rref(this.roomCode, 'playerScores'), {}),
+    ]);
+  }
+
   // ── Central action dispatcher ────────────────────────────────────────────────
 
   async _processAction(type, data, by) {
@@ -400,10 +459,8 @@ export class GameEngine {
       case 'set_ship': {
         // Any player can set their own ship; host can set bots
         if (by !== data.playerId && !isHost) return;
-        const validShips  = ['cruiser','interceptor','cargo','stealth','saucer','biplane','orb','shark','bug','spade'];
-        const validColors = ['red','blue','emerald','amber','violet','cyan','pink','bone','toxic','void'];
-        const ship  = validShips.includes(data.ship)   ? data.ship  : 'cruiser';
-        const color = validColors.includes(data.color) ? data.color : 'blue';
+        const ship = SHIP_IDS.includes(data.ship) ? data.ship : SHIP_IDS[0];
+        const color = SHIP_COLORS.includes(data.color) ? data.color : 'blue';
         await update(rref(this.roomCode, 'players', data.playerId || by), { ship, shipColor: color });
         break;
       }
@@ -430,15 +487,9 @@ export class GameEngine {
         if (!isHost || room.phase !== 'lobby') return;
         const players = allPlayers(room);
         const hasBots = players.some(p => p.isBot);
-        const min = hasBots ? 2 : 3; // FFA needs at least 2 voters + 1 transmitter = 3
         const minFallback = hasBots ? 2 : 2;
         if (players.length < minFallback) return;
-        await roomUpdate(this.roomCode, { round: 0, winner: null, winnerIds: null });
-        await Promise.all([
-          remove(rref(this.roomCode, 'roundHistory')),
-          remove(rref(this.roomCode, 'usedCardIds')),
-          set(rref(this.roomCode, 'playerScores'), {}),
-        ]);
+        await this._prepareFreshGame();
         await this._startRound();
         break;
       }
@@ -494,13 +545,27 @@ export class GameEngine {
 
       case 'dev_add_bots': {
         if (!isHost || room.phase !== 'lobby') return;
-        const n = Object.keys(room.players || {}).length;
-        const bots = {
-          bot_0: { id:'bot_0', name:'Bot-Alpha', isBot:true, color:PLAYER_COLORS[(n)%12],   connected:false, isHost:false },
-          bot_1: { id:'bot_1', name:'Bot-Beta',  isBot:true, color:PLAYER_COLORS[(n+1)%12], connected:false, isHost:false },
-          bot_2: { id:'bot_2', name:'Bot-Gamma', isBot:true, color:PLAYER_COLORS[(n+2)%12], connected:false, isHost:false },
-        };
-        await update(rref(this.roomCode, 'players'), bots);
+        await this._ensureDevBots(room);
+        break;
+      }
+
+      case 'dev_setup_transmitter_test': {
+        if (!isHost || room.phase !== 'lobby') return;
+        await this._ensureDevBots(room);
+        await roomUpdate(this.roomCode, { transmitterId: by });
+        await this._prepareFreshGame();
+        await this._startRound();
+        break;
+      }
+
+      case 'dev_setup_voter_test': {
+        if (!isHost || room.phase !== 'lobby') return;
+        const hydratedRoom = await this._ensureDevBots(room);
+        const bot = allPlayers(hydratedRoom).find((player) => player.isBot);
+        if (!bot) return;
+        await roomUpdate(this.roomCode, { transmitterId: bot.id });
+        await this._prepareFreshGame();
+        await this._startRound();
         break;
       }
 
@@ -511,8 +576,15 @@ export class GameEngine {
 
       case 'dev_next_psychic': {
         if (!isHost) return;
-        await roomUpdate(this.roomCode, { transmitterIdx: (room.transmitterIdx || 0) + 1 });
-        if (room.phase !== 'lobby') await this._startRound();
+        const nonBots = allPlayers(room).filter((player) => !player.isBot);
+        const currentIndex = nonBots.findIndex((player) => player.id === room.transmitterId);
+        const next = nonBots[(currentIndex + 1 + nonBots.length) % nonBots.length];
+        if (!next) return;
+        await roomUpdate(this.roomCode, { transmitterId: next.id });
+        if (room.phase !== 'lobby') {
+          await this._prepareFreshGame();
+          await this._startRound();
+        }
         break;
       }
     }

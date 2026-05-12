@@ -30,7 +30,7 @@ function PlayerRow({ p, rank, compact, lang, transmitterId }) {
 
       {/* Ship icon */}
       <div style={{ flex:'0 0 auto' }}>
-        <ShipIcon ship={p.ship||'cruiser'} color={p.shipColor||'blue'} pixel={compact?1.5:2}/>
+        <ShipIcon ship={p.ship || 'nova_01'} color={p.shipColor || 'blue'} pixel={compact ? 1.5 : 2}/>
       </div>
 
       {/* Name + score bar */}
@@ -88,7 +88,8 @@ function PlayerRow({ p, rank, compact, lang, transmitterId }) {
 // ── Full sidebar (desktop) ─────────────────────────────────────────────────────
 export function RankingSidebar({ gameState, myId, lang, onSettings }) {
   if (!gameState) return null;
-  const { players, playerScores, round, totalRounds, transmitterId } = gameState;
+  const { players, playerScores, round, totalRounds } = gameState;
+  const transmitterId = gameState.psychicId || gameState.transmitterId;
 
   const transmitter = players.find(p => p.id === transmitterId);
   const voters      = players
@@ -150,7 +151,8 @@ export function RankingSidebar({ gameState, myId, lang, onSettings }) {
 // ── Compact top bar (mobile) ───────────────────────────────────────────────────
 export function RankingTopBar({ gameState, myId, lang, onSettings }) {
   if (!gameState) return null;
-  const { players, playerScores, round, totalRounds, transmitterId } = gameState;
+  const { players, playerScores, round, totalRounds } = gameState;
+  const transmitterId = gameState.psychicId || gameState.transmitterId;
 
   const transmitter = players.find(p => p.id === transmitterId);
   const voters      = players
@@ -179,7 +181,7 @@ export function RankingTopBar({ gameState, myId, lang, onSettings }) {
       {transmitter && (
         <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
           <span style={{ fontSize:12 }}>👑</span>
-          <ShipIcon ship={transmitter.ship||'cruiser'} color={transmitter.shipColor||'blue'} pixel={1.5}/>
+          <ShipIcon ship={transmitter.ship || 'nova_01'} color={transmitter.shipColor || 'blue'} pixel={1.5}/>
           <div className="t-title glow-text-amber" style={{ fontSize:7, maxWidth:60, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
             {transmitter.name}
           </div>
@@ -198,7 +200,7 @@ export function RankingTopBar({ gameState, myId, lang, onSettings }) {
             background: p.isMe?'rgba(0,255,255,0.06)':'transparent',
             flexShrink:0,
           }}>
-            <ShipIcon ship={p.ship||'cruiser'} color={p.shipColor||'blue'} pixel={1.2}/>
+            <ShipIcon ship={p.ship || 'nova_01'} color={p.shipColor || 'blue'} pixel={1.2}/>
             <span className="t-read" style={{ fontSize:16, color: i===0?'var(--neon-amber)':'var(--ink)', lineHeight:1 }}>
               {p.score}
             </span>
