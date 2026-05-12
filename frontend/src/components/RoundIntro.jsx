@@ -25,12 +25,7 @@ export default function RoundIntro({ gameState, myId, lang, onDone }) {
 
   const transmitter   = gameState.players?.find(p => p.id === gameState.psychicId);
   const isTransmitter = myId === gameState.psychicId;
-
-  const color    = isTransmitter ? 'var(--neon-amber)' : 'var(--neon-cyan)';
-  const roleIcon = isTransmitter ? 'TX' : 'CAL';
-  const roleLine = isTransmitter
-    ? 'TX'
-    : 'CAL';
+  const color = isTransmitter ? 'var(--neon-amber)' : 'var(--neon-cyan)';
 
   return (
     <div
@@ -84,7 +79,7 @@ export default function RoundIntro({ gameState, myId, lang, onDone }) {
             borderBottom: '1px solid rgba(255,255,255,0.07)',
           }}>
             <div className="label mb-4" style={{ color: 'var(--ink-dim)' }}>
-              TX
+              {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
             </div>
             <div style={{ fontFamily: 'var(--f-vt)', fontSize: 36, color: 'var(--neon-amber)', lineHeight: 1 }}>
               {transmitter?.name ?? '?'}
@@ -97,9 +92,10 @@ export default function RoundIntro({ gameState, myId, lang, onDone }) {
             border: `2px solid ${color}`,
             background: `${color}09`,
           }}>
-            <div style={{ fontSize: 26, marginBottom: 6 }}>{roleIcon}</div>
-            <div className="pixel-title" style={{ fontSize: 'clamp(10px,2.8vw,13px)', color, lineHeight: 2 }}>
-              {roleLine}
+            <div className="pixel-title" style={{ fontSize: 'clamp(10px,2.8vw,14px)', color, lineHeight: 1.6 }}>
+              {isTransmitter
+                ? (lang === 'pt' ? 'É a sua vez de transmitir!' : 'Your turn to transmit!')
+                : (lang === 'pt' ? 'Calibre a posição certa' : 'Calibrate the right position')}
             </div>
           </div>
         </div>
