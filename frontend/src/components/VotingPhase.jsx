@@ -98,16 +98,21 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
           </div>
 
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', width: 'min(560px, 100%)' }}>
-            <button
-              className={`btn btn-sm ${boost ? 'btn-yellow' : 'btn-ghost'}`}
-              onClick={() => {
-                setBoost((value) => !value);
-                playClick();
-              }}
-              style={{ fontSize: 9, minWidth: 132, minHeight: 40 }}
-            >
-              BOOST
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              <button
+                className={`btn btn-sm ${boost ? 'btn-yellow' : 'btn-ghost'}`}
+                onClick={() => {
+                  setBoost((value) => !value);
+                  playClick();
+                }}
+                style={{ fontSize: 9, minWidth: 132, minHeight: 40 }}
+              >
+                BOOST
+              </button>
+              <span className="t-mono text-dim" style={{ fontSize: 9 }}>
+                {lang === 'pt' ? '+pts se acertar · -pts se errar' : '+pts if right · -pts if wrong'}
+              </span>
+            </div>
             <span className="t-title text-dim" style={{ fontSize: 9, alignSelf: 'center' }}>
               {votedCount}/{nonPsychicVoters.length}
             </span>

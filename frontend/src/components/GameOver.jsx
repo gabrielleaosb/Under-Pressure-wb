@@ -26,11 +26,10 @@ function useConfetti(active) {
 }
 
 export default function GameOver({ gameState, myId, lang, send, isHost }) {
-  const { players, playerScores, playerDamage = {}, winner, winnerIds, settings } = gameState;
+  const { players, playerScores, winner, winnerIds, settings } = gameState;
   const soundPlayed = useRef(false);
 
-  // Sort by score
-  const ranked = [...players].sort((a,b) => ((playerScores[b.id]||0) - (playerScores[a.id]||0)) || ((playerDamage[a.id]||0) - (playerDamage[b.id]||0)));
+  const ranked = [...players].sort((a,b) => (playerScores[b.id]||0) - (playerScores[a.id]||0));
   const topScore   = playerScores[ranked[0]?.id] || 0;
   const iAmWinner  = winnerIds?.includes(myId);
   const isTie      = (winnerIds?.length || 0) > 1;
@@ -104,7 +103,6 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
             if (!p) return <div key={slot} />;
             const rank = ranked.findIndex((player) => player.id === p.id) + 1;
             const score = playerScores[p.id] || 0;
-            const damage = playerDamage[p.id] || 0;
             const isWin = winnerIds?.includes(p.id);
             const height = rank === 1 ? 98 : rank === 2 ? 74 : 58;
             return (
@@ -112,7 +110,6 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
                 <ShipIcon
                   ship={p.ship || 'nova_01'}
                   color={p.shipColor || 'blue'}
-                  damage={damage}
                   pixel={rank === 1 ? 6 : 5}
                   glow={isWin}
                 />
@@ -134,10 +131,10 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
                   }}
                 >
                   <div className="t-read" style={{ fontSize:28, color:isWin ? 'var(--neon-mint)' : p.color }}>
-                    {String(rank).padStart(2,'0')}
+                    #{rank}
                   </div>
                   <div className="t-mono" style={{ fontSize:13, color:'var(--ink-dim)' }}>
-                    {score} PTS · DMG {damage}
+                    {score} PTS
                   </div>
                 </div>
               </div>
@@ -176,7 +173,7 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
           {lang==='pt'?'PLACAR FINAL':'FINAL SCORE'}
         </div>
         <div className="t-mono" style={{ color:'var(--ink-dim)', fontSize:12, marginBottom:10, textAlign:'center' }}>
-          {lang === 'pt' ? 'Mais PTS vence. Empate: menor DMG.' : 'Most PTS wins. Tie: lower DMG.'}
+          {lang === 'pt' ? 'Mais pontos vence. Empates são possíveis.' : 'Most points wins. Ties are possible.'}
         </div>
         <div className="flex-col gap-6">
           {ranked.map((p, i) => {
@@ -191,16 +188,13 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
                 background: isWin ? 'rgba(0,255,136,0.07)' : isMe ? `${p.color}12` : 'transparent',
               }}>
                 <span style={{ fontFamily:'var(--f-vt)', fontSize:24, color:'var(--ink-dim)', minWidth:28 }}>
-                  {i===0?'01':i===1?'02':i===2?'03':`${i+1}.`}
+                  #{i+1}
                 </span>
                 <div style={{ width:36, height:36, borderRadius:'50%', background:`${p.color}22`, border:`2px solid ${p.color}`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--f-pixel)', fontSize:9, color:p.color, flexShrink:0 }}>
                   {p.name.slice(0,2).toUpperCase()}
                 </div>
                 <span style={{ flex:1, fontFamily:'var(--f-body)', fontWeight:800, fontSize:14, color: isMe ? p.color : 'var(--ink)' }}>
-                  {p.name}{isMe && <span style={{ fontSize:10, color:'var(--neon-amber)', marginLeft:6 }}>← voce</span>}
-                </span>
-                <span className="t-mono" style={{ color:'var(--neon-coral)', fontSize:12 }}>
-                  DMG {playerDamage?.[p.id] || 0}
+                  {p.name}
                 </span>
                 <span style={{ fontFamily:'var(--f-vt)', fontSize:28, color:isWin?'var(--neon-mint)':p.color, lineHeight:1 }}>
                   {score}

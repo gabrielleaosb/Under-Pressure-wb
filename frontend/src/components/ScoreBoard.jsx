@@ -29,7 +29,7 @@ export default function ScoreBoard({ gameState, myId, lang, onSettings }) {
             }}>
               {/* Rank */}
               <span style={{ fontFamily:'var(--f-vt)', fontSize:16, color:'var(--ink-dim)', lineHeight:1 }}>
-                {i+1}.
+                #{i+1}
               </span>
               {/* Avatar dot */}
               <div style={{ width:18, height:18, borderRadius:'50%', background:p.color, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--f-pixel)', fontSize:6, color:'#000' }}>
@@ -38,7 +38,6 @@ export default function ScoreBoard({ gameState, myId, lang, onSettings }) {
               {/* Name */}
               <span style={{ fontFamily:'var(--f-body)', fontWeight:800, fontSize:11, color: isMe ? p.color : 'var(--ink)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                 {p.name}
-                {isTx && <span style={{ color:'var(--neon-amber)', marginLeft:4 }}>TX</span>}
               </span>
               {/* Score */}
               <span style={{ fontFamily:'var(--f-vt)', fontSize:20, color:p.color, lineHeight:1, flexShrink:0 }}>
