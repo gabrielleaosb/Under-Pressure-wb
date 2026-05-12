@@ -234,8 +234,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
               </button>
               <button className="btn btn-ghost btn-sm" onClick={() => {
                 playClick();
-                setMode(inviteCode ? 'join' : null);
-                if (!inviteCode) setCode('');
+                setMode(null);
               }}>
                 {lang === 'pt' ? 'VOLTAR' : 'BACK'}
               </button>
