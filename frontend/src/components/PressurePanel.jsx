@@ -217,7 +217,6 @@ export default function PressurePanel({
         >
           {String(Math.round(value)).padStart(2, '0')}
         </div>
-        <div className="t-mono text-dim" style={{ fontSize: 12 }}>kPa</div>
       </div>
 
       <svg

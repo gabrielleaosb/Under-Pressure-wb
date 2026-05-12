@@ -96,11 +96,14 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, paddingBottom: 28 }}>
       <div className="panel bevel glow-amber" style={{ padding: '14px 22px', textAlign: 'center', width: 'min(560px, 100%)' }}>
-        <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 6 }}>
-          ▸ REVEAL · {psychic?.name || '?'}
+        <div className="t-title" style={{ fontSize: 'clamp(13px, 2.5vw, 17px)', color: gameState.currentTheme?.color, marginBottom: 6 }}>
+          {lang === 'en' ? gameState.currentTheme?.shortEN : gameState.currentTheme?.shortPT}
         </div>
         <div className="t-title glow-text-amber" style={{ fontSize: 'clamp(17px, 4vw, 26px)' }}>
           "{gameState.clue}"
+        </div>
+        <div className="t-title text-dim" style={{ fontSize: 9, marginTop: 6 }}>
+          ▸ {psychic?.name || '?'} · TX
         </div>
       </div>
 
