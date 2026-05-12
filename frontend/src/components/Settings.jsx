@@ -1,12 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getVolume, setVolume, playClick } from '../sounds.js';
 
 export default function Settings({ lang, setLang, onLeaveRoom, onClose, inGame }) {
   const [vol, setVol] = useState(() => Math.round(getVolume() * 100));
+  const rafRef = useRef(null);
 
   const handleVol = (value) => {
-    setVol(value);
-    setVolume(value / 100);
+    const next = Math.max(0, Math.min(100, value));
+    setVolume(next / 100);
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      setVol(next);
+      rafRef.current = null;
+    });
   };
 
   useEffect(() => {
@@ -14,21 +21,21 @@ export default function Settings({ lang, setLang, onLeaveRoom, onClose, inGame }
       if (event.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    return () => {
+      window.removeEventListener('keydown', handler);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   }, [onClose]);
 
   return (
     <div className="settings-overlay" onClick={(event) => event.target === event.currentTarget && onClose()}>
       <div className="settings-backdrop" />
 
-      <div className="settings-panel panel bevel glow-cyan">
+      <div className="settings-panel panel bevel">
         <div className="settings-panel__header">
           <div>
-            <div className="t-title text-dim" style={{ fontSize: 7 }}>
-              ▸ {lang === 'pt' ? 'PAINEL DE CONTROLE' : 'CONTROL PANEL'}
-            </div>
-            <h2 className="t-title glow-text-cyan" style={{ fontSize: 'clamp(10px,2.4vw,13px)', marginTop: 14 }}>
-              {lang === 'pt' ? 'CONFIGURACOES' : 'SETTINGS'}
+            <h2 className="t-title glow-text-cyan" style={{ fontSize: 'clamp(10px,2.4vw,13px)' }}>
+              CONFIG
             </h2>
           </div>
 
@@ -43,7 +50,7 @@ export default function Settings({ lang, setLang, onLeaveRoom, onClose, inGame }
 
         <div className="settings-section">
           <div className="label" style={{ color: 'var(--dim2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{lang === 'pt' ? 'VOLUME' : 'VOLUME'}</span>
+            <span>VOL</span>
             <span style={{ fontFamily: 'var(--f-vt)', fontSize: 32, color: 'var(--cyan)' }}>{vol}%</span>
           </div>
 
@@ -53,11 +60,10 @@ export default function Settings({ lang, setLang, onLeaveRoom, onClose, inGame }
               min="0"
               max="100"
               value={vol}
+              onInput={(event) => handleVol(Number(event.target.value))}
               onChange={(event) => handleVol(Number(event.target.value))}
               className="settings-slider"
-              style={{
-                background: `linear-gradient(90deg, var(--cyan) ${vol}%, rgba(255,255,255,0.12) ${vol}%)`,
-              }}
+              style={{ '--vol': `${vol}%` }}
             />
           </div>
 
@@ -79,7 +85,7 @@ export default function Settings({ lang, setLang, onLeaveRoom, onClose, inGame }
 
         <div className="settings-section">
           <div className="label" style={{ color: 'var(--dim2)', marginBottom: 10 }}>
-            {lang === 'pt' ? 'IDIOMA' : 'LANGUAGE'}
+            LANG
           </div>
           <div className="settings-quick-grid">
             {[
@@ -108,12 +114,12 @@ export default function Settings({ lang, setLang, onLeaveRoom, onClose, inGame }
               onLeaveRoom();
             }}
           >
-            {lang === 'pt' ? 'SAIR DA SALA' : 'LEAVE ROOM'}
+            EXIT
           </button>
         )}
 
         <button className="btn btn-ghost btn-full" onClick={onClose}>
-          {lang === 'pt' ? 'FECHAR' : 'CLOSE'}
+          CLOSE
         </button>
       </div>
     </div>

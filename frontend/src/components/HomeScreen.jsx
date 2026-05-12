@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { t } from '../i18n.js';
 import { playClick, playJoin } from '../sounds.js';
-import { ShipIcon } from './ShipRoster.jsx';
+import { ShipIcon, ShipPicker } from './ShipRoster.jsx';
 
 function PixelLogo({ lang }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <ShipIcon ship="nova_03" color="red" pixel={5} glow damage={1} />
-        <ShipIcon ship="nova_18" color="blue" pixel={5} glow damage={2} />
+        <ShipIcon ship="nova_08" color="blue" pixel={5} glow damage={2} />
       </div>
       <div className="t-title glow-text-cyan flicker" style={{
         fontSize: 'clamp(26px, 7vw, 48px)',
@@ -19,9 +19,7 @@ function PixelLogo({ lang }) {
         UNDER<br />
         <span className="glow-text-amber">PRESSURE</span>
       </div>
-      <div className="t-title text-dim" style={{ fontSize: 8, letterSpacing: '.18em' }}>
-        {lang === 'pt' ? 'PARTY GAME · ESPACO PROFUNDO' : 'PARTY GAME · DEEP SPACE'}
-      </div>
+      <div className="t-title text-dim" style={{ fontSize: 8, letterSpacing: '.18em' }}>SECTOR-7G</div>
     </div>
   );
 }
@@ -30,6 +28,9 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
   const [mode, setMode] = useState(() => (inviteCode ? 'join' : null));
   const [name, setName] = useState('');
   const [code, setCode] = useState(inviteCode);
+  const [ship, setShip] = useState(() => localStorage.getItem('up_ship') || 'nova_01');
+  const [shipColor, setShipColor] = useState(() => localStorage.getItem('up_ship_color') || 'blue');
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -51,7 +52,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
     try {
       if (mode === 'create') {
         playJoin();
-        await onCreate(name.trim());
+        await onCreate(name.trim(), { ship, shipColor });
       } else {
         if (code.length < 4) {
           setErr(lang === 'pt' ? 'Codigo invalido.' : 'Invalid code.');
@@ -59,7 +60,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
           return;
         }
         playJoin();
-        await onJoin(code.trim(), name.trim());
+        await onJoin(code.trim(), name.trim(), { ship, shipColor });
       }
     } catch (e) {
       setErr(e.message);
@@ -70,6 +71,21 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
 
   return (
     <div className="screen" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+      {pickerOpen && (
+        <ShipPicker
+          currentShip={ship}
+          currentColor={shipColor}
+          lang={lang}
+          onConfirm={(nextShip, nextColor) => {
+            setShip(nextShip);
+            setShipColor(nextColor);
+            localStorage.setItem('up_ship', nextShip);
+            localStorage.setItem('up_ship_color', nextColor);
+            setPickerOpen(false);
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
       <div style={{
         position: 'absolute',
         inset: 0,
@@ -96,7 +112,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
       }}>
         <span className="glow-text-cyan">▌SECTOR-7G</span>
         <span>v1.0 // ONLINE</span>
-        <span className="glow-text-mint">● 42 NAVES</span>
+        <span className="glow-text-mint">12 NAVES</span>
       </div>
 
       <div style={{
@@ -108,25 +124,10 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 18,
+        gap: 16,
         padding: '64px 18px 24px',
       }}>
         <PixelLogo lang={lang} />
-
-        <div className="panel bevel" style={{
-          width: 'min(520px, 100%)',
-          padding: '12px 14px',
-          borderColor: 'rgba(0,255,255,.25)',
-        }}>
-          <div className="t-title glow-text-cyan" style={{ fontSize: 8, marginBottom: 6 }}>
-            ▸ {lang === 'pt' ? 'TRANSMISSAO RECEBIDA' : 'TRANSMISSION RECEIVED'}
-          </div>
-          <div className="t-body text-dim" style={{ fontSize: 13, lineHeight: 1.5 }}>
-            {lang === 'pt'
-              ? 'Tripulacao online. Um painel de pressao instavel. Calibre antes que o casco ceda.'
-              : 'Crew online. One unstable pressure panel. Calibrate before the hull gives.'}
-          </div>
-        </div>
 
         <div className="panel bevel glow-cyan" style={{
           width: 'min(430px, 100%)',
@@ -138,13 +139,13 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
         }}>
           {inviteCode && (
             <div className="t-mono glow-text-amber" style={{ fontSize: 14 }}>
-              {lang === 'pt' ? `CONVITE ${inviteCode}` : `INVITE ${inviteCode}`}
+              {inviteCode}
             </div>
           )}
 
           <div>
             <label className="t-title text-dim" style={{ display: 'block', fontSize: 8, marginBottom: 6 }}>
-              {t('playerName', lang)} ▸
+              PILOT ▸
             </label>
             <input
               className="input"
@@ -160,13 +161,41 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
             />
           </div>
 
+          <button
+            className="panel bevel"
+            onClick={() => {
+              playClick();
+              setPickerOpen(true);
+            }}
+            style={{
+              padding: '10px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              cursor: 'pointer',
+              textAlign: 'left',
+              background: 'rgba(255,255,255,.025)',
+              borderColor: 'var(--metal-2)',
+            }}
+          >
+            <ShipIcon ship={ship} color={shipColor} pixel={3} glow />
+            <div style={{ flex: 1 }}>
+              <div className="t-title text-dim" style={{ fontSize: 7, marginBottom: 4 }}>
+                {lang === 'pt' ? 'SUA NAVE' : 'YOUR SHIP'}
+              </div>
+              <div className="t-title glow-text-cyan" style={{ fontSize: 9 }}>
+                {lang === 'pt' ? 'MUDAR NAVE' : 'CHANGE SHIP'}
+              </div>
+            </div>
+          </button>
+
           {mode === null && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <button className="btn btn-primary btn-pulse" onClick={() => { playClick(); setMode('create'); }}>
-                ▸ {lang === 'pt' ? 'CRIAR NAVE' : 'CREATE SHIP'}
+                {lang === 'pt' ? 'CRIAR' : 'CREATE'}
               </button>
               <button className="btn btn-yellow" onClick={() => { playClick(); setMode('join'); }}>
-                {lang === 'pt' ? 'EMBARCAR' : 'BOARD SHIP'}
+                {lang === 'pt' ? 'ENTRAR' : 'JOIN'}
               </button>
             </div>
           )}
@@ -174,7 +203,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
           {mode === 'create' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button className="btn btn-primary btn-pulse" onClick={go} disabled={!name.trim() || busy}>
-                {busy ? '...' : lang === 'pt' ? 'INICIAR MISSAO' : 'START MISSION'}
+                {busy ? '...' : lang === 'pt' ? 'CRIAR SALA' : 'CREATE ROOM'}
               </button>
               <button className="btn btn-ghost btn-sm" onClick={() => { playClick(); setMode(inviteCode ? 'join' : null); }}>
                 {lang === 'pt' ? 'VOLTAR' : 'BACK'}
@@ -186,7 +215,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div>
                 <label className="t-title text-dim" style={{ display: 'block', fontSize: 8, marginBottom: 6 }}>
-                  {t('roomCode', lang)} ▸
+                  ROOM ▸
                 </label>
                 <input
                   className="input code-input"
@@ -201,7 +230,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
                 />
               </div>
               <button className="btn btn-yellow" onClick={go} disabled={!name.trim() || code.length < 4 || busy}>
-                {busy ? '...' : lang === 'pt' ? 'EMBARCAR AGORA' : 'BOARD NOW'}
+                {busy ? '...' : lang === 'pt' ? 'ENTRAR NA SALA' : 'JOIN ROOM'}
               </button>
               <button className="btn btn-ghost btn-sm" onClick={() => {
                 playClick();

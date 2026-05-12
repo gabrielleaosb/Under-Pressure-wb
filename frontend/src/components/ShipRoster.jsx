@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 export const SHIP_SWATCHES = {
   red: '#ff5468',
@@ -14,36 +14,154 @@ export const SHIP_SWATCHES = {
 };
 
 export const SHIP_MODELS = [
-  { id: 'nova_01', name: 'Lancer', profile: [1, 2, 3, 3, 2], nose: 2, tail: 2, canopy: 9, engines: 2, fins: 'none' },
-  { id: 'nova_02', name: 'Arrow', profile: [1, 2, 2, 3, 2], nose: 4, tail: 1, canopy: 10, engines: 1, fins: 'none' },
-  { id: 'nova_03', name: 'Manta', profile: [1, 3, 4, 4, 2], nose: 2, tail: 2, canopy: 8, engines: 2, fins: 'wide' },
-  { id: 'nova_04', name: 'Drift', profile: [2, 2, 3, 3, 2], nose: 3, tail: 1, canopy: 9, engines: 2, fins: 'top' },
-  { id: 'nova_05', name: 'Basilisk', profile: [1, 3, 3, 4, 2], nose: 2, tail: 3, canopy: 11, engines: 3, fins: 'wide' },
-  { id: 'nova_06', name: 'Raptor', profile: [2, 3, 4, 4, 3], nose: 2, tail: 2, canopy: 9, engines: 2, fins: 'stab' },
-  { id: 'nova_07', name: 'Warden', profile: [2, 3, 3, 3, 2], nose: 3, tail: 3, canopy: 12, engines: 3, fins: 'none' },
-  { id: 'nova_08', name: 'Needle', profile: [1, 1, 2, 2, 1], nose: 5, tail: 1, canopy: 11, engines: 1, fins: 'none' },
-  { id: 'nova_09', name: 'Halo', profile: [2, 3, 4, 3, 2], nose: 2, tail: 2, canopy: 8, engines: 2, fins: 'top' },
-  { id: 'nova_10', name: 'Harpoon', profile: [1, 2, 3, 4, 2], nose: 3, tail: 2, canopy: 10, engines: 2, fins: 'lower' },
-  { id: 'nova_11', name: 'Quill', profile: [1, 2, 2, 4, 3], nose: 2, tail: 1, canopy: 11, engines: 2, fins: 'stab' },
-  { id: 'nova_12', name: 'Comet', profile: [2, 2, 3, 4, 2], nose: 4, tail: 2, canopy: 10, engines: 1, fins: 'top' },
-  { id: 'nova_13', name: 'Anvil', profile: [2, 4, 4, 3, 2], nose: 2, tail: 3, canopy: 8, engines: 3, fins: 'none' },
-  { id: 'nova_14', name: 'Dart', profile: [1, 1, 2, 3, 2], nose: 5, tail: 1, canopy: 10, engines: 1, fins: 'none' },
-  { id: 'nova_15', name: 'Scythe', profile: [1, 3, 4, 4, 2], nose: 1, tail: 2, canopy: 7, engines: 2, fins: 'stab' },
-  { id: 'nova_16', name: 'Beacon', profile: [2, 2, 3, 3, 2], nose: 3, tail: 3, canopy: 10, engines: 2, fins: 'none' },
-  { id: 'nova_17', name: 'Pike', profile: [1, 2, 3, 4, 3], nose: 2, tail: 1, canopy: 11, engines: 1, fins: 'lower' },
-  { id: 'nova_18', name: 'Atlas', profile: [2, 3, 3, 3, 2], nose: 2, tail: 4, canopy: 10, engines: 3, fins: 'top' },
-  { id: 'nova_19', name: 'Glider', profile: [1, 3, 4, 4, 3], nose: 1, tail: 2, canopy: 7, engines: 2, fins: 'wide' },
-  { id: 'nova_20', name: 'Skipper', profile: [1, 2, 3, 4, 2], nose: 3, tail: 2, canopy: 8, engines: 2, fins: 'top' },
-  { id: 'nova_21', name: 'Relic', profile: [2, 2, 3, 4, 3], nose: 2, tail: 3, canopy: 11, engines: 3, fins: 'lower' },
-  { id: 'nova_22', name: 'Monarch', profile: [1, 3, 4, 4, 2], nose: 1, tail: 2, canopy: 8, engines: 2, fins: 'wide' },
-  { id: 'nova_23', name: 'Shard', profile: [1, 1, 2, 3, 2], nose: 4, tail: 1, canopy: 10, engines: 1, fins: 'lower' },
-  { id: 'nova_24', name: 'Aegis', profile: [2, 3, 3, 4, 2], nose: 3, tail: 3, canopy: 9, engines: 3, fins: 'none' },
-  { id: 'nova_25', name: 'Spine', profile: [1, 2, 2, 4, 3], nose: 2, tail: 2, canopy: 11, engines: 2, fins: 'stab' },
-  { id: 'nova_26', name: 'Mirage', profile: [1, 3, 4, 4, 3], nose: 1, tail: 2, canopy: 7, engines: 2, fins: 'wide' },
-  { id: 'nova_27', name: 'Forge', profile: [2, 4, 4, 3, 2], nose: 2, tail: 4, canopy: 9, engines: 3, fins: 'top' },
-  { id: 'nova_28', name: 'Pulse', profile: [1, 2, 3, 3, 2], nose: 3, tail: 2, canopy: 10, engines: 2, fins: 'lower' },
-  { id: 'nova_29', name: 'Hydra', profile: [1, 3, 4, 4, 2], nose: 2, tail: 3, canopy: 8, engines: 3, fins: 'stab' },
-  { id: 'nova_30', name: 'Orbit', profile: [2, 2, 3, 4, 2], nose: 3, tail: 2, canopy: 9, engines: 2, fins: 'top' },
+  { id: 'nova_01', name: 'Needle', role: 'Duelist', sprite: `
+......2...........
+.....222..........
+....22022.........
+...22033022.......
+55220044002222....
+6622770000000222..
+55220044002222....
+...22033022.......
+....22022.........
+.....222..........
+......2...........
+  ` },
+  { id: 'nova_02', name: 'Manta', role: 'Wing', sprite: `
+..2...........2...
+.222.........222..
+22022.......22022.
+22200222222200222.
+..220044440022....
+....22077022......
+..220044440022....
+22200222222200222.
+22022.......22022.
+.222.........222..
+..2...........2...
+  ` },
+  { id: 'nova_03', name: 'Brick', role: 'Tank', sprite: `
+....222222222.....
+..220000000022....
+552000333300022...
+6620077447700022..
+6620004444000022..
+552000333300022...
+..220000000022....
+....222222222.....
+  ` },
+  { id: 'nova_04', name: 'Halo', role: 'Orbit', sprite: `
+.....2222222......
+...22000000022....
+..20022...22002...
+.2002..333..2002..
+.2002.34443.2002..
+.2002..333..2002..
+..20022...22002...
+...22000000022....
+.....2222222......
+  ` },
+  { id: 'nova_05', name: 'Beetle', role: 'Crawler', sprite: `
+....2.....2.......
+...222...222......
+552200222002255...
+662003333300266...
+..20034443002.....
+..20037773002.....
+662003333300266...
+552200222002255...
+...222...222......
+....2.....2.......
+  ` },
+  { id: 'nova_06', name: 'Shark', role: 'Rusher', sprite: `
+...........2......
+.........2222.....
+......22200022....
+552222000333022...
+66200007774400222.
+552222000333022...
+......22200022....
+.........2222.....
+...........2......
+  ` },
+  { id: 'nova_07', name: 'Shrine', role: 'Relic', sprite: `
+.......22.........
+......2002........
+....22033022......
+...2003443002.....
+552007777700255...
+662000444000266...
+552007777700255...
+...2003443002.....
+....22033022......
+......2002........
+.......22.........
+  ` },
+  { id: 'nova_08', name: 'Comet', role: 'Scout', sprite: `
+55................
+6655..............
+556622............
+..5520022.........
+....200330222.....
+....200744000222..
+....200330222.....
+..5520022.........
+556622............
+6655..............
+55................
+  ` },
+  { id: 'nova_09', name: 'Fork', role: 'Interceptor', sprite: `
+..222.......222...
+.20022.....22002..
+55200222222200255.
+66200033330002666.
+...2207447022.....
+.....200002.......
+...2207447022.....
+66200033330002666.
+55200222222200255.
+.20022.....22002..
+..222.......222...
+  ` },
+  { id: 'nova_10', name: 'Carrier', role: 'Heavy', sprite: `
+..222222222222....
+220000000000022...
+2003377777330022..
+20030000003300022.
+66200444440002666.
+66200333330002666.
+20030000003300022.
+2003377777330022..
+220000000000022...
+..222222222222....
+  ` },
+  { id: 'nova_11', name: 'Viper', role: 'Blade', sprite: `
+2.............2...
+22...........22...
+2022.......2202...
+200222222222002...
+552003333300255...
+662007444700266...
+552003333300255...
+200222222222002...
+2022.......2202...
+22...........22...
+2.............2...
+  ` },
+  { id: 'nova_12', name: 'Monolith', role: 'Core', sprite: `
+......2222........
+.....200002.......
+....20033002......
+...2003443002.....
+552007777700255...
+662000444000266...
+662000333000266...
+552007777700255...
+...2003443002.....
+....20033002......
+.....200002.......
+......2222........
+  ` },
 ];
 
 export const SHIP_IDS = SHIP_MODELS.map((model) => model.id);
@@ -175,26 +293,36 @@ function addOutline(grid) {
 }
 
 function buildSprite(model) {
-  if (SPRITE_CACHE.has(model.id)) return SPRITE_CACHE.get(model.id);
+  const safeModel = model || SHIP_MODELS[0];
+  if (SPRITE_CACHE.has(safeModel.id)) return SPRITE_CACHE.get(safeModel.id);
+  if (safeModel.sprite) {
+    const rawRows = safeModel.sprite.trim().split('\n').map((row) => row.trim()).filter(Boolean);
+    const width = Math.max(...rawRows.map((row) => row.length));
+    const rows = rawRows.map((row) => row.padEnd(width, '.'));
+    SPRITE_CACHE.set(safeModel.id, rows);
+    return rows;
+  }
+
   const grid = blankGrid();
   const bodyStart = 4;
   const bodyEnd = 17;
-  const segment = Math.floor((bodyEnd - bodyStart) / model.profile.length);
+  const profile = safeModel.profile || SHIP_MODELS[0].profile || [1, 2, 3, 2, 1];
+  const segment = Math.floor((bodyEnd - bodyStart) / profile.length);
 
-  model.profile.forEach((halfHeight, index) => {
+  profile.forEach((halfHeight, index) => {
     const startX = bodyStart + index * segment;
-    const endX = index === model.profile.length - 1 ? bodyEnd : startX + segment;
+    const endX = index === profile.length - 1 ? bodyEnd : startX + segment;
     for (let x = startX; x < endX; x += 1) {
       const t = (x - startX) / Math.max(1, endX - startX);
-      const next = model.profile[Math.min(model.profile.length - 1, index + 1)];
+      const next = profile[Math.min(profile.length - 1, index + 1)];
       const currentHeight = Math.round(halfHeight + (next - halfHeight) * t);
-      drawColumn(grid, x, currentHeight, model.nose);
+      drawColumn(grid, x, currentHeight, safeModel.nose);
     }
   });
 
-  for (let step = 0; step < model.tail; step += 1) {
+  for (let step = 0; step < (safeModel.tail || 1); step += 1) {
     const x = bodyStart - 1 - step;
-    const halfHeight = Math.max(1, model.profile[0] - Math.floor(step / 2));
+    const halfHeight = Math.max(1, profile[0] - Math.floor(step / 2));
     drawColumn(grid, x, halfHeight);
     if (step > 0) {
       setPixel(grid, x, CY - halfHeight - 1, '1');
@@ -202,23 +330,23 @@ function buildSprite(model) {
     }
   }
 
-  for (let step = 0; step < model.nose; step += 1) {
+  for (let step = 0; step < (safeModel.nose || 1); step += 1) {
     const x = bodyEnd + step;
-    const halfHeight = Math.max(0, model.profile[model.profile.length - 1] - step - 1);
+    const halfHeight = Math.max(0, profile[profile.length - 1] - step - 1);
     if (halfHeight === 0) {
-      setPixel(grid, x, CY, step === model.nose - 1 ? '2' : '0');
+      setPixel(grid, x, CY, step === (safeModel.nose || 1) - 1 ? '2' : '0');
     } else {
-      drawColumn(grid, x, halfHeight, model.nose);
+      drawColumn(grid, x, halfHeight, safeModel.nose);
     }
   }
 
-  addFins(grid, model, bodyEnd);
-  addCockpit(grid, model, bodyStart, bodyEnd);
+  addFins(grid, safeModel, bodyEnd);
+  addCockpit(grid, safeModel, bodyStart, bodyEnd);
   addAccent(grid, bodyStart, bodyEnd);
-  addEngines(grid, model, bodyStart);
+  addEngines(grid, safeModel, bodyStart);
 
   const rows = addOutline(grid).map((row) => row.join(''));
-  SPRITE_CACHE.set(model.id, rows);
+  SPRITE_CACHE.set(safeModel.id, rows);
   return rows;
 }
 
@@ -258,24 +386,48 @@ function applyDamage(rows, level, seed = 0, cacheKey = '') {
 }
 
 function PixelArt({ rows, palette, pixel, glow = false, shake = false }) {
+  const canvasRef = useRef(null);
+  const width = rows[0]?.length || 1;
+  const height = rows.length || 1;
+  const cssWidth = width * pixel;
+  const cssHeight = height * pixel;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.ceil(cssWidth * dpr);
+    canvas.height = Math.ceil(cssHeight * dpr);
+
+    const ctx = canvas.getContext('2d', { alpha: true });
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+    rows.forEach((row, y) => {
+      row.split('').forEach((char, x) => {
+        if (char === '.') return;
+        ctx.fillStyle = palette[char] || '#ff00ff';
+        ctx.fillRect(x * pixel, y * pixel, pixel, pixel);
+      });
+    });
+  }, [rows, palette, pixel, cssWidth, cssHeight]);
+
   return (
-    <div
-      className={`pixel-grid ${shake ? 'shake-hard' : ''}`}
+    <canvas
+      ref={canvasRef}
+      className={`pixel-canvas ${shake ? 'shake-hard' : ''}`}
+      width={cssWidth}
+      height={cssHeight}
       style={{
-        gridTemplateColumns: `repeat(${rows[0]?.length || 1}, ${pixel}px)`,
-        gridTemplateRows: `repeat(${rows.length || 1}, ${pixel}px)`,
+        width: cssWidth,
+        height: cssHeight,
         filter: glow ? `drop-shadow(0 0 ${Math.max(8, pixel * 2)}px rgba(0,255,255,0.35))` : undefined,
+        display: 'block',
+        imageRendering: 'pixelated',
       }}
-    >
-      {rows.flatMap((row, y) =>
-        row.split('').map((char, x) => (
-          <i
-            key={`${x}-${y}`}
-            style={{ background: char === '.' ? 'transparent' : palette[char] || '#ff00ff' }}
-          />
-        )),
-      )}
-    </div>
+    />
   );
 }
 
@@ -287,9 +439,10 @@ export const ShipIcon = memo(function ShipIcon({
   shake = false,
   damage = 0,
 }) {
-  const model = useMemo(() => getShipModel(ship), [ship]);
+  const safeShip = typeof ship === 'string' && ship ? ship : SHIP_MODELS[0].id;
+  const model = useMemo(() => getShipModel(safeShip), [safeShip]);
   const baseSprite = useMemo(() => buildSprite(model), [model]);
-  const rows = useMemo(() => applyDamage(baseSprite, damage, ship.length, ship), [baseSprite, damage, ship]);
+  const rows = useMemo(() => applyDamage(baseSprite, damage, safeShip.length, safeShip), [baseSprite, damage, safeShip]);
   const palette = useMemo(() => makePalette(color), [color]);
 
   return (
@@ -300,8 +453,11 @@ export const ShipIcon = memo(function ShipIcon({
 });
 
 export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'blue', lang = 'pt', onConfirm, onClose }) {
-  const [ship, setShip] = useState(currentShip);
-  const [color, setColor] = useState(currentColor);
+  const initialShip = typeof currentShip === 'string' && SHIP_IDS.includes(currentShip) ? currentShip : SHIP_MODELS[0].id;
+  const initialColor = typeof currentColor === 'string' && SHIP_COLORS.includes(currentColor) ? currentColor : 'blue';
+  const [ship, setShip] = useState(initialShip);
+  const [color, setColor] = useState(initialColor);
+  const selectedModel = SHIP_MODELS.find((model) => model.id === ship) || SHIP_MODELS[0];
 
   return (
     <div
@@ -309,8 +465,7 @@ export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'bl
         position: 'fixed',
         inset: 0,
         zIndex: 9000,
-        background: 'rgba(0,0,0,0.9)',
-        backdropFilter: 'blur(10px)',
+        background: 'rgba(0,0,0,0.92)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -331,16 +486,13 @@ export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'bl
           flexDirection: 'column',
           gap: 18,
           background: 'linear-gradient(180deg,#0d1026,#060818)',
+          backdropFilter: 'none',
+          contain: 'layout paint',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div>
-            <div className="t-title glow-text-cyan" style={{ fontSize: 'clamp(9px,2.5vw,12px)' }}>
-              {lang === 'pt' ? 'HANGAR TATICO' : 'TACTICAL HANGAR'}
-            </div>
-            <div className="t-body text-dim" style={{ fontSize: 13, marginTop: 8 }}>
-              {lang === 'pt' ? 'Sprites pixel art novos, sem SVG.' : 'New pixel art sprites, no SVG.'}
-            </div>
+            <div className="t-title glow-text-cyan" style={{ fontSize: 'clamp(9px,2.5vw,12px)' }}>HANGAR</div>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={onClose} style={{ minWidth: 32, minHeight: 32, fontSize: 16, padding: 0 }}>
             X
@@ -352,11 +504,14 @@ export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'bl
           <div className="t-title glow-text-amber" style={{ fontSize: 10 }}>
             {SHIP_LABELS[lang]?.[ship] || ship}
           </div>
+          <div className="t-mono text-dim" style={{ fontSize: 13 }}>
+            {selectedModel.role}
+          </div>
         </div>
 
         <div>
           <div className="t-title text-dim" style={{ fontSize: 7, marginBottom: 8 }}>
-            {lang === 'pt' ? 'MODELOS' : 'MODELS'}
+            SHIP
           </div>
           <div className="ship-picker-grid">
             {SHIP_MODELS.map((model) => {
@@ -376,11 +531,17 @@ export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'bl
                     borderRadius: 6,
                     cursor: 'pointer',
                     boxShadow: active ? '0 0 12px rgba(0,255,255,0.4)' : 'none',
+                    contain: 'layout paint',
+                    transform: active ? 'translateY(-1px)' : 'none',
+                    transition: 'border-color .08s linear, background .08s linear, transform .08s linear',
                   }}
                 >
-                  <ShipIcon ship={model.id} color={color} pixel={3} glow={active} />
+                  <ShipIcon ship={model.id} color={color} pixel={3.2} glow={active} />
                   <span style={{ fontFamily: 'var(--f-body)', fontSize: 11, fontWeight: 800, color: active ? 'var(--neon-cyan)' : 'var(--ink-dim)' }}>
                     {model.name}
+                  </span>
+                  <span className="t-mono" style={{ fontSize: 10, color: active ? 'var(--neon-amber)' : 'var(--ink-faint)' }}>
+                    {model.role}
                   </span>
                 </button>
               );
@@ -390,7 +551,7 @@ export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'bl
 
         <div>
           <div className="t-title text-dim" style={{ fontSize: 7, marginBottom: 8 }}>
-            {lang === 'pt' ? 'PALETAS' : 'PALETTES'}
+            COLOR
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {SHIP_COLORS.map((swatch) => {
@@ -408,6 +569,7 @@ export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'bl
                     boxShadow: active ? `0 0 12px ${fill}, 0 0 0 2px var(--neon-cyan)` : `0 0 6px ${fill}66`,
                     cursor: 'pointer',
                     borderRadius: 6,
+                    contain: 'layout paint',
                   }}
                 />
               );
@@ -415,8 +577,8 @@ export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'bl
           </div>
         </div>
 
-        <button className="btn btn-primary btn-pulse" style={{ fontSize: 11 }} onClick={() => onConfirm(ship, color)}>
-          {lang === 'pt' ? 'CONFIRMAR NAVE' : 'CONFIRM SHIP'}
+        <button className="btn btn-primary" style={{ fontSize: 11 }} onClick={() => onConfirm(ship, color)}>
+          OK
         </button>
       </div>
     </div>

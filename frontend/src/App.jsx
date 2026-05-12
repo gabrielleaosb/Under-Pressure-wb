@@ -151,14 +151,48 @@ export default function App() {
     const presUnsub = onValue(infoRef, (snap) => {
       if (!snap.val()) return;
       update(playerRef, { connected: true });
-      onDisconnect(playerRef).update({ connected: false });
+      onDisconnect(playerRef).update({ connected: false, disconnectedAt: Date.now() });
     });
+
+    const markOffline = () => {
+      update(playerRef, { connected: false, disconnectedAt: Date.now() }).catch(() => {});
+    };
+    window.addEventListener('pagehide', markOffline);
+    window.addEventListener('beforeunload', markOffline);
 
     return () => {
       unsub();
       presUnsub();
+      window.removeEventListener('pagehide', markOffline);
+      window.removeEventListener('beforeunload', markOffline);
     };
   }, [roomCode, myId, lang, showError, flash, clearActiveRoom]);
+
+  useEffect(() => {
+    if (!rawRoom || !roomCode) return;
+    const players = Object.values(rawRoom.players || {});
+    const connectedHumans = players
+      .filter((player) => !player.isBot && player.connected !== false)
+      .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    const nextHost = connectedHumans[0];
+    const currentHost = rawRoom.players?.[rawRoom.hostId];
+
+    if (!nextHost || nextHost.id !== myId || currentHost?.connected !== false) return;
+
+    const roomUpdates = {
+      [`rooms/${roomCode}/hostId`]: nextHost.id,
+      [`rooms/${roomCode}/players/${nextHost.id}/isHost`]: true,
+    };
+
+    if (rawRoom.hostId) {
+      roomUpdates[`rooms/${roomCode}/players/${rawRoom.hostId}/isHost`] = false;
+    }
+    if (rawRoom.phase === 'lobby' && rawRoom.transmitterId === rawRoom.hostId) {
+      roomUpdates[`rooms/${roomCode}/transmitterId`] = nextHost.id;
+    }
+
+    update(ref(db), roomUpdates).catch(() => {});
+  }, [rawRoom, roomCode, myId]);
 
   useEffect(() => {
     if (!isHost || !roomCode) return undefined;
@@ -177,11 +211,11 @@ export default function App() {
       .catch((err) => showError(err.message));
   }, [roomCode, myId, showError]);
 
-  const handleCreate = async (playerName) => {
+  const handleCreate = async (playerName, loadout = {}) => {
     try {
       sessionStorage.setItem('up_pid', myId);
       const code = await generateRoomCode();
-      await createRoom(code, myId, playerName);
+      await createRoom(code, myId, playerName, loadout);
       sessionStorage.setItem('up_room', code);
       setRoomCode(code);
     } catch (err) {
@@ -189,9 +223,9 @@ export default function App() {
     }
   };
 
-  const handleJoin = async (code, playerName) => {
+  const handleJoin = async (code, playerName, loadout = {}) => {
     const upper = normalizeRoomCode(code);
-    const result = await addPlayerToRoom(upper, myId, playerName);
+    const result = await addPlayerToRoom(upper, myId, playerName, loadout);
     if (result.error) {
       showError(t(`err_${result.error}`, lang));
       return;

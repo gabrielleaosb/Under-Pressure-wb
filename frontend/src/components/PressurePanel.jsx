@@ -295,11 +295,6 @@ export default function PressurePanel({
         </span>
       </div>
 
-      {!disabled && (
-        <p style={{ fontFamily: 'var(--f-body)', fontSize: 11, color: 'var(--ink-faint)', textAlign: 'center', marginTop: 6 }}>
-          {lang === 'pt' ? 'arraste a agulha para votar' : 'drag the needle to vote'}
-        </p>
-      )}
     </div>
   );
 }

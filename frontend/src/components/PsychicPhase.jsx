@@ -38,21 +38,21 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, paddingBottom: 28 }}>
-      <div className="panel bevel glow-amber" style={{ padding: '10px 18px', textAlign: 'center', width: 'min(420px, 100%)' }}>
-        <div className="t-title text-dim" style={{ fontSize: 7, marginBottom: 4 }}>
-          ▸ {psychicPlayer?.name || '?'} · {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
+      <div className="panel bevel glow-amber" style={{ padding: '14px 22px', textAlign: 'center', width: 'min(560px, 100%)' }}>
+        <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 6 }}>
+          ▸ {psychicPlayer?.name || '?'} · TX
         </div>
-        <div className="t-title glow-text-amber" style={{ fontSize: 'clamp(14px, 3vw, 20px)' }}>
+        <div className="t-title glow-text-amber" style={{ fontSize: 'clamp(18px, 3vw, 28px)' }}>
           {lang === 'en' ? gameState.currentTheme?.shortEN : gameState.currentTheme?.shortPT}
         </div>
-        <div className="t-mono text-dim" style={{ fontSize: 13, marginTop: 6 }}>
+        <div className="t-mono text-dim" style={{ fontSize: 16, marginTop: 8 }}>
           {tCard(gameState.currentCard, 'left', lang)} ← → {tCard(gameState.currentCard, 'right', lang)}
         </div>
       </div>
 
       {isPsychic && myTargetPos !== null && (
         <>
-          <div className="panel bevel glow-cyan" style={{ width: 'min(420px, 100%)', padding: 14 }}>
+          <div className="panel bevel glow-cyan" style={{ width: 'min(560px, 100%)', padding: 18 }}>
             <PressurePanel
               card={gameState.currentCard}
               lang={lang}
@@ -64,9 +64,9 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
             />
           </div>
 
-          <div className="panel bevel" style={{ width: 'min(420px, 100%)', padding: 14 }}>
-            <label className="t-title text-dim" style={{ display: 'block', fontSize: 8, marginBottom: 8 }}>
-              ▸ {t('clue_label', lang)}
+          <div className="panel bevel" style={{ width: 'min(560px, 100%)', padding: 18 }}>
+            <label className="t-title text-dim" style={{ display: 'block', fontSize: 10, marginBottom: 10 }}>
+              ▸ CLUE
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <input
@@ -76,7 +76,7 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
                 placeholder={t('clue_ph', lang)}
                 maxLength={40}
                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                style={{ flex: 1, minWidth: 160 }}
+                style={{ flex: 1, minWidth: 220 }}
                 autoFocus
               />
               <button className="btn btn-primary" onClick={() => { playClick(); handleSubmit(); }} disabled={!clue.trim()}>
@@ -88,25 +88,24 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
       )}
 
       {isPsychic && myTargetPos === null && (
-        <div className="panel bevel glow-cyan" style={{ width: 'min(420px, 100%)', padding: 20, textAlign: 'center' }}>
-          <div className="t-title glow-text-cyan" style={{ fontSize: 10 }}>
-            {lang === 'pt' ? 'RECEBENDO ALVO...' : 'RECEIVING TARGET...'}
+        <div className="panel bevel glow-cyan" style={{ width: 'min(560px, 100%)', padding: 26, textAlign: 'center' }}>
+          <div className="t-title glow-text-cyan" style={{ fontSize: 13 }}>
+            ...
           </div>
         </div>
       )}
 
       {!isPsychic && (
         <div className="panel bevel glow-cyan" style={{
-          width: 'min(420px, 100%)',
-          padding: 22,
+          width: 'min(560px, 100%)',
+          padding: 28,
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: 14,
         }}>
-          <div className="t-title glow-text-amber" style={{ fontSize: 12 }}>{psychicPlayer?.name || '?'}</div>
-          <div className="t-mono text-dim" style={{ fontSize: 16 }}>{t('psychic_watch', lang)}</div>
+          <div className="t-title glow-text-amber" style={{ fontSize: 16 }}>{psychicPlayer?.name || '?'}</div>
           <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
             {[0, 1, 2].map((i) => (
               <span key={i} style={{
@@ -122,8 +121,8 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
         </div>
       )}
 
-      <div style={{ width: 'min(380px, 100%)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--f-read)', fontSize: 13, color: pct < .25 ? 'var(--neon-coral)' : 'var(--ink-dim)', marginBottom: 4 }}>
+      <div style={{ width: 'min(500px, 100%)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--f-read)', fontSize: 16, color: pct < .25 ? 'var(--neon-coral)' : 'var(--ink-dim)', marginBottom: 6 }}>
           <span>{lang === 'pt' ? 'TEMPO' : 'TIME'}</span>
           <span>{remaining}s</span>
         </div>

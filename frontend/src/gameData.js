@@ -12,6 +12,7 @@ export const THEMES = [
   { id: 9,  namePT: 'Filosofia & Emoções',  nameEN: 'Philosophy',          shortPT: 'MENTE',    shortEN: 'MIND',    color: '#ff8c00' },
   { id: 10, namePT: 'Espaço & Ficção',      nameEN: 'Space & Sci-Fi',      shortPT: 'ESPAÇO',   shortEN: 'SPACE',   color: '#00bfff' },
   { id: 11, namePT: 'Cultura Pop',          nameEN: 'Pop Culture',         shortPT: 'POP',      shortEN: 'POP',     color: '#ff1493' },
+  { id: 12, namePT: 'Amigos & Caos',        nameEN: 'Friends & Chaos',     shortPT: 'AMIGOS',   shortEN: 'FRIENDS', color: '#00ff88' },
 ];
 
 // ── 60 Spectrum Cards ───────────────────────────────────────────────────────
@@ -88,9 +89,18 @@ export const CARDS = [
   { id: 57, t:11, lP:'Sério',          lE:'Serious',       rP:'Irônico',       rE:'Ironic'        },
   { id: 58, t:11, lP:'Nicho',          lE:'Niche',         rP:'Universal',     rE:'Universal'     },
   { id: 59, t:11, lP:'Underground',    lE:'Underground',   rP:'Viral',         rE:'Viral'         },
+  // 12 - Friends & Chaos
+  { id: 60, t:12, lP:'Perdoavel',      lE:'Forgivable',    rP:'Imperdoavel',   rE:'Unforgivable'  },
+  { id: 61, t:12, lP:'Privado',        lE:'Private',       rP:'Exposto',       rE:'Exposed'       },
+  { id: 62, t:12, lP:'Faria sozinho',  lE:'Would do solo', rP:'Chamaria todos',rE:'Invite everyone' },
+  { id: 63, t:12, lP:'Vergonha leve',  lE:'Mild shame',    rP:'Vergonha eterna',rE:'Eternal shame' },
+  { id: 64, t:12, lP:'Amigo confiavel',lE:'Trustworthy',   rP:'Agente do caos',rE:'Chaos agent'   },
+  { id: 65, t:12, lP:'Boa desculpa',   lE:'Good excuse',   rP:'Sem defesa',    rE:'No defense'    },
+  { id: 66, t:12, lP:'Mandaria no grupo',lE:'Group chat',  rP:'Apagaria depois',rE:'Delete later'  },
+  { id: 67, t:12, lP:'Pouco suspeito', lE:'Barely suspicious', rP:'Muito suspeito', rE:'Very suspicious' },
 ];
 
-export const EMOJI_REACTIONS = ['😱','🔥','💀','😂','👏','😮','🤯','💥'];
+export const EMOJI_REACTIONS = ['OK','GG','!!','??','+1'];
 
 export const PLAYER_COLORS = [
   '#ff4655','#00c2ff','#ffb800','#00ff88',
@@ -132,8 +142,13 @@ export function selectCard(usedIds = []) {
 // Normalize Firebase RTDB response to the shape components expect
 export function normalizeRoom(raw) {
   if (!raw) return null;
-  const players        = Object.values(raw.players || {});
+  const rawPlayers     = Object.values(raw.players || {});
+  const players        = raw.phase === 'lobby'
+    ? rawPlayers.filter((player) => player.connected !== false || player.isBot)
+    : rawPlayers;
   const playerScores   = raw.playerScores || {};
+  const playerDamage   = raw.playerDamage || {};
+  const playerStreaks  = raw.playerStreaks || {};
   const roundHistory   = Object.values(raw.roundHistory || {});
   const emojiReactions = Object.values(raw.emojiReactions || {}).slice(-15);
   const votes          = raw.votes || {};
@@ -143,10 +158,13 @@ export function normalizeRoom(raw) {
     ...raw,
     players,
     playerScores,
+    playerDamage,
+    playerStreaks,
     roundHistory,
     emojiReactions,
     votes: ['reveal','gameover'].includes(raw.phase) ? votes : null,
     submittedVotes,
-    totalRounds: raw.settings?.rounds ?? 10,
+    maxDamage: raw.maxDamage ?? 6,
+    totalRounds: raw.settings?.rounds ?? 7,
   };
 }

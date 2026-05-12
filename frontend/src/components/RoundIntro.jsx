@@ -27,13 +27,10 @@ export default function RoundIntro({ gameState, myId, lang, onDone }) {
   const isTransmitter = myId === gameState.psychicId;
 
   const color    = isTransmitter ? 'var(--neon-amber)' : 'var(--neon-cyan)';
-  const roleIcon = isTransmitter ? '📡' : '🎯';
+  const roleIcon = isTransmitter ? 'TX' : 'CAL';
   const roleLine = isTransmitter
-    ? (lang === 'pt' ? 'VOCÊ TRANSMITE A DICA' : 'YOU SEND THE CLUE')
-    : (lang === 'pt' ? 'VOCÊ CALIBRA O PAINEL' : 'YOU CALIBRATE THE PANEL');
-  const roleHint = isTransmitter
-    ? (lang === 'pt' ? 'Gire a roleta · Escolha a pista' : 'Spin the wheel · Give the clue')
-    : (lang === 'pt' ? 'Ouça a pista · Ajuste o ponteiro' : 'Hear the clue · Adjust the needle');
+    ? 'TX'
+    : 'CAL';
 
   return (
     <div
@@ -76,8 +73,7 @@ export default function RoundIntro({ gameState, myId, lang, onDone }) {
           {/* Round counter */}
           <div>
             <div className="label" style={{ color: 'var(--ink-dim)', marginBottom: 4 }}>
-              {lang === 'pt' ? 'RODADA' : 'ROUND'}&nbsp;
-              {String((gameState.round ?? 0) + 1).padStart(2, '0')} / {String(gameState.totalRounds ?? '?').padStart(2, '0')}
+              RD {String((gameState.round ?? 0) + 1).padStart(2, '0')} / {String(gameState.totalRounds ?? '?').padStart(2, '0')}
             </div>
           </div>
 
@@ -88,7 +84,7 @@ export default function RoundIntro({ gameState, myId, lang, onDone }) {
             borderBottom: '1px solid rgba(255,255,255,0.07)',
           }}>
             <div className="label mb-4" style={{ color: 'var(--ink-dim)' }}>
-              📡 {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
+              TX
             </div>
             <div style={{ fontFamily: 'var(--f-vt)', fontSize: 36, color: 'var(--neon-amber)', lineHeight: 1 }}>
               {transmitter?.name ?? '?'}
@@ -105,13 +101,6 @@ export default function RoundIntro({ gameState, myId, lang, onDone }) {
             <div className="pixel-title" style={{ fontSize: 'clamp(10px,2.8vw,13px)', color, lineHeight: 2 }}>
               {roleLine}
             </div>
-            <div style={{ fontFamily: 'var(--f-body)', fontSize: 12, color: 'var(--ink-dim)', marginTop: 6 }}>
-              {roleHint}
-            </div>
-          </div>
-
-          <div style={{ fontFamily: 'var(--f-body)', fontSize: 11, color: 'var(--ink-dim)' }}>
-            {lang === 'pt' ? 'toque para continuar' : 'tap to continue'}
           </div>
         </div>
       </div>

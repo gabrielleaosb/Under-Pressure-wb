@@ -38,7 +38,7 @@ export default function ScoreBoard({ gameState, myId, lang, onSettings }) {
               {/* Name */}
               <span style={{ fontFamily:'var(--f-body)', fontWeight:800, fontSize:11, color: isMe ? p.color : 'var(--ink)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                 {p.name}
-                {isTx && <span style={{ color:'var(--neon-amber)', marginLeft:4 }}>📡</span>}
+                {isTx && <span style={{ color:'var(--neon-amber)', marginLeft:4 }}>TX</span>}
               </span>
               {/* Score */}
               <span style={{ fontFamily:'var(--f-vt)', fontSize:20, color:p.color, lineHeight:1, flexShrink:0 }}>
@@ -61,7 +61,7 @@ export default function ScoreBoard({ gameState, myId, lang, onSettings }) {
           {round+1}/{totalRounds}
         </span>
         <button onClick={onSettings} className="btn btn-ghost" style={{ fontSize:13, padding:'2px 6px', minHeight:26, height:26, marginTop:2 }}
-          title="Settings">⚙</button>
+          title="Settings">CONFIG</button>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { t } from '../i18n.js';
 import { playClick } from '../sounds.js';
-import { ShipIcon, ShipPicker, SHIP_LABELS } from './ShipRoster.jsx';
+import { ShipIcon, ShipPicker } from './ShipRoster.jsx';
 
 function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send }) {
   const isTx = player.id === transmitterId;
@@ -9,10 +9,10 @@ function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send 
 
   return (
     <div className={`panel ${isTx ? 'glow-cyan' : 'bevel'}`} style={{
-      padding: '10px 12px',
+      padding: '14px 16px',
       display: 'flex',
       alignItems: 'center',
-      gap: 10,
+      gap: 14,
       background: isTx
         ? 'linear-gradient(180deg, rgba(255,224,0,.06), rgba(0,255,255,.03))'
         : 'rgba(255,255,255,.02)',
@@ -23,14 +23,14 @@ function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send 
         style={{ position: 'relative', flex: '0 0 auto', cursor: isMe ? 'pointer' : 'default' }}
         onClick={isMe ? onPickShip : undefined}
       >
-        <ShipIcon ship={player.ship || 'nova_01'} color={player.shipColor || 'blue'} pixel={2.7} glow={isTx || isMe} />
+        <ShipIcon ship={player.ship || 'nova_01'} color={player.shipColor || 'blue'} pixel={3.4} glow={isTx || isMe} />
         {isMe && (
           <div style={{
             position: 'absolute',
             bottom: -4,
             right: -4,
-            width: 14,
-            height: 14,
+            width: 18,
+            height: 18,
             borderRadius: 2,
             background: 'var(--neon-cyan)',
             border: '2px solid var(--space-0)',
@@ -38,7 +38,7 @@ function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 9,
+            fontSize: 10,
             fontFamily: 'var(--f-title)',
           }}>+</div>
         )}
@@ -46,7 +46,7 @@ function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send 
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="t-title" style={{
-          fontSize: 9,
+          fontSize: 11,
           color: isTx ? 'var(--neon-amber)' : isMe ? 'var(--neon-cyan)' : 'var(--ink)',
           textShadow: isTx ? '0 0 8px var(--neon-amber)' : isMe ? '0 0 6px var(--neon-cyan)' : 'none',
           whiteSpace: 'nowrap',
@@ -55,12 +55,9 @@ function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send 
         }}>
           {player.name}
         </div>
-        <div className="t-mono text-dim" style={{ fontSize: 11, marginTop: 2 }}>
-          {SHIP_LABELS[lang]?.[player.ship || 'nova_01']} · {player.shipColor || 'blue'}
-        </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-end' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
         {isTx && (
           <span className="badge badge-captain">
             {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
@@ -75,7 +72,7 @@ function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send 
               playClick();
               send('set_transmitter', { playerId: player.id });
             }}
-            style={{ minHeight: 28, fontSize: 7, padding: '4px 7px' }}
+            style={{ minHeight: 34, fontSize: 8, padding: '6px 10px' }}
           >
             TX
           </button>
@@ -88,14 +85,14 @@ function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send 
 function SettingRow({ label, options, value, onChange, suffix = '' }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div className="t-title text-dim" style={{ fontSize: 8 }}>{label}</div>
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div className="t-title text-dim" style={{ fontSize: 9 }}>{label}</div>
+      <div style={{ display: 'flex', gap: 8 }}>
         {options.map((option) => (
           <button
             key={option}
             className={`btn btn-sm ${value === option ? 'btn-cyan' : 'btn-ghost'}`}
             onClick={() => onChange(option)}
-            style={{ flex: 1, fontSize: 8 }}
+            style={{ flex: 1, fontSize: 9, minHeight: 40 }}
           >
             {option}{suffix}
           </button>
@@ -112,6 +109,7 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
   const me = players.find((player) => player.id === myId);
   const transmitterId = gameState.transmitterId || gameState.hostId;
   const transmitter = players.find((player) => player.id === transmitterId) || players[0];
+  const crew = players.filter((player) => player.id !== transmitterId);
   const canStart = players.length >= 2;
 
   const copyLink = async () => {
@@ -144,24 +142,25 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
       <div className="screen lobby-shell" style={{ minHeight: '100vh' }}>
         <div style={{
           position: 'relative',
-          width: 'min(860px, 100%)',
-          padding: '18px 14px 80px',
+          width: 'min(1060px, 100%)',
+          padding: '24px 18px 96px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 12,
+          gap: 16,
         }}>
           <div className="panel bevel rivets" style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '10px 14px',
-            gap: 12,
+            padding: '16px 18px',
+            gap: 16,
+            flexWrap: 'wrap',
           }}>
             <div>
-              <div className="t-title text-dim" style={{ fontSize: 7, marginBottom: 2 }}>{t('room_code', lang)}</div>
-              <div className="t-read glow-text-amber" style={{ fontSize: 26, letterSpacing: '.2em' }}>{code}</div>
+              <div className="t-title text-dim" style={{ fontSize: 8, marginBottom: 4 }}>ROOM</div>
+              <div className="t-read glow-text-amber" style={{ fontSize: 40, letterSpacing: '.18em' }}>{code}</div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               {['pt', 'en'].map((languageCode) => (
                 <button
                   key={languageCode}
@@ -177,41 +176,50 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
               <button className={`btn btn-sm ${copied ? 'btn-green' : 'btn-yellow'}`} onClick={copyLink}>
                 {copied ? t('copied', lang) : t('copy_link', lang)}
               </button>
-              <button className="btn btn-ghost btn-icon" onClick={() => { playClick(); onSettings?.(); }} style={{ minHeight: 34, height: 34, width: 34 }}>
-                ⚙
+              <button className="btn btn-ghost" onClick={() => { playClick(); onSettings?.(); }} style={{ minHeight: 38, padding: '8px 12px', fontSize: 9 }}>
+                CONFIG
               </button>
             </div>
           </div>
 
           {transmitter && (
             <div className="panel glow-cyan" style={{
-              padding: '12px 14px',
+              padding: '22px 22px',
               display: 'flex',
               alignItems: 'center',
-              gap: 12,
+              gap: 20,
               borderColor: 'var(--neon-amber)',
-              background: 'linear-gradient(180deg, rgba(255,224,0,.06), rgba(0,255,255,.03))',
-            }}>
-              <ShipIcon ship={transmitter.ship || 'nova_01'} color={transmitter.shipColor || 'amber'} pixel={3.2} glow />
+              background: 'linear-gradient(180deg, rgba(255,224,0,.10), rgba(0,255,255,.035))',
+              marginBottom: 10,
+              boxShadow: '0 0 24px rgba(255,224,0,.20)',
+              cursor: transmitter.id === myId ? 'pointer' : 'default',
+            }}
+              onClick={transmitter.id === myId ? () => setPickerOpen(true) : undefined}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <div className="badge badge-captain">TX</div>
+                <ShipIcon ship={transmitter.ship || 'nova_01'} color={transmitter.shipColor || 'amber'} pixel={5} glow />
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="t-title text-dim" style={{ fontSize: 7, marginBottom: 4 }}>
-                  ▸ {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
+                <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 8 }}>
+                  {lang === 'pt' ? 'TRANSMISSOR INICIAL' : 'STARTING TRANSMITTER'}
                 </div>
-                <div className="t-title glow-text-amber" style={{ fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div className="t-title glow-text-amber" style={{ fontSize: 'clamp(15px, 2.4vw, 22px)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {transmitter.name}
                 </div>
-              </div>
-              <div className="t-mono text-dim" style={{ fontSize: 12 }}>
-                {lang === 'pt' ? 'MODO ◆ FFA' : 'MODE ◆ FFA'}
+                <div className="t-mono text-dim" style={{ fontSize: 16, marginTop: 8 }}>
+                  {lang === 'pt' ? 'A funcao gira a cada rodada' : 'Role rotates every round'}
+                </div>
               </div>
             </div>
           )}
 
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div className="t-title text-dim" style={{ fontSize: 7 }}>
-              ▸ {lang === 'pt' ? 'PILOTOS' : 'PILOTS'} ({players.length})
-            </div>
-            {players.map((player) => (
+          <div className="t-title text-dim" style={{ fontSize: 9, marginTop: 4 }}>
+            {lang === 'pt' ? 'TRIPULACAO' : 'CREW'} · {players.length}
+          </div>
+
+          <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 10 }}>
+            {crew.map((player) => (
               <PlayerCard
                 key={player.id}
                 player={player}
@@ -223,29 +231,25 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
                 onPickShip={() => setPickerOpen(true)}
               />
             ))}
-            <div style={{
-              padding: '8px 10px',
-              border: '1.5px dashed rgba(255,255,255,.14)',
-              borderRadius: 4,
-              color: 'var(--ink-faint)',
-              fontFamily: 'var(--f-read)',
-              fontSize: 14,
-              textAlign: 'center',
-            }}>
-              + {lang === 'pt' ? 'aguardando piloto...' : 'awaiting pilot...'}
-            </div>
+            {crew.length === 0 && (
+              <div className="panel bevel" style={{ padding: 22, textAlign: 'center', gridColumn: '1 / -1' }}>
+                <div className="t-body text-dim" style={{ fontSize: 17 }}>
+                  {lang === 'pt' ? 'Aguardando jogadores...' : 'Waiting for players...'}
+                </div>
+              </div>
+            )}
           </div>
 
           {isHost && (
             <div className="panel bevel" style={{
-              padding: '10px 12px',
+              padding: '16px 18px',
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-              gap: 10,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+              gap: 14,
             }}>
               <SettingRow
                 label={t('rounds', lang)}
-                options={[5, 10, 15, 20]}
+                options={[5, 7, 10, 15]}
                 value={settings.rounds}
                 onChange={(value) => {
                   playClick();
@@ -284,7 +288,7 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
                   send('start_game');
                 }}
                 disabled={!canStart}
-                style={{ maxWidth: 360, opacity: canStart ? 1 : .35 }}
+                style={{ maxWidth: 460, opacity: canStart ? 1 : .35, fontSize: 12, minHeight: 58 }}
               >
                 ▸ {t('start_mission', lang)}
               </button>

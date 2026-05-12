@@ -551,9 +551,9 @@ body::before {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at top, rgba(0,255,255,.08), transparent 30%),
-    rgba(3,4,14,.82);
-  backdrop-filter: blur(10px);
+    radial-gradient(circle at top, rgba(0,255,255,.06), transparent 28%),
+    rgba(3,4,14,.88);
+  backdrop-filter: none;
 }
 
 .settings-panel {
@@ -566,7 +566,10 @@ body::before {
   gap: 18px;
   border-color: rgba(0,255,255,.4);
   background: linear-gradient(180deg, rgba(11,13,35,.98) 0%, rgba(6,8,24,.96) 100%);
-  animation: theme-pop .24s cubic-bezier(.34,1.56,.64,1);
+  animation: none;
+  backdrop-filter: none;
+  contain: layout paint;
+  box-shadow: 0 0 0 1px #000, 0 10px 36px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
 }
 
 .settings-panel__header {
@@ -574,6 +577,29 @@ body::before {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+
+.settings-panel .btn {
+  transition: transform .04s linear, opacity .08s linear, border-color .08s linear, background .08s linear, color .08s linear;
+  box-shadow: 0 2px 0 #000;
+}
+
+.settings-panel .btn:hover:not(:disabled) {
+  filter: none;
+}
+
+.settings-panel .btn-cyan,
+.settings-panel .btn-primary,
+.settings-panel .btn-red,
+.settings-panel .btn-green,
+.settings-panel .btn-yellow,
+.settings-panel .btn-magenta {
+  box-shadow: 0 2px 0 #000;
+}
+
+.settings-panel .btn-ghost:hover:not(:disabled) {
+  box-shadow: none;
+  background: rgba(0,255,255,.06);
 }
 
 .settings-section {
@@ -596,6 +622,7 @@ body::before {
   border: 1px solid rgba(255,255,255,.08);
   -webkit-appearance: none;
   appearance: none;
+  background: linear-gradient(90deg, var(--cyan) var(--vol, 50%), rgba(255,255,255,0.12) var(--vol, 50%));
 }
 
 .settings-slider::-webkit-slider-thumb {
@@ -605,7 +632,7 @@ body::before {
   height: 18px;
   border-radius: 50%;
   background: var(--neon-cyan);
-  box-shadow: 0 0 14px rgba(0,255,255,.45);
+  box-shadow: 0 0 8px rgba(0,255,255,.32);
   border: 2px solid #05202b;
 }
 
@@ -614,7 +641,7 @@ body::before {
   height: 18px;
   border-radius: 50%;
   background: var(--neon-cyan);
-  box-shadow: 0 0 14px rgba(0,255,255,.45);
+  box-shadow: 0 0 8px rgba(0,255,255,.32);
   border: 2px solid #05202b;
 }
 
@@ -665,12 +692,12 @@ body::before {
 }
 
 .game-frame {
-  width: min(1160px, 100%);
+  width: min(1320px, 100%);
   margin: 0 auto;
-  padding: 16px 16px 56px;
+  padding: 20px 20px 64px;
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 24px;
   align-items: start;
 }
 
@@ -683,17 +710,17 @@ body::before {
 }
 
 .game-rail-card {
-  padding: 16px;
+  padding: 18px;
 }
 
 .game-rail-meta {
-  margin-top: 10px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
   color: var(--ink-dim);
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 14px;
+  line-height: 1.5;
   font-weight: 700;
 }
 
@@ -717,11 +744,11 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 18px 0 32px;
+  padding: 22px 0 36px;
 }
 
 .game-stage > * {
-  width: min(820px, 100%);
+  width: min(940px, 100%);
 }
 
 .game-sidebar-wrap {
@@ -856,7 +883,7 @@ body::before {
 .tag-yellow { background:rgba(255,224,0,.12);  color:var(--neon-amber); border:1px solid var(--neon-amber); }
 
 /* ── Timer bar ── */
-.timer-bar-outer { width:100%; height:7px; background:var(--space-1); border:1px solid var(--metal-2); border-radius:4px; overflow:hidden; }
+.timer-bar-outer { width:100%; height:10px; background:var(--space-1); border:1px solid var(--metal-2); border-radius:5px; overflow:hidden; }
 .timer-bar-inner { height:100%; background:var(--neon-cyan); box-shadow:0 0 8px var(--neon-cyan); transition:width .4s linear, background .4s; border-radius:4px; }
 .timer-bar-inner.warn   { background:var(--orange); box-shadow:0 0 8px var(--orange); }
 .timer-bar-inner.danger { background:var(--neon-coral); box-shadow:0 0 8px var(--neon-coral); animation:blink-bar .4s infinite; }
@@ -865,6 +892,7 @@ body::before {
 .pixel { image-rendering:pixelated; image-rendering:crisp-edges; }
 .pixel-grid { display:grid; line-height:0; }
 .pixel-grid > i { display:block; width:100%; aspect-ratio:1/1; }
+.pixel-canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
 
 /* ── Glassmorphism overlay ── */
 .overlay-blur { position:absolute; inset:0; background:rgba(5,5,16,.78); backdrop-filter:blur(12px) saturate(110%); -webkit-backdrop-filter:blur(12px) saturate(110%); }
@@ -954,6 +982,7 @@ body::before {
   .home-mode-grid { grid-template-columns: 1fr; }
   .auto-grid-3 { grid-template-columns: 1fr; }
   .reveal-stats-grid { width: 100%; }
+  .badge { font-size: 7px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -970,8 +999,8 @@ body::before {
   .game-mobile-topbar { display:block; }
   .game-frame {
     grid-template-columns: 1fr;
-    padding: 0 12px 48px;
-    gap: 12px;
+    padding: 0 14px 54px;
+    gap: 16px;
   }
   .game-rail,
   .game-sidebar-wrap {
@@ -991,7 +1020,7 @@ body::before {
   }
   .game-stage {
     min-height: auto;
-    padding-top: 10px;
+    padding-top: 14px;
   }
   .home-grid { grid-template-columns: 1fr; gap: 20px; }
   .home-hero { align-items: center; text-align: center; }

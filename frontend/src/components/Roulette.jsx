@@ -79,7 +79,7 @@ export default function Roulette({ gameState, myId, lang, send, spinning, isHost
       </h2>
 
       <div style={{ fontFamily:'var(--f-body)', fontSize:14, color:'var(--ink-dim)' }}>
-        📡 {lang==='pt'?'Transmissor:':'Transmitter:'}
+        TX {lang==='pt'?'Transmissor:':'Transmitter:'}
         {' '}<span style={{ color:'var(--neon-amber)', fontWeight:800 }}>{psychicPlayer?.name || '?'}</span>
       </div>
 
@@ -198,7 +198,7 @@ export default function Roulette({ gameState, myId, lang, send, spinning, isHost
         <button className="btn btn-yellow btn-lg"
           onClick={() => { playClick(); send('spin_roulette'); }}
           style={{ fontSize:12, letterSpacing:3, minWidth:200 }}>
-          ⚡ {lang==='pt'?'GIRAR':'SPIN'} ⚡
+          {lang==='pt'?'GIRAR':'SPIN'}
         </button>
       )}
 
@@ -212,7 +212,7 @@ export default function Roulette({ gameState, myId, lang, send, spinning, isHost
 
       {isAnimating && (
         <div style={{ fontFamily:'var(--f-vt)', fontSize:24, color:'var(--neon-amber)', letterSpacing:4, animation:'blink-bar .4s infinite' }}>
-          ⚡ {lang==='pt'?'GIRANDO...':'SPINNING...'} ⚡
+          {lang==='pt'?'GIRANDO...':'SPINNING...'}
         </div>
       )}
     </div>

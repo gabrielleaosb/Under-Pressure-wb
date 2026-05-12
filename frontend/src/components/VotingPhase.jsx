@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PressurePanel from './PressurePanel.jsx';
-import { t, tTheme, tCard } from '../i18n.js';
+import { tTheme, tCard } from '../i18n.js';
 import { EMOJI_REACTIONS } from '../gameData.js';
 import { playVoteSubmit, playTimerTick, playAlarmTick, playClick } from '../sounds.js';
 
@@ -20,6 +20,7 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
   const [position,       setPosition]       = useState(50);
   const [confirmedOnce,  setConfirmedOnce]  = useState(false);
   const [lastVoted,      setLastVoted]      = useState(null);
+  const [overdrive,      setOverdrive]      = useState(false);
   const [floatingEmojis, setFloatingEmojis] = useState([]);
   const lastTickRef = useRef(null);
 
@@ -63,7 +64,7 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
 
   // Submit / re-submit vote
   const handleConfirm = () => {
-    send('submit_vote', { position });
+    send('submit_vote', { position, overdrive });
     setLastVoted(position);
     setConfirmedOnce(true);
     playVoteSubmit();
@@ -71,21 +72,21 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, paddingBottom: 28 }}>
-      <div className="panel bevel glow-cyan" style={{ padding: '10px 18px', textAlign: 'center', width: 'min(420px, 100%)' }}>
-        <div className="t-title text-dim" style={{ fontSize: 7, marginBottom: 4 }}>
-          ▸ {tTheme(gameState.currentTheme, lang)} · {t('psychic_clue', lang)}
+      <div className="panel bevel glow-cyan" style={{ padding: '14px 22px', textAlign: 'center', width: 'min(560px, 100%)' }}>
+        <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 6 }}>
+          ▸ {tTheme(gameState.currentTheme, lang)}
         </div>
         <div className="t-title glow-text-amber" style={{ fontSize: 'clamp(17px, 4vw, 26px)' }}>
           "{gameState.clue || '...'}"
         </div>
-        <div className="t-mono text-dim" style={{ fontSize: 13, marginTop: 6 }}>
+        <div className="t-mono text-dim" style={{ fontSize: 16, marginTop: 8 }}>
           {tCard(gameState.currentCard, 'left', lang)} ← → {tCard(gameState.currentCard, 'right', lang)}
         </div>
       </div>
 
       {canVote && (
         <>
-          <div className="panel bevel glow-cyan" style={{ width: 'min(420px, 100%)', padding: 14 }}>
+          <div className="panel bevel glow-cyan" style={{ width: 'min(560px, 100%)', padding: 18 }}>
             <PressurePanel
               card={gameState.currentCard}
               lang={lang}
@@ -96,8 +97,18 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', width: 'min(420px, 100%)' }}>
-            <span className="t-title text-dim" style={{ fontSize: 7, alignSelf: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', width: 'min(560px, 100%)' }}>
+            <button
+              className={`btn btn-sm ${overdrive ? 'btn-yellow' : 'btn-ghost'}`}
+              onClick={() => {
+                setOverdrive((value) => !value);
+                playClick();
+              }}
+              style={{ fontSize: 9, minWidth: 132, minHeight: 40 }}
+            >
+              OVR x2 / DMG
+            </button>
+            <span className="t-title text-dim" style={{ fontSize: 9, alignSelf: 'center' }}>
               {votedCount}/{nonPsychicVoters.length}
             </span>
             {nonPsychicVoters.map(p => {
@@ -108,7 +119,7 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
                   borderColor: hasVoted ? 'var(--neon-mint)' : 'var(--metal-2)',
                   color: hasVoted ? 'var(--neon-mint)' : 'var(--ink-dim)',
                   fontFamily: 'var(--f-read)',
-                  fontSize: 13,
+                  fontSize: 15,
                 }}>
                   {hasVoted ? 'OK' : '--'} · {p.name}
                 </div>
@@ -117,19 +128,19 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
           </div>
 
           {!confirmedOnce ? (
-            <button className="btn btn-primary btn-lg" onClick={handleConfirm} style={{ minWidth: 260, fontSize: 12 }}>
-              ▸ {lang === 'pt' ? 'CONFIRMAR' : 'CONFIRM'} · {Math.round(position)}
+            <button className="btn btn-primary btn-lg" onClick={handleConfirm} style={{ minWidth: 340, fontSize: 13, minHeight: 60 }}>
+              {lang === 'pt' ? 'CONFIRMAR' : 'CONFIRM'} · {Math.round(position)}{overdrive ? ' · OVR' : ''}
             </button>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: 'min(320px, 100%)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: 'min(460px, 100%)' }}>
               <div className="panel bevel glow-mint" style={{ padding: '10px 18px', textAlign: 'center', width: '100%' }}>
-                <span className="t-title glow-text-mint" style={{ fontSize: 9 }}>
-                  {lang === 'pt' ? 'VOTO ENVIADO' : 'VOTE SENT'}
+                <span className="t-title glow-text-mint" style={{ fontSize: 10 }}>
+                  OK
                 </span>
-                <div className="t-read glow-text-amber" style={{ fontSize: 34, marginTop: 4 }}>{lastVoted}</div>
+                <div className="t-read glow-text-amber" style={{ fontSize: 44, marginTop: 4 }}>{lastVoted}{overdrive ? ' OVR' : ''}</div>
               </div>
               {Math.round(position) !== lastVoted && (
-                <button className="btn btn-yellow" onClick={handleConfirm} style={{ width: '100%', fontSize: 11 }}>
+                <button className="btn btn-yellow" onClick={handleConfirm} style={{ width: '100%', fontSize: 12, minHeight: 52 }}>
                   {lang === 'pt' ? 'AJUSTAR' : 'ADJUST'} · {Math.round(position)}
                 </button>
               )}
@@ -139,13 +150,13 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
       )}
 
       {isPsychic && (
-        <div className="panel bevel glow-cyan" style={{ width: 'min(420px, 100%)', padding: 18, textAlign: 'center' }}>
-          <div className="t-title glow-text-cyan" style={{ fontSize: 10 }}>{t('waiting_votes', lang)}</div>
+        <div className="panel bevel glow-cyan" style={{ width: 'min(560px, 100%)', padding: 24, textAlign: 'center' }}>
+          <div className="t-title glow-text-cyan" style={{ fontSize: 13 }}>{votedCount}/{nonPsychicVoters.length}</div>
         </div>
       )}
 
-      <div style={{ width: 'min(380px, 100%)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--f-read)', fontSize: 13, color: pct < .25 ? 'var(--neon-coral)' : 'var(--ink-dim)', marginBottom: 4 }}>
+      <div style={{ width: 'min(500px, 100%)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--f-read)', fontSize: 16, color: pct < .25 ? 'var(--neon-coral)' : 'var(--ink-dim)', marginBottom: 6 }}>
           <span>{lang === 'pt' ? 'TEMPO' : 'TIME'}</span>
           <span>{remaining}s</span>
         </div>
@@ -157,7 +168,7 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
       <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
         {EMOJI_REACTIONS.map(emoji => (
           <button key={emoji} onClick={() => { sendEmoji(emoji); }}
-            style={{ fontSize: 19, background: 'rgba(255,255,255,.04)', border: '1px solid var(--metal-2)', borderRadius: 4, padding: '5px 7px', cursor: 'pointer', minWidth: 36, minHeight: 36 }}>
+            style={{ fontSize: 18, background: 'rgba(255,255,255,.04)', border: '1px solid var(--metal-2)', borderRadius: 4, padding: '7px 10px', cursor: 'pointer', minWidth: 44, minHeight: 40 }}>
             {emoji}
           </button>
         ))}
