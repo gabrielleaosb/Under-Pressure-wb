@@ -1,32 +1,31 @@
 /**
  * RankingSidebar — shown during gameplay (roulette, psychic, voting, reveal).
- * Ported from the design's RankingPanel + FFATopBar.
  * Desktop: 240px right column. Mobile: compact top bar.
  */
 import React from 'react';
 import { ShipIcon } from './ShipRoster.jsx';
 
 function PlayerRow({ p, rank, compact, lang, transmitterId, maxDamage = 6 }) {
-  const isTx    = p.id === transmitterId;
-  const labelColor = isTx ? 'var(--neon-amber)' : (p.isMe ? 'var(--neon-cyan)' : 'var(--ink)');
+  const isTx = p.id === transmitterId;
+  const nameColor = isTx ? 'var(--neon-amber)' : (p.isMe ? 'var(--neon-cyan)' : 'var(--ink)');
   const damagePct = Math.min(100, Math.max(0, ((p.damage || 0) / maxDamage) * 100));
 
   return (
     <div style={{
       display:'flex', alignItems:'center', gap: compact ? 8 : 12,
       padding: compact ? '8px 10px' : '12px 14px',
-      background: p.isMe ? 'rgba(0,255,255,0.08)' : 'rgba(255,255,255,0.02)',
-      border:`1px solid ${p.isMe ? 'rgba(0,255,255,0.35)' : 'rgba(255,255,255,0.06)'}`,
+      background: p.isMe ? 'rgba(0,255,255,0.08)' : isTx ? 'rgba(255,224,0,0.05)' : 'rgba(255,255,255,0.02)',
+      border:`1px solid ${p.isMe ? 'rgba(0,255,255,0.35)' : isTx ? 'rgba(255,224,0,0.25)' : 'rgba(255,255,255,0.06)'}`,
       borderRadius:4,
     }}>
-      {/* Rank / crown */}
+      {/* Rank */}
       <div className="t-title" style={{
-        fontSize: compact ? 8 : isTx ? 12 : 10,
-        color: isTx ? 'var(--neon-amber)' : rank===1 ? 'var(--neon-amber)' : 'var(--ink-dim)',
-        textShadow: (isTx||rank===1) ? '0 0 8px var(--neon-amber)' : 'none',
+        fontSize: compact ? 8 : 10,
+        color: rank === 1 ? 'var(--neon-amber)' : 'var(--ink-dim)',
+        textShadow: rank === 1 ? '0 0 8px var(--neon-amber)' : 'none',
         minWidth: compact ? 22 : 30, textAlign:'center',
       }}>
-        {isTx ? 'TX' : `#${rank}`}
+        {`#${rank}`}
       </div>
 
       {/* Ship icon */}
@@ -34,17 +33,21 @@ function PlayerRow({ p, rank, compact, lang, transmitterId, maxDamage = 6 }) {
         <ShipIcon ship={p.ship || 'nova_01'} color={p.shipColor || 'blue'} pixel={compact ? 1.8 : 2.8} damage={p.damage || 0}/>
       </div>
 
-      {/* Name + score bar */}
+      {/* Name + indicator + damage bar */}
       <div style={{ flex:1, minWidth:0 }}>
         <div className="t-title" style={{
           fontSize: compact ? 8 : 10,
-          color: labelColor,
+          color: nameColor,
           textShadow: p.isMe ? '0 0 6px var(--neon-cyan)' : 'none',
           whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
         }}>
           {p.name}{p.isMe ? ' ◀' : ''}
         </div>
-        {!isTx && (
+        {isTx ? (
+          <div className="t-mono" style={{ fontSize: compact ? 9 : 11, color:'var(--neon-amber)', marginTop: compact ? 2 : 4 }}>
+            {lang === 'pt' ? 'transmissor' : 'transmitter'}
+          </div>
+        ) : (
           <div className="hpbar" style={{ height:7, marginTop:6, borderColor:'rgba(255,255,255,0.1)' }}>
             <div className="hpbar-fill" style={{
               width:`${damagePct}%`,
@@ -53,40 +56,24 @@ function PlayerRow({ p, rank, compact, lang, transmitterId, maxDamage = 6 }) {
             }}/>
           </div>
         )}
-        {isTx && (
-          <div className="t-mono" style={{ fontSize:12, color:'var(--neon-amber)', marginTop:4 }}>
-            {lang==='pt'?'TRANSMISSOR':'TRANSMITTER'}
-          </div>
-        )}
       </div>
 
       {/* Score */}
-      {!isTx && (
-        <div style={{ textAlign:'right', flexShrink:0 }}>
-          <div className="t-read" style={{
-            fontSize: compact ? 20 : 28,
-            color: rank===1 ? 'var(--neon-amber)' : 'var(--ink)',
-            textShadow: rank===1 ? '0 0 8px var(--neon-amber)' : 'none',
-            lineHeight:1,
-          }}>
-            {p.score||0}
-          </div>
-          {p.lastDelta != null && (
-            <div className="t-mono" style={{
-              fontSize:11,
-              color: p.lastDelta>0 ? 'var(--neon-mint)' : p.lastDelta<0 ? 'var(--neon-coral)' : 'var(--ink-faint)',
-              marginTop:2,
-            }}>
-              {p.lastDelta>0?`+${p.lastDelta}`:p.lastDelta}
-            </div>
-          )}
-          {(p.damage || 0) > 0 && (
-            <div className="t-mono" style={{ fontSize:11, color:'var(--neon-coral)', marginTop:3 }}>
-              DMG {p.damage}/{maxDamage}
-            </div>
-          )}
+      <div style={{ textAlign:'right', flexShrink:0 }}>
+        <div className="t-read" style={{
+          fontSize: compact ? 20 : 28,
+          color: rank === 1 ? 'var(--neon-amber)' : 'var(--ink)',
+          textShadow: rank === 1 ? '0 0 8px var(--neon-amber)' : 'none',
+          lineHeight:1,
+        }}>
+          {p.score || 0}
         </div>
-      )}
+        {(p.damage || 0) > 0 && !isTx && (
+          <div className="t-mono" style={{ fontSize:11, color:'var(--neon-coral)', marginTop:3 }}>
+            DMG {p.damage}/{maxDamage}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -97,13 +84,10 @@ export function RankingSidebar({ gameState, myId, lang, onSettings }) {
   const { players, playerScores, playerDamage = {}, round, totalRounds, maxDamage } = gameState;
   const transmitterId = gameState.psychicId || gameState.transmitterId;
 
-  const transmitter = players.find(p => p.id === transmitterId);
-  const voters      = players
-    .filter(p => p.id !== transmitterId && (p.isBot || p.connected !== false))
-    .map(p => ({ ...p, score: playerScores?.[p.id]||0, damage: playerDamage?.[p.id]||0, isMe: p.id===myId }))
-    .sort((a,b) => (b.score - a.score) || (a.damage - b.damage));
-
-  const txRow = transmitter ? { ...transmitter, damage: playerDamage?.[transmitter.id]||0, isMe: transmitter.id===myId } : null;
+  const sorted = players
+    .filter(p => p.isBot || p.connected !== false)
+    .map(p => ({ ...p, score: playerScores?.[p.id] || 0, damage: playerDamage?.[p.id] || 0, isMe: p.id === myId }))
+    .sort((a, b) => (b.score - a.score) || (a.damage - b.damage));
 
   return (
     <div className="panel bevel" style={{
@@ -116,12 +100,12 @@ export function RankingSidebar({ gameState, myId, lang, onSettings }) {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div>
           <div className="t-title text-dim" style={{ fontSize:9 }}>
-            {lang==='pt'?'RODADA':'ROUND'}
+            {lang === 'pt' ? 'RODADA' : 'ROUND'}
           </div>
           <div className="t-read glow-text-cyan" style={{ fontSize:36, lineHeight:1 }}>
-            {String(round+1).padStart(2,'0')}
+            {String(round + 1).padStart(2, '0')}
             <span className="text-faded" style={{ fontSize:14 }}>
-              /{String(totalRounds).padStart(2,'0')}
+              /{String(totalRounds).padStart(2, '0')}
             </span>
           </div>
         </div>
@@ -129,25 +113,13 @@ export function RankingSidebar({ gameState, myId, lang, onSettings }) {
           style={{ minHeight:38, height:38, width:72, padding:0, fontSize:8 }}>CONFIG</button>
       </div>
 
-      {/* Transmitter */}
-      {txRow && (
-        <div>
-          <div className="t-title text-dim" style={{ fontSize:9, marginBottom:8 }}>
-            ▸ {lang==='pt'?'TRANSMISSOR':'TRANSMITTER'}
-          </div>
-          <PlayerRow p={txRow} compact={false} lang={lang} transmitterId={transmitterId} maxDamage={maxDamage}/>
-        </div>
-      )}
-
-      <div style={{ height:1, background:'var(--metal-2)', margin:'4px 0' }}/>
-
       <div className="t-title text-dim" style={{ fontSize:9 }}>
-        ▸ {lang==='pt'?'CLASSIFICAÇÃO':'RANKINGS'}
+        ▸ {lang === 'pt' ? 'CLASSIFICAÇÃO' : 'RANKINGS'}
       </div>
 
       <div style={{ display:'flex', flexDirection:'column', gap:8, flex:1, overflowY:'auto' }}>
-        {voters.map((p,i) => (
-          <PlayerRow key={p.id} p={p} rank={i+1} compact={false} lang={lang} transmitterId={transmitterId} maxDamage={maxDamage}/>
+        {sorted.map((p, i) => (
+          <PlayerRow key={p.id} p={p} rank={i + 1} compact={false} lang={lang} transmitterId={transmitterId} maxDamage={maxDamage} />
         ))}
       </div>
     </div>
@@ -160,11 +132,10 @@ export function RankingTopBar({ gameState, myId, lang, onSettings }) {
   const { players, playerScores, playerDamage = {}, round, totalRounds } = gameState;
   const transmitterId = gameState.psychicId || gameState.transmitterId;
 
-  const transmitter = players.find(p => p.id === transmitterId);
-  const voters      = players
-    .filter(p => p.id !== transmitterId && (p.isBot || p.connected !== false))
-    .map(p => ({ ...p, score: playerScores?.[p.id]||0, damage: playerDamage?.[p.id]||0, isMe: p.id===myId }))
-    .sort((a,b) => (b.score - a.score) || (a.damage - b.damage));
+  const sorted = players
+    .filter(p => p.isBot || p.connected !== false)
+    .map(p => ({ ...p, score: playerScores?.[p.id] || 0, damage: playerDamage?.[p.id] || 0, isMe: p.id === myId }))
+    .sort((a, b) => (b.score - a.score) || (a.damage - b.damage));
 
   return (
     <div className="panel bevel" style={{
@@ -175,43 +146,33 @@ export function RankingTopBar({ gameState, myId, lang, onSettings }) {
     }}>
       {/* Round */}
       <div style={{ flexShrink:0 }}>
-        <div className="t-title text-dim" style={{ fontSize:7 }}>{lang==='pt'?'RD':'RD'}</div>
+        <div className="t-title text-dim" style={{ fontSize:7 }}>{lang === 'pt' ? 'RD' : 'RD'}</div>
         <div className="t-read glow-text-cyan" style={{ fontSize:24, lineHeight:1 }}>
-          {round+1}<span className="text-faded" style={{ fontSize:12 }}>/{totalRounds}</span>
+          {round + 1}<span className="text-faded" style={{ fontSize:12 }}>/{totalRounds}</span>
         </div>
       </div>
 
       <div style={{ width:1, height:24, background:'var(--metal-2)', flexShrink:0 }}/>
 
-      {/* Transmitter chip */}
-      {transmitter && (
-        <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
-          <span className="t-title" style={{ fontSize:8, color:'var(--neon-amber)' }}>TX</span>
-          <ShipIcon ship={transmitter.ship || 'nova_01'} color={transmitter.shipColor || 'blue'} pixel={2} damage={playerDamage?.[transmitter.id] || 0}/>
-          <div className="t-title glow-text-amber" style={{ fontSize:8, maxWidth:90, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-            {transmitter.name}
-          </div>
-        </div>
-      )}
-
-      <div style={{ width:1, height:24, background:'var(--metal-2)', flexShrink:0 }}/>
-
-      {/* Top voters */}
+      {/* All players */}
       <div style={{ display:'flex', gap:6, flex:1, overflow:'hidden' }}>
-        {voters.slice(0,4).map((p,i) => (
-          <div key={p.id} style={{
-            display:'flex', alignItems:'center', gap:4,
-            padding:'5px 9px', borderRadius:3,
-            border:`1px solid ${p.isMe?'rgba(0,255,255,0.4)':'rgba(255,255,255,0.06)'}`,
-            background: p.isMe?'rgba(0,255,255,0.06)':'transparent',
-            flexShrink:0,
-          }}>
-            <ShipIcon ship={p.ship || 'nova_01'} color={p.shipColor || 'blue'} pixel={1.6} damage={p.damage}/>
-            <span className="t-read" style={{ fontSize:22, color: i===0?'var(--neon-amber)':'var(--ink)', lineHeight:1 }}>
-              {p.score}
-            </span>
-          </div>
-        ))}
+        {sorted.slice(0, 5).map((p) => {
+          const isTx = p.id === transmitterId;
+          return (
+            <div key={p.id} style={{
+              display:'flex', alignItems:'center', gap:4,
+              padding:'5px 9px', borderRadius:3,
+              border:`1px solid ${p.isMe ? 'rgba(0,255,255,0.4)' : isTx ? 'rgba(255,224,0,0.45)' : 'rgba(255,255,255,0.06)'}`,
+              background: p.isMe ? 'rgba(0,255,255,0.06)' : isTx ? 'rgba(255,224,0,0.06)' : 'transparent',
+              flexShrink:0,
+            }}>
+              <ShipIcon ship={p.ship || 'nova_01'} color={p.shipColor || 'blue'} pixel={1.6} damage={p.damage} />
+              <span className="t-read" style={{ fontSize:22, color: isTx ? 'var(--neon-amber)' : 'var(--ink)', lineHeight:1 }}>
+                {p.score}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       <button onClick={onSettings} className="btn btn-ghost btn-icon"
