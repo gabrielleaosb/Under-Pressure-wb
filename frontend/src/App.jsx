@@ -7,6 +7,7 @@ import HomeScreen from './components/HomeScreen.jsx';
 import Lobby from './components/Lobby.jsx';
 import Roulette from './components/Roulette.jsx';
 import PsychicPhase from './components/PsychicPhase.jsx';
+import CardPicker from './components/CardPicker.jsx';
 import VotingPhase from './components/VotingPhase.jsx';
 import RevealPhase from './components/RevealPhase.jsx';
 import GameOver from './components/GameOver.jsx';
@@ -19,7 +20,7 @@ import RouletteStyleLab2 from './components/RouletteStyleLab2.jsx';
 import GaugeLab from './components/GaugeLab.jsx';
 import BackgroundLab from './components/BackgroundLab.jsx';
 import { RankingSidebar, RankingTopBar } from './components/RankingSidebar.jsx';
-import { t } from './i18n.js';
+import { t, tCard } from './i18n.js';
 import { playPhaseChange, playVotingStart, playError as playSoundError } from './sounds.js';
 
 const SEARCH_PARAMS = new URLSearchParams(window.location.search);
@@ -72,6 +73,7 @@ export default function App() {
     ? ({
         roulette: lang === 'pt' ? 'Roleta' : 'Roulette',
         spinning: lang === 'pt' ? 'Girando' : 'Spinning',
+        pick_card: lang === 'pt' ? 'Escolha' : 'Pick',
         psychic: lang === 'pt' ? 'Transmissao' : 'Transmission',
         voting: lang === 'pt' ? 'Votacao' : 'Voting',
         reveal: lang === 'pt' ? 'Resultado' : 'Results',
@@ -149,11 +151,11 @@ export default function App() {
       setRawRoom(raw);
       setScreen(raw.phase === 'lobby' ? 'lobby' : 'game');
       const roundIntroUntil = Number(raw.roundIntroUntil || 0);
-      const shouldShowRoundIntro = raw.phase === 'roulette' && roundIntroUntil > Date.now();
+      const shouldShowRoundIntro = (raw.phase === 'roulette' || raw.phase === 'pick_card') && roundIntroUntil > Date.now();
 
       if (prevPhase.current && prevPhase.current !== raw.phase) {
         flash();
-        if (raw.phase === 'roulette') {
+        if (raw.phase === 'roulette' || raw.phase === 'pick_card') {
           playPhaseChange();
         }
         if (raw.phase === 'voting') playVotingStart();
@@ -450,8 +452,32 @@ export default function App() {
 
                 <main className="game-main">
                   <div className="game-stage">
-                    {!showRoundIntro && (gameState.phase === 'roulette' || gameState.phase === 'spinning') && (
+                    {!showRoundIntro && gameState.phase === 'pick_card' && (
+                      <CardPicker {...sharedProps} />
+                    )}
+                    {!showRoundIntro && (gameState.phase === 'roulette' || gameState.phase === 'spinning') && gameState.settings?.cardMode !== 'livre' && (
                       <Roulette {...sharedProps} spinning={gameState.phase === 'spinning'} />
+                    )}
+                    {gameState.phase === 'spinning' && gameState.settings?.cardMode === 'livre' && gameState.currentCard && (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, paddingBottom: 20, width: '100%' }}>
+                        <div className="panel bevel glow-cyan" style={{
+                          padding: '20px 28px', textAlign: 'center', width: 'min(520px, 100%)',
+                          animation: 'theme-pop 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+                        }}>
+                          <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 12 }}>
+                            {lang === 'pt' ? 'CARTA SELECIONADA' : 'CARD SELECTED'}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                            <span style={{ fontFamily: 'var(--f-body)', fontWeight: 800, fontSize: 15, color: 'rgba(0,170,255,0.9)' }}>
+                              ◀ {tCard(gameState.currentCard, 'left', lang)}
+                            </span>
+                            <span style={{ color: 'var(--ink-dim)', fontSize: 12 }}>────</span>
+                            <span style={{ fontFamily: 'var(--f-body)', fontWeight: 800, fontSize: 15, color: 'rgba(255,51,85,0.9)', textAlign: 'right' }}>
+                              {tCard(gameState.currentCard, 'right', lang)} ▶
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     )}
                     {!showRoundIntro && gameState.phase === 'psychic' && (
                       <PsychicPhase {...sharedProps} myTargetPos={myTargetPos} />

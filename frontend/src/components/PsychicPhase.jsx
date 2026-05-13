@@ -19,7 +19,7 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
   const [clue, setClue] = useState('');
   const [chosenPos, setChosenPos] = useState(50);
   const psychicPlayer = gameState.players?.find(p => p.id === gameState.psychicId);
-  const isPsychic = gameState.psychicId === myId || (psychicPlayer?.isBot && isHost);
+  const isPsychic = gameState.psychicId === myId;
   const chooseMode = gameState.settings?.targetMode === 'choose';
   const remaining = useCountdown(gameState.timerEnd);
   const total = gameState.settings.clueTimer;
@@ -35,7 +35,7 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
   }, [remaining]);
 
   const handleSubmit = () => {
-    const trimmed = clue.trim().split(/\s+/)[0];
+    const trimmed = clue.trim();
     if (!trimmed) return;
     if (chooseMode) send('submit_clue', { clue: trimmed, position: chosenPos });
     else send('submit_clue', { clue: trimmed });
@@ -132,15 +132,15 @@ function ClueEntry({ lang, clue, setClue, onSubmit }) {
   return (
     <div className="phase-card panel bevel">
       <label className="phase-kicker t-title text-dim">
-        {lang === 'pt' ? 'SUA DICA (1 PALAVRA)' : 'YOUR CLUE (1 WORD)'}
+        {lang === 'pt' ? 'SUA DICA' : 'YOUR CLUE'}
       </label>
       <div className="phase-input-row">
         <input
           className="input"
           value={clue}
-          onChange={e => setClue(e.target.value.replace(/\s/g, ''))}
+          onChange={e => setClue(e.target.value)}
           placeholder={t('clue_ph', lang)}
-          maxLength={40}
+          maxLength={20}
           onKeyDown={e => e.key === 'Enter' && onSubmit()}
           autoFocus
         />

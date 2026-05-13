@@ -241,8 +241,8 @@ export default function PressurePanel({
       }}
     >
       <div className="pressure-axis-labels">
-        <span title={leftLabel}>{`<- ${leftLabel}`}</span>
-        <span title={rightLabel}>{`${rightLabel} ->`}</span>
+        <span title={leftLabel}>{`◀ ${leftLabel}`}</span>
+        <span title={rightLabel}>{`${rightLabel} ▶`}</span>
       </div>
 
       <div

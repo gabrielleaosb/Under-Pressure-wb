@@ -100,6 +100,48 @@ export const CARDS = [
   { id: 67, t:12, lP:'Pouco suspeito', lE:'Barely suspicious', rP:'Muito suspeito', rE:'Very suspicious' },
 ];
 
+// ── Open (Wavelength-style) Cards — IDs start at 100 ────────────────────────
+export const OPEN_CARDS = [
+  { id:100, lP:'Subestimado',      lE:'Underrated',       rP:'Superestimado',    rE:'Overrated'        },
+  { id:101, lP:'Básico',           lE:'Basic',            rP:'Diferentão',       rE:'Hipster'          },
+  { id:102, lP:'Burro',            lE:'Stupid',           rP:'Genial',           rE:'Brilliant'        },
+  { id:103, lP:'Inútil',           lE:'Useless',          rP:'Essencial',        rE:'Essential'        },
+  { id:104, lP:'Culpa secreta',    lE:'Guilty pleasure',  rP:'Orgulho público',  rE:'Openly love'      },
+  { id:105, lP:'Feio de falar',    lE:'Ugly word',        rP:'Bonito de falar',  rE:'Beautiful word'   },
+  { id:106, lP:'Faz mal',          lE:'Feels bad',        rP:'Faz bem',          rE:'Feels good'       },
+  { id:107, lP:'Perda de tempo',   lE:'Waste of time',    rP:'Bem aproveitado',  rE:'Good use of time' },
+  { id:108, lP:'Irrazoável',       lE:'Unreasonable',     rP:'Razoável',         rE:'Reasonable'       },
+  { id:109, lP:'Sem arte',         lE:'Not art',          rP:'Arte pura',        rE:'Definitely art'   },
+  { id:110, lP:'Fama imerecida',   lE:'Undeserved fame',  rP:'Fama merecida',    rE:'Deserved fame'    },
+  { id:111, lP:'Esquecível',       lE:'Forgettable',      rP:'Inesquecível',     rE:'Unforgettable'    },
+  { id:112, lP:'Pura sorte',       lE:'Pure luck',        rP:'Pura habilidade',  rE:'Pure skill'       },
+  { id:113, lP:'Todo mundo odeia', lE:'Everyone hates',   rP:'Todo mundo ama',   rE:'Everyone loves'   },
+  { id:114, lP:'Antiquado',        lE:'Outdated',         rP:'Na moda',          rE:'Trendy'           },
+  { id:115, lP:'Infantil',         lE:'Childish',         rP:'Maduro',           rE:'Mature'           },
+  { id:116, lP:'Nerd',             lE:'Nerdy',            rP:'Descolado',        rE:'Cool'             },
+  { id:117, lP:'Desnecessário',    lE:'Unnecessary',      rP:'Indispensável',    rE:'Indispensable'    },
+  { id:118, lP:'Muito específico', lE:'Very niche',       rP:'Todo mundo conhece',rE:'Everyone knows'  },
+  { id:119, lP:'Insignificante',   lE:'Insignificant',    rP:'Mudou o mundo',    rE:'Changed the world'},
+  { id:120, lP:'Careta',           lE:'Uncool',           rP:'Ousado',           rE:'Daring'           },
+  { id:121, lP:'Supersticioso',    lE:'Superstitious',    rP:'Científico',       rE:'Scientific'       },
+  { id:122, lP:'Revoltante',       lE:'Revolting',        rP:'Delicioso',        rE:'Delightful'       },
+  { id:123, lP:'Pior tarefa',      lE:'Worst chore',      rP:'Melhor tarefa',    rE:'Best chore'       },
+  { id:124, lP:'Assustador demais',lE:'Too scary',        rP:'Nem um pouco',     rE:'Not at all scary' },
+  { id:125, lP:'Mau hábito',       lE:'Bad habit',        rP:'Bom hábito',       rE:'Good habit'       },
+  { id:126, lP:'Overrated',        lE:'Overrated',        rP:'Underrated',       rE:'Underrated'       },
+  { id:127, lP:'Impossível',       lE:'Impossible',       rP:'Fácil demais',     rE:'Way too easy'     },
+  { id:128, lP:'Introvertido',     lE:'Introverted',      rP:'Extrovertido',     rE:'Extroverted'      },
+  { id:129, lP:'Melhor presente',  lE:'Best gift',        rP:'Pior presente',    rE:'Worst gift'       },
+];
+
+export function selectOpenCards(count, usedIds = []) {
+  const usedSet = new Set(usedIds);
+  let available = OPEN_CARDS.filter(c => !usedSet.has(c.id));
+  if (available.length < count) available = [...OPEN_CARDS];
+  const shuffled = [...available].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
 export const EMOJI_REACTIONS = ['OK','GG','!!','??','+1'];
 
 export const PLAYER_COLORS = [

@@ -6,7 +6,7 @@
  * Streaks and BOOST create round-to-round pressure.
  */
 import { db, ref, get, set, update, remove, push, onValue, onChildAdded } from './firebase.js';
-import { PLAYER_COLORS, TEAM_NAME_PAIRS, CARDS, THEMES, selectCard, genId } from './gameData.js';
+import { PLAYER_COLORS, TEAM_NAME_PAIRS, CARDS, THEMES, selectCard, selectOpenCards, genId } from './gameData.js';
 import { SHIP_IDS, SHIP_COLORS } from './components/ShipRoster.jsx';
 
 const ROUND_INTRO_DURATION_MS = 4600;
@@ -127,7 +127,7 @@ export async function createRoom(code, hostId, playerName, loadout = {}) {
     currentTheme: null,
     currentCard: null,
     revealResult: null,
-    settings: { rounds: 7, clueTimer: 30, voteTimer: 30, targetMode: 'random' },
+    settings: { rounds: 7, clueTimer: 30, voteTimer: 30, targetMode: 'random', cardMode: 'themed', cardOptions: 3 },
     players: {
       [hostId]: {
         id: hostId, name: playerName,
@@ -207,13 +207,13 @@ export class GameEngine {
 
     // Watch votes to auto-finalize
     const unsub2 = onValue(rref(this.roomCode, 'votes'), snap => {
-      this._checkVoteCompletion(snap.val() || {});
+      this._checkVoteCompletion(snap.val() || {}).catch(e => console.error('[Engine] checkVoteCompletion:', e));
     });
     this._unsubs.push(unsub2);
 
     // Watch player connections to skip rounds when transmitter drops
     const unsub3 = onValue(rref(this.roomCode, 'players'), snap => {
-      this._onPlayersChanged(snap.val() || {});
+      this._onPlayersChanged(snap.val() || {}).catch(e => console.error('[Engine] onPlayersChanged:', e));
     });
     this._unsubs.push(unsub3);
   }
@@ -261,23 +261,51 @@ export class GameEngine {
     const tx = players[(startIndex + (room.round || 0)) % players.length] || players[0];
     const roundIntroUntil = Date.now() + ROUND_INTRO_DURATION_MS;
 
-    await Promise.all([
-      roomUpdate(this.roomCode, {
-        phase: 'roulette', psychicId: tx.id, transmitterId: tx.id,
-        clue: null, revealResult: null, currentTheme: null, currentCard: null, timerEnd: null,
-        roundIntroUntil,
-      }),
-      remove(rref(this.roomCode, 'votes')),
-      remove(rref(this.roomCode, 'psychicSecret')),
-      remove(rref(this.roomCode, 'emojiReactions')),
-    ]);
+    const cardMode = room.settings?.cardMode ?? 'themed';
+    const cardOptions = room.settings?.cardOptions ?? 3;
 
-    if (tx.isBot) setTimeout(() => this._autoSpinForBot(), ROUND_INTRO_DURATION_MS + 450);
-    else this._setTimer(20000, async () => {
-      const r = await getRoom(this.roomCode);
-      if (!r || r.phase !== 'roulette') return;
-      await this._spinRoulette(this.hostId, true);
-    });
+    const baseUpdate = {
+      psychicId: tx.id, transmitterId: tx.id,
+      clue: null, revealResult: null, currentTheme: null, currentCard: null,
+      timerEnd: null, cardPickOptions: null, roundIntroUntil,
+    };
+
+    if (cardMode === 'livre') {
+      const usedIds = Object.keys(room.usedCardIds || {}).map(Number);
+      const options = selectOpenCards(cardOptions, usedIds);
+      await Promise.all([
+        roomUpdate(this.roomCode, { ...baseUpdate, phase: 'pick_card', cardPickOptions: options }),
+        remove(rref(this.roomCode, 'votes')),
+        remove(rref(this.roomCode, 'psychicSecret')),
+        remove(rref(this.roomCode, 'emojiReactions')),
+      ]);
+      if (tx.isBot) {
+        setTimeout(async () => {
+          const r = await getRoom(this.roomCode);
+          if (!r || r.phase !== 'pick_card') return;
+          await this._applyCardPick(Object.values(r.cardPickOptions || {})[0]);
+        }, ROUND_INTRO_DURATION_MS + 450);
+      } else {
+        this._setTimer(20000, async () => {
+          const r = await getRoom(this.roomCode);
+          if (!r || r.phase !== 'pick_card') return;
+          await this._applyCardPick(Object.values(r.cardPickOptions || {})[0]);
+        });
+      }
+    } else {
+      await Promise.all([
+        roomUpdate(this.roomCode, { ...baseUpdate, phase: 'roulette' }),
+        remove(rref(this.roomCode, 'votes')),
+        remove(rref(this.roomCode, 'psychicSecret')),
+        remove(rref(this.roomCode, 'emojiReactions')),
+      ]);
+      if (tx.isBot) setTimeout(() => this._autoSpinForBot(), ROUND_INTRO_DURATION_MS + 450);
+      else this._setTimer(20000, async () => {
+        const r = await getRoom(this.roomCode);
+        if (!r || r.phase !== 'roulette') return;
+        await this._spinRoulette(this.hostId, true);
+      });
+    }
   }
 
   async _autoSpinForBot() {
@@ -314,9 +342,23 @@ export class GameEngine {
     setTimeout(() => this._activatePsychic(room.psychicId), 5200);
   }
 
+  async _applyCardPick(card) {
+    if (!card) return;
+    const room = await getRoom(this.roomCode);
+    if (!room || room.phase !== 'pick_card') return;
+    this._clearTimer();
+    await set(rref(this.roomCode, 'usedCardIds', String(card.id)), true);
+    await roomUpdate(this.roomCode, {
+      phase: 'spinning',
+      currentCard: { id: card.id, lP: card.lP, lE: card.lE, rP: card.rP, rE: card.rE },
+      cardPickOptions: null,
+    });
+    setTimeout(() => this._activatePsychic(room.psychicId), 900);
+  }
+
   async _activatePsychic(txId) {
     const room = await getRoom(this.roomCode);
-    if (!room || room.phase !== 'spinning') return;
+    if (!room || !['spinning', 'pick_card'].includes(room.phase)) return;
     const tx = allPlayers(room).find(p => p.id === txId);
     const targetMode = room.settings?.targetMode ?? 'random';
 
@@ -362,7 +404,8 @@ export class GameEngine {
 
   async _proceedToVoting() {
     const room = await getRoom(this.roomCode);
-    const dur  = (room?.settings?.voteTimer ?? 60) * 1000;
+    if (!room) return;
+    const dur  = (room.settings?.voteTimer ?? 60) * 1000;
     await roomUpdate(this.roomCode, { phase: 'voting' });
 
     // Auto-vote for bots (non-transmitter)
@@ -375,7 +418,7 @@ export class GameEngine {
       await update(rref(this.roomCode, 'votes'), autoVotes);
     }
 
-    this._setTimer(dur, () => this._finalizeVoting());
+    this._setTimer(dur, () => this._finalizeVoting().catch(e => console.error('[Engine] finalizeVoting:', e)));
   }
 
   async _checkVoteCompletion(votes) {
@@ -384,7 +427,7 @@ export class GameEngine {
     const voters = allPlayers(room).filter(p => p.id !== room.psychicId && (p.isBot || p.connected !== false));
     if (voters.length > 0 && voters.every(p => votes[p.id] !== undefined)) {
       this._clearTimer();
-      await this._finalizeVoting();
+      await this._finalizeVoting().catch(e => console.error('[Engine] finalizeVoting:', e));
     }
   }
 
@@ -456,13 +499,7 @@ export class GameEngine {
     ]);
 
     const txName = allPlayers(room).find(p => p.id === room.psychicId)?.name;
-    await push(rref(this.roomCode, 'roundHistory'), {
-      round: room.round,
-      transmitterId: room.psychicId,
-      transmitterName: txName,
-      theme: room.currentTheme,
-      card: room.currentCard,
-      clue: room.clue,
+    const revealResult = {
       target,
       votes,
       averageVote,
@@ -471,22 +508,25 @@ export class GameEngine {
       highlights: highlights.slice(0, 5),
       transmitterScore: txPoints,
       transmitterScoreBreakdown: txScore,
-    });
+    };
 
-    await roomUpdate(this.roomCode, {
-      phase: 'reveal',
-      revealResult: {
-        target,
-        votes,
-        averageVote,
-        roundScores,
-        streaks: streakUpdates,
-        highlights: highlights.slice(0, 5),
-        transmitterScore: txPoints,
-        transmitterScoreBreakdown: txScore,
-      },
-      timerEnd: null,
-    });
+    // Push history without blocking reveal on failure
+    push(rref(this.roomCode, 'roundHistory'), {
+      round: room.round,
+      transmitterId: room.psychicId,
+      transmitterName: txName,
+      theme: room.currentTheme ?? null,
+      card: room.currentCard ?? null,
+      clue: room.clue ?? null,
+      target,
+      averageVote,
+      roundScores,
+      streaks: streakUpdates,
+      highlights: highlights.slice(0, 5),
+      transmitterScore: txPoints,
+    }).catch(e => console.error('[Engine] roundHistory push:', e));
+
+    await roomUpdate(this.roomCode, { phase: 'reveal', revealResult, timerEnd: null });
   }
 
   async _doNextRound(room) {
@@ -529,7 +569,7 @@ export class GameEngine {
     }
 
     // During pre-voting phases: skip round if transmitter disconnected
-    if (!['roulette', 'spinning', 'psychic'].includes(room.phase)) return;
+    if (!['roulette', 'spinning', 'psychic', 'pick_card'].includes(room.phase)) return;
     if (this._skipping) return;
     const transmitter = players[room.psychicId];
     if (!transmitter || transmitter.connected === false) {
@@ -545,7 +585,7 @@ export class GameEngine {
         phase: 'lobby', round: 0,
         psychicId: null, clue: null, revealResult: null,
         currentTheme: null, currentCard: null, timerEnd: null,
-        winner: null, winnerIds: null, startingTransmitterId: null,
+        winner: null, winnerIds: null, startingTransmitterId: null, cardPickOptions: null,
       }),
       remove(rref(this.roomCode, 'roundHistory')),
       remove(rref(this.roomCode, 'votes')),
@@ -641,6 +681,8 @@ export class GameEngine {
         if ([30,60,90].includes(data.clueTimer))   s.clueTimer = data.clueTimer;
         if ([30,60,90].includes(data.voteTimer))   s.voteTimer = data.voteTimer;
         if (['random','choose'].includes(data.targetMode)) s.targetMode = data.targetMode;
+        if (['themed','livre'].includes(data.cardMode)) s.cardMode = data.cardMode;
+        if ([1,3,5].includes(data.cardOptions)) s.cardOptions = data.cardOptions;
         if (Object.keys(s).length) await update(rref(this.roomCode, 'settings'), s);
         break;
       }
@@ -661,11 +703,24 @@ export class GameEngine {
         await this._spinRoulette(by);
         break;
 
+      case 'pick_card': {
+        if (room.phase !== 'pick_card') return;
+        if (Number(room.roundIntroUntil || 0) > Date.now()) return;
+        const txPlayer = allPlayers(room).find(p => p.id === room.psychicId);
+        const canPick = room.psychicId === by || (by === this.hostId && txPlayer?.isBot);
+        if (!canPick) return;
+        const options = Object.values(room.cardPickOptions || {});
+        const chosen = options.find(c => c.id === data.cardId) || options[0];
+        if (!chosen) return;
+        await this._applyCardPick(chosen);
+        break;
+      }
+
       case 'submit_clue': {
         const tx = Object.values(room.players || {}).find(p => p.id === room.psychicId);
         const canClue = room.psychicId === by || (by === this.hostId && tx?.isBot);
         if (room.phase !== 'psychic' || !canClue) return;
-        const clue = String(data.clue || '').trim().split(/\s+/)[0].slice(0, 60);
+        const clue = String(data.clue || '').trim().slice(0, 20);
         if (!clue) return;
         if (room.settings?.targetMode === 'choose' && data.position !== undefined) {
           const pos = Math.max(5, Math.min(95, Math.round(Number(data.position) || 50)));
@@ -762,6 +817,8 @@ export class GameEngine {
     const phase = room.phase;
     if (phase === 'lobby') {
       await this._processAction('start_game', {}, this.hostId);
+    } else if (phase === 'pick_card') {
+      await this._applyCardPick(Object.values(room.cardPickOptions || {})[0]);
     } else if (phase === 'roulette' || phase === 'spinning') {
       if (!room.currentTheme) {
         const usedIds = Object.keys(room.usedCardIds||{}).map(Number);

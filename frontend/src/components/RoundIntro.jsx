@@ -29,9 +29,14 @@ export default function RoundIntro({ gameState, myId, lang, onDone }) {
   const isTransmitter = myId === gameState.psychicId;
   const round = String((gameState.round ?? 0) + 1).padStart(2, '0');
   const total = String(gameState.totalRounds ?? '?').padStart(2, '0');
+  const cardMode = gameState.settings?.cardMode ?? 'themed';
   const missionStatus = isTransmitter
-    ? (lang === 'pt' ? 'Controle da roleta liberado' : 'Roulette control granted')
-    : (lang === 'pt' ? 'Aguardando giro do navegador' : 'Waiting for navigator spin');
+    ? (cardMode === 'livre'
+        ? (lang === 'pt' ? 'Escolha a carta e transmita' : 'Pick a card and transmit')
+        : (lang === 'pt' ? 'Controle da roleta liberado' : 'Roulette control granted'))
+    : (cardMode === 'livre'
+        ? (lang === 'pt' ? 'Aguardando o navegador' : 'Waiting for navigator')
+        : (lang === 'pt' ? 'Aguardando giro do navegador' : 'Waiting for navigator spin'));
 
   return (
     <div

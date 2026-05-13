@@ -269,6 +269,27 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
                   send('update_settings', { ...settings, targetMode: value });
                 }}
               />
+              <SettingRow
+                label={lang === 'pt' ? 'MODO DE CARTA' : 'CARD MODE'}
+                options={['themed', 'livre']}
+                labels={lang === 'pt' ? ['TEMATICO', 'LIVRE'] : ['THEMED', 'FREE']}
+                value={settings.cardMode ?? 'themed'}
+                onChange={(value) => {
+                  playClick();
+                  send('update_settings', { ...settings, cardMode: value });
+                }}
+              />
+              {(settings.cardMode ?? 'themed') === 'livre' && (
+                <SettingRow
+                  label={lang === 'pt' ? 'OPCOES DE CARTA' : 'CARD OPTIONS'}
+                  options={[1, 3, 5]}
+                  value={settings.cardOptions ?? 3}
+                  onChange={(value) => {
+                    playClick();
+                    send('update_settings', { ...settings, cardOptions: value });
+                  }}
+                />
+              )}
             </section>
           )}
 
