@@ -17,8 +17,10 @@ function useCountdown(timerEnd) {
 
 export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos, isHost }) {
   const [clue, setClue] = useState('');
+  const [chosenPos, setChosenPos] = useState(50);
   const psychicPlayer = gameState.players?.find(p => p.id === gameState.psychicId);
   const isPsychic     = gameState.psychicId === myId || (psychicPlayer?.isBot && isHost);
+  const chooseMode    = gameState.settings?.targetMode === 'choose';
   const remaining     = useCountdown(gameState.timerEnd);
   const total         = gameState.settings.clueTimer;
   const pct           = total > 0 ? remaining / total : 0;
@@ -33,7 +35,9 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
 
   const handleSubmit = () => {
     const trimmed = clue.trim().split(/\s+/)[0];
-    if (trimmed) send('submit_clue', { clue: trimmed });
+    if (!trimmed) return;
+    if (chooseMode) send('submit_clue', { clue: trimmed, position: chosenPos });
+    else send('submit_clue', { clue: trimmed });
   };
 
   return (
@@ -50,7 +54,45 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
         </div>
       </div>
 
-      {isPsychic && myTargetPos !== null && (
+      {isPsychic && chooseMode && (
+        <>
+          <div className="panel bevel glow-cyan" style={{ width: 'min(560px, 100%)', padding: 18 }}>
+            <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 10 }}>
+              ▸ {lang === 'pt' ? 'ESCOLHA A POSIÇÃO ALVO' : 'CHOOSE THE TARGET POSITION'}
+            </div>
+            <PressurePanel
+              card={gameState.currentCard}
+              lang={lang}
+              value={chosenPos}
+              onChange={setChosenPos}
+              disabled={false}
+              readoutLabel={lang === 'pt' ? 'POSIÇÃO ALVO' : 'TARGET POSITION'}
+            />
+          </div>
+          <div className="panel bevel" style={{ width: 'min(560px, 100%)', padding: 18 }}>
+            <label className="t-title text-dim" style={{ display: 'block', fontSize: 10, marginBottom: 10 }}>
+              ▸ {lang === 'pt' ? 'SUA DICA (1 PALAVRA)' : 'YOUR CLUE (1 WORD)'}
+            </label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <input
+                className="input"
+                value={clue}
+                onChange={e => setClue(e.target.value.replace(/\s/g, ''))}
+                placeholder={t('clue_ph', lang)}
+                maxLength={40}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                style={{ flex: 1, minWidth: 220 }}
+                autoFocus
+              />
+              <button className="btn btn-primary" onClick={() => { playClick(); handleSubmit(); }} disabled={!clue.trim()}>
+                ▸ {t('send_clue', lang)}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {isPsychic && myTargetPos !== null && !chooseMode && (
         <>
           <div className="panel bevel glow-cyan" style={{ width: 'min(560px, 100%)', padding: 18 }}>
             <PressurePanel
@@ -87,7 +129,7 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
         </>
       )}
 
-      {isPsychic && myTargetPos === null && (
+      {isPsychic && myTargetPos === null && !chooseMode && (
         <div className="panel bevel glow-cyan" style={{ width: 'min(560px, 100%)', padding: 26, textAlign: 'center' }}>
           <div className="t-title glow-text-cyan" style={{ fontSize: 13 }}>
             ...

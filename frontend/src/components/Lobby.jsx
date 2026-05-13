@@ -82,19 +82,19 @@ function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send 
   );
 }
 
-function SettingRow({ label, options, value, onChange, suffix = '' }) {
+function SettingRow({ label, options, labels, value, onChange, suffix = '' }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div className="t-title text-dim" style={{ fontSize: 9 }}>{label}</div>
       <div style={{ display: 'flex', gap: 8 }}>
-        {options.map((option) => (
+        {options.map((option, i) => (
           <button
             key={option}
             className={`btn btn-sm ${value === option ? 'btn-cyan' : 'btn-ghost'}`}
             onClick={() => onChange(option)}
             style={{ flex: 1, fontSize: 9, minHeight: 40 }}
           >
-            {option}{suffix}
+            {labels ? labels[i] : `${option}${suffix}`}
           </button>
         ))}
       </div>
@@ -274,6 +274,16 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
                 onChange={(value) => {
                   playClick();
                   send('update_settings', { ...settings, voteTimer: value });
+                }}
+              />
+              <SettingRow
+                label={lang === 'pt' ? 'POSIÇÃO ALVO' : 'TARGET POSITION'}
+                options={['random', 'choose']}
+                labels={lang === 'pt' ? ['ALEATÓRIA', 'LIVRE'] : ['RANDOM', 'FREE']}
+                value={settings.targetMode ?? 'random'}
+                onChange={(value) => {
+                  playClick();
+                  send('update_settings', { ...settings, targetMode: value });
                 }}
               />
             </div>

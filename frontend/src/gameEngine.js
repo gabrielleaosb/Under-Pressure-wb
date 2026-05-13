@@ -111,7 +111,7 @@ export async function createRoom(code, hostId, playerName, loadout = {}) {
     currentTheme: null,
     currentCard: null,
     revealResult: null,
-    settings: { rounds: 7, clueTimer: 30, voteTimer: 30 },
+    settings: { rounds: 7, clueTimer: 30, voteTimer: 30, targetMode: 'random' },
     players: {
       [hostId]: {
         id: hostId, name: playerName,
@@ -255,6 +255,11 @@ export class GameEngine {
     ]);
 
     if (tx.isBot) setTimeout(() => this._autoSpinForBot(), 1600);
+    else this._setTimer(20000, async () => {
+      const r = await getRoom(this.roomCode);
+      if (!r || r.phase !== 'roulette') return;
+      await this._spinRoulette(this.hostId, true);
+    });
   }
 
   async _autoSpinForBot() {
@@ -272,11 +277,11 @@ export class GameEngine {
     }, 2200);
   }
 
-  async _spinRoulette(requestedBy) {
+  async _spinRoulette(requestedBy, forced = false) {
     const room = await getRoom(this.roomCode);
     if (!room || room.phase !== 'roulette') return;
     const tx = Object.values(room.players || {}).find(p => p.id === room.psychicId);
-    const canSpin = room.psychicId === requestedBy || (requestedBy === this.hostId && tx?.isBot);
+    const canSpin = forced || room.psychicId === requestedBy || (requestedBy === this.hostId && tx?.isBot);
     if (!canSpin) return;
 
     const usedIds = Object.keys(room.usedCardIds || {}).map(Number);
@@ -293,12 +298,25 @@ export class GameEngine {
   async _activatePsychic(txId) {
     const room = await getRoom(this.roomCode);
     if (!room || room.phase !== 'spinning') return;
-    const target   = Math.floor(Math.random() * 81) + 10;
-    const duration = (room.settings?.clueTimer ?? 60) * 1000;
-    await roomUpdate(this.roomCode, { phase: 'psychic' });
-    await set(rref(this.roomCode, 'psychicSecret'), { targetPosition: target });
+    const tx = allPlayers(room).find(p => p.id === txId);
+    const targetMode = room.settings?.targetMode ?? 'random';
 
-    const tx = Object.values(room.players || {}).find(p => p.id === txId);
+    if (targetMode === 'choose' && !tx?.isBot) {
+      // Transmitter picks position + clue together in psychic phase
+      await this._startPsychicCluePhase(txId);
+    } else {
+      const target = Math.floor(Math.random() * 81) + 10;
+      await set(rref(this.roomCode, 'psychicSecret'), { targetPosition: target });
+      await this._startPsychicCluePhase(txId);
+    }
+  }
+
+  async _startPsychicCluePhase(txId) {
+    const room = await getRoom(this.roomCode);
+    if (!room) return;
+    const duration = (room.settings?.clueTimer ?? 30) * 1000;
+    await roomUpdate(this.roomCode, { phase: 'psychic' });
+    const tx = allPlayers(room).find(p => p.id === txId);
     if (tx?.isBot) {
       setTimeout(async () => {
         const r = await getRoom(this.roomCode);
@@ -313,6 +331,10 @@ export class GameEngine {
       this._setTimer(duration, async () => {
         const r = await getRoom(this.roomCode);
         if (!r || r.phase !== 'psychic') return;
+        const secretSnap = await get(rref(this.roomCode, 'psychicSecret'));
+        if (!secretSnap.exists()) {
+          await set(rref(this.roomCode, 'psychicSecret'), { targetPosition: Math.floor(Math.random() * 81) + 10 });
+        }
         await roomUpdate(this.roomCode, { clue: '(sem dica)', timerEnd: null });
         await this._proceedToVoting();
       });
@@ -597,9 +619,11 @@ export class GameEngine {
         if ([5,7,10,15,20].includes(data.rounds)) s.rounds = data.rounds;
         if ([30,60,90].includes(data.clueTimer))   s.clueTimer = data.clueTimer;
         if ([30,60,90].includes(data.voteTimer))   s.voteTimer = data.voteTimer;
+        if (['random','choose'].includes(data.targetMode)) s.targetMode = data.targetMode;
         if (Object.keys(s).length) await update(rref(this.roomCode, 'settings'), s);
         break;
       }
+
 
       case 'start_game': {
         if (!isHost || room.phase !== 'lobby') return;
@@ -622,6 +646,10 @@ export class GameEngine {
         if (room.phase !== 'psychic' || !canClue) return;
         const clue = String(data.clue || '').trim().split(/\s+/)[0].slice(0, 60);
         if (!clue) return;
+        if (room.settings?.targetMode === 'choose' && data.position !== undefined) {
+          const pos = Math.max(5, Math.min(95, Math.round(Number(data.position) || 50)));
+          await set(rref(this.roomCode, 'psychicSecret'), { targetPosition: pos });
+        }
         this._clearTimer();
         await roomUpdate(this.roomCode, { clue, timerEnd: null });
         await this._proceedToVoting();
