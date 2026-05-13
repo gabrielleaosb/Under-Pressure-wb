@@ -137,7 +137,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
 
             {mode === null && (
               <div className="home-action-grid">
-                <button className="btn btn-primary btn-pulse" onClick={() => { playClick(); setMode('create'); }}>
+                <button className="btn btn-primary" onClick={() => { playClick(); setMode('create'); }}>
                   {lang === 'pt' ? 'CRIAR' : 'CREATE'}
                 </button>
                 <button className="btn btn-yellow" onClick={() => { playClick(); setMode('join'); }}>
@@ -148,7 +148,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
 
             {mode === 'create' && (
               <div className="home-action-stack">
-                <button className="btn btn-primary btn-pulse" onClick={go} disabled={!name.trim() || busy}>
+                <button className="btn btn-primary" onClick={go} disabled={!name.trim() || busy}>
                   {busy ? '...' : lang === 'pt' ? 'CRIAR SALA' : 'CREATE ROOM'}
                 </button>
                 <button className="btn btn-ghost btn-sm" onClick={() => { playClick(); setMode(inviteCode ? 'join' : null); }}>

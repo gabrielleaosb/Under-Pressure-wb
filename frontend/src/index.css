@@ -477,7 +477,19 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: linear-gradient(180deg, rgba(13,15,40,.96), rgba(7,8,24,.96));
+  background:
+    linear-gradient(180deg, rgba(20, 28, 64, .58), rgba(4, 7, 22, .7)),
+    radial-gradient(circle at 18% 0%, rgba(0,255,255,.12), transparent 44%),
+    radial-gradient(circle at 88% 100%, rgba(255,224,0,.08), transparent 38%);
+  border-color: rgba(0,255,255,.34);
+  backdrop-filter: blur(12px) saturate(1.18);
+  -webkit-backdrop-filter: blur(12px) saturate(1.18);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,.78),
+    0 18px 42px rgba(0,0,0,.34),
+    0 0 34px rgba(0,255,255,.16),
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 0 30px rgba(0,255,255,.045);
 }
 
 .home-field-label {
@@ -499,8 +511,10 @@ body::before {
   gap: 12px;
   cursor: pointer;
   text-align: left;
-  background: rgba(255,255,255,.025);
-  border-color: var(--metal-2);
+  background:
+    linear-gradient(90deg, rgba(0,255,255,.075), rgba(255,255,255,.025) 52%, rgba(255,224,0,.05));
+  border-color: rgba(0,255,255,.22);
+  box-shadow: inset 0 0 16px rgba(0,255,255,.045);
 }
 
 .home-ship-trigger__action {
@@ -537,6 +551,19 @@ body::before {
   padding: 3px;
   gap: 2px;
   border-radius: 4px;
+  background: rgba(3, 7, 22, .5);
+  border-color: rgba(0,255,255,.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.home-card .input {
+  background:
+    linear-gradient(180deg, rgba(0, 8, 24, .68), rgba(0, 3, 12, .76));
+  border-color: rgba(0,255,255,.24);
+  box-shadow:
+    inset 0 0 16px rgba(0,255,255,.055),
+    0 0 0 1px rgba(0,0,0,.45);
 }
 
 .home-grid {
