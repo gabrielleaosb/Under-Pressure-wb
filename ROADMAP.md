@@ -11,13 +11,16 @@ O projeto ja tem uma fatia vertical funcional:
 - App React/Vite com Firebase Realtime Database.
 - Salas online com codigo, lobby, entrada de jogadores e presenca.
 - Engine host-authoritative no navegador do host.
-- Fluxo de rodada: roleta, transmissor, voto, revelacao e fim de jogo.
-- Modo FFA atual, com pontuacao individual, dano individual, streak e overdrive.
-- Painel de pressao interativo.
-- Naves pixel art, seletor de nave, ranking, sons sinteticos e efeitos visuais.
+- Fluxo de rodada: roleta/selecao de carta, navegador, voto, revelacao e fim de jogo.
+- Modo FFA com pontuacao individual, streak e BOOST (alto risco/alta recompensa).
+- Sistema de dano removido — pontuacao negativa substitui penalidade por erro grande.
+- Painel de pressao interativo com identificacao de votos por ranking.
+- Naves pixel art com cor e accent, seletor de nave, ranking, sons e efeitos visuais.
+- Modo LIVRE: navegador escolhe entre N cartas estilo Wavelength em vez de roleta tematica.
 - Dev mode com bots para testar fluxo solo.
+- Desconexao de navegador pula a rodada automaticamente; votantes desconectados sao ignorados.
 
-O projeto ainda esta em alpha. Ele compila e tem base jogavel, mas precisa consolidar seguranca, regras, UX e identidade mecanica.
+O projeto esta em alpha jogavel. Precisa consolidar seguranca, panes mecanicas e playtest real.
 
 ## Norte De Produto
 
@@ -49,10 +52,10 @@ Objetivo: deixar o projeto sem ambiguidade entre modo por equipes e FFA.
 
 Tarefas:
 
-- Escolher o modo principal do MVP: FFA, equipes ou cooperativo.
-- Atualizar README para refletir o modo escolhido.
-- Remover ou isolar restos de codigo antigo de equipes.
-- Definir vocabulario fixo: transmissor, piloto, pressao, dano, overdrive, rodada.
+- ~~Escolher o modo principal do MVP: FFA, equipes ou cooperativo.~~ ✓ (FFA consolidado)
+- ~~Atualizar README para refletir o modo escolhido.~~ ✓
+- ~~Remover ou isolar restos de codigo antigo de equipes.~~ ✓
+- ~~Definir vocabulario fixo.~~ ✓ (navegador, calibrador, BOOST, rodada — dano removido)
 - Criar um documento curto de regras atuais.
 
 Criterio de pronto:
@@ -72,23 +75,24 @@ Tarefas tecnicas:
 - Parar de expor o alvo secreto para todos os clientes.
 - Validar acoes no engine com mais rigor.
 - Tornar a fila de acoes idempotente.
-- Melhorar reconexao e troca de host.
+- ~~Melhorar reconexao e troca de host.~~ ✓ (skip automatico ao desconectar; votantes ignorados)
 - Criar limpeza de salas antigas.
 - Adicionar tela de erro clara quando Firebase nao estiver configurado.
-- Criar testes unitarios para score, dano, overdrive, streak e final de jogo.
+- ~~Criar testes unitarios para score, overdrive, streak e final de jogo.~~ (dano removido; testes ainda pendentes)
 
 Tarefas de UX:
 
-- Melhorar explicacao minima do lobby.
-- Indicar claramente quem deve agir em cada fase.
+- ~~Melhorar explicacao minima do lobby.~~ ✓ (briefing, configuracoes, indicadores de fase)
+- ~~Indicar claramente quem deve agir em cada fase.~~ ✓ (round intro, labels de fase, CardPicker)
 - Reduzir textos truncados e mojibake.
 - Garantir que mobile seja o caminho principal.
-- Criar um fluxo de convite com link e, depois, QR code.
+- ~~Criar um fluxo de convite com link.~~ ✓ (link funciona, bug do botao voltar corrigido)
+- QR code de convite (pendente).
 
 Criterio de pronto:
 
 - Host cria sala, 4 pessoas entram, partida termina e todos veem o mesmo resultado.
-- Um jogador desconectado nao trava a rodada.
+- ~~Um jogador desconectado nao trava a rodada.~~ ✓
 - O alvo secreto nao fica trivialmente visivel para jogadores comuns.
 
 ## Marco 2 - Identidade De Nave Sob Pressao
@@ -99,24 +103,24 @@ Objetivo: criar as mecanicas que diferenciam Under Pressure de Wavelength.
 
 Sistemas candidatos para MVP:
 
-- Casco: dano acumulado, risco de explosao ou penalidade.
-- Reator: overdrive aumenta pontos, mas gera calor.
-- Comunicacao: falhas limitam dica, voto ou informacao na tela.
-- Oxigenio: timer global que pune demora.
-- Reparo: depois da revelacao, jogadores escolhem entre pontuar, reparar ou arriscar.
+- ~~Casco/dano acumulado~~ (removido — pontuacao negativa substitui penalidade)
+- BOOST: alto risco/alta recompensa por voto. ✓ Implementado. Precisa de playtest para calibrar valores.
+- Comunicacao: falhas limitam a dica ou informacao na tela. (pendente)
+- Oxigenio: timer global que pune demora. (pendente)
+- Reparo: depois da revelacao, jogadores escolhem entre pontuar, reparar ou arriscar. (pendente)
 
 Primeira versao recomendada:
 
-- Manter o painel 0-100.
-- Adicionar 3 sistemas simples: casco, reator e comunicacao.
-- Cada rodada gera uma pane se a media errar muito ou se muitos usarem overdrive.
+- Manter o painel 0-100. ✓
+- ~~Adicionar reator/overdrive.~~ → BOOST implementado com formula reformulada. ✓
+- Adicionar panes de comunicacao como evento de rodada.
 - A pane altera a proxima rodada com uma regra pequena.
 
-Exemplos de panes:
+Exemplos de panes a prototipar:
 
-- Comunicacao ruim: transmissor so pode dar dica com ate 5 letras.
-- Sensor instavel: votantes nao veem numeros no painel.
-- Reator quente: overdrive vale mais, mas erro causa dano dobrado.
+- Comunicacao ruim: navegador so pode dar dica com ate 5 letras.
+- Sensor instavel: calibradores nao veem numeros no painel.
+- Reator quente: BOOST vale mais, mas erro causa penalidade dobrada.
 - Gravidade falhando: ponteiro comeca em posicao aleatoria e treme.
 
 Criterio de pronto:
@@ -127,7 +131,7 @@ Criterio de pronto:
 
 ## Marco 3 - Playtest Night
 
-Prazo alvo: 7 a 14 dias a partir de hoje.
+Prazo alvo: proximo grupo disponivel.
 
 Objetivo: testar diversao real com amigos.
 
@@ -135,9 +139,9 @@ Preparacao:
 
 - Criar formulario curto de feedback.
 - Preparar 3 configuracoes: curta, padrao e caotica.
-- Criar um botao de "copiar convite".
-- Ter dev tools escondidas por query param.
-- Registrar historico de rodada suficiente para diagnosticar bugs.
+- ~~Criar um botao de copiar convite.~~ ✓
+- ~~Ter dev tools escondidas por query param.~~ ✓ (?dev, ?gauge, ?rouletteLab, etc.)
+- ~~Registrar historico de rodada suficiente para diagnosticar bugs.~~ ✓ (roundHistory)
 
 Metricas de playtest:
 
@@ -162,13 +166,14 @@ Objetivo: aumentar rejogabilidade sem inflar complexidade.
 
 Tarefas:
 
-- Expandir cartas para 150+ espectros.
-- Criar packs tematicos: espaco, cultura pop, amigos, absurdos, dificil.
-- Adicionar configuracao de intensidade de caos.
-- Criar modo FFA competitivo.
+- Expandir cartas tematicas para 150+ espectros. (68 tematicas atuais)
+- ~~Criar pack de cartas abertas estilo Wavelength.~~ ✓ (30 cartas em OPEN_CARDS, modo LIVRE)
+- ~~Adicionar configuracao de modo de cartas no lobby.~~ ✓ (TEMATICO / LIVRE, opcoes 1/3/5)
+- ~~Modo FFA competitivo.~~ ✓ (implementado e refinado)
 - Criar modo cooperativo sobrevivencia.
 - Avaliar modo equipes se playtest pedir.
-- Criar tela de resumo com melhores momentos.
+- ~~Tela de resumo com destaques no fim de partida.~~ ✓ (GameOver com destaques e placar)
+- Rejoin de jogador que saiu durante partida em andamento. (pendente)
 
 Criterio de pronto:
 
@@ -202,20 +207,22 @@ Criterio de pronto:
 
 - Corrigir exposicao do alvo secreto.
 - Fechar regras publicas do Firebase.
-- Consolidar FFA vs equipes.
+- ~~Consolidar FFA vs equipes.~~ ✓
 - Playtestar com 4+ pessoas.
-- Transformar dano/pressao em efeito mecanico real.
-- Corrigir textos com encoding quebrado.
+- ~~Transformar overdrive em mecanica de decisao real.~~ ✓ (BOOST com risco/recompensa)
+- ~~Corrigir jargao e textos confusos na UI.~~ ✓ (navegador, calibrador, labels claros)
 
 ## Prioridades P1
 
 - QR code de convite.
-- Mais cartas e packs.
-- Replays/resumo da partida.
-- Melhor feedback de turno.
-- Melhor host migration.
+- Mais cartas tematicas (meta: 150+).
+- ~~Pack de cartas abertas estilo Wavelength.~~ ✓
+- ~~Melhor feedback de turno e identidade de fase.~~ ✓ (round intro, card picker, transicoes)
+- ~~Melhor host migration.~~ ✓ (skip automatico, transferencia de host)
 - Testes automaticos de engine.
-- Melhor estado vazio e mensagens de erro.
+- ~~Melhor estado vazio e mensagens de erro.~~ ✓ (error handling no engine, telas de espera)
+- Panes de comunicacao (primeira iteracao).
+- Rejoin mid-game.
 
 ## Prioridades P2
 
@@ -260,8 +267,8 @@ O MVP de Under Pressure esta pronto quando:
 
 - 4 a 8 jogadores conseguem jogar online pelo celular.
 - Uma partida dura 10 a 20 minutos.
-- Cada rodada tem decisao clara.
-- A pressao da nave muda pelo menos uma regra durante a partida.
+- Cada rodada tem decisao clara (escolha de carta, BOOST, posicao alvo livre).
+- Pelo menos uma mecanica de pressao muda uma regra durante a partida.
 - A revelacao gera tensao e reacao social.
 - A partida termina com ranking/resumo convincente.
 - O grupo consegue jogar de novo sem ajuda do desenvolvedor.
