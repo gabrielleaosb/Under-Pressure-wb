@@ -71,7 +71,7 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
   };
 
   return (
-    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, paddingBottom: 28 }}>
+    <div className="phase-shell phase-shell--voting">
       <div className="panel bevel glow-cyan" style={{ padding: '14px 22px', textAlign: 'center', width: 'min(560px, 100%)' }}>
         <div className="t-title" style={{ fontSize: 'clamp(13px, 2.5vw, 17px)', color: gameState.currentTheme?.color, marginBottom: 6 }}>
           {lang === 'en' ? gameState.currentTheme?.shortEN : gameState.currentTheme?.shortPT}
@@ -97,39 +97,41 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', width: 'min(560px, 100%)' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          <div className="vote-action-panel panel bevel">
+            <div className="vote-action-main">
               <button
-                className={`btn btn-sm ${boost ? 'btn-yellow' : 'btn-ghost'}`}
+                type="button"
+                className={`boost-toggle${boost ? ' is-active' : ''}`}
                 onClick={() => {
                   setBoost((value) => !value);
                   playClick();
                 }}
-                style={{ fontSize: 9, minWidth: 132, minHeight: 40 }}
               >
-                BOOST
+                <span className="boost-toggle__label">BOOST</span>
+                <span className="boost-toggle__hint">
+                  {lang === 'pt' ? 'Perto ganha bonus. Longe perde pontos.' : 'Close gains bonus. Far loses points.'}
+                </span>
               </button>
-              <span className="t-mono text-dim" style={{ fontSize: 9 }}>
-                {lang === 'pt' ? '+pts se acertar · -pts se errar' : '+pts if right · -pts if wrong'}
-              </span>
-            </div>
-            <span className="t-title text-dim" style={{ fontSize: 9, alignSelf: 'center' }}>
-              {votedCount}/{nonPsychicVoters.length}
-            </span>
-            {nonPsychicVoters.map(p => {
-              const hasVoted = submittedIds.includes(p.id);
-              return (
-                <div key={p.id} className="panel" style={{
-                  padding: '5px 8px',
-                  borderColor: hasVoted ? 'var(--neon-mint)' : 'var(--metal-2)',
-                  color: hasVoted ? 'var(--neon-mint)' : 'var(--ink-dim)',
-                  fontFamily: 'var(--f-read)',
-                  fontSize: 15,
-                }}>
-                  {hasVoted ? 'OK' : '--'} · {p.name}
+
+              <div className="vote-progress">
+                <span>{lang === 'pt' ? 'VOTOS' : 'VOTES'}</span>
+                <strong>{votedCount}/{nonPsychicVoters.length}</strong>
+                <div className="vote-progress__bar">
+                  <i style={{ width: `${nonPsychicVoters.length ? (votedCount / nonPsychicVoters.length) * 100 : 0}%` }} />
                 </div>
-              );
-            })}
+              </div>
+            </div>
+            <div className="vote-status-list">
+              {nonPsychicVoters.map(p => {
+                const hasVoted = submittedIds.includes(p.id);
+                return (
+                  <div key={p.id} className={`vote-status${hasVoted ? ' is-ready' : ''}`}>
+                    <span>{hasVoted ? 'OK' : '--'}</span>
+                    <b>{p.name}</b>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {!confirmedOnce ? (

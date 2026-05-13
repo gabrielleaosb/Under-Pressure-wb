@@ -233,6 +233,20 @@ Cosmetica, sem pay-to-win:
 - Titulos pos-partida: "Rei do Overdrive", "Engenheiro de Emergencia", "Sensor Humano".
 - Estatisticas locais: melhor acerto, maior desastre, melhor transmissor.
 
+## Ideias Futuras De Customizacao De Nave
+
+Por enquanto a nave funciona mais como icone pessoal do jogador. As ideias abaixo ficam para depois, se a customizacao virar uma parte mais importante da experiencia.
+
+- Nome da nave separado do nome do piloto.
+- Decalques simples no casco: estrela, listra, ponto, chevron, numero curto ou marca de tripulacao.
+- Trails cosmeticos de motor: plasma, ionico, fogo, toxico, vazio e faisca curta.
+- Preview de estados no hangar: intacta, danificada e critica.
+- Desgaste cosmetico inicial: limpa, usada, sucata, blindada ou experimental.
+- Animacoes cosmeticas: pulso do cockpit, motor tremendo, brilho intermitente e flutuacao mais pesada.
+- Presets nomeados para jogadores rapidos: Piloto de Corrida, Sucata Neon, Cruzador Militar, Fantasma, Reator Ilegal.
+- Categorias visuais sem impacto de gameplay: leve, media, pesada e exotica.
+- Molduras ou insignias de piloto conquistadas por feitos pos-partida.
+
 ## Ideias Para Retencao De Grupo
 
 - Resumo compartilhavel da partida.
@@ -254,4 +268,3 @@ Prototipar primeiro:
 - Resumo de melhores momentos no final.
 
 Se essas ideias nao aumentarem a diversao no playtest, cortar.
-

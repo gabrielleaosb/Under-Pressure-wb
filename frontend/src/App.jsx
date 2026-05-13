@@ -14,6 +14,9 @@ import DevPanel from './components/DevPanel.jsx';
 import Settings from './components/Settings.jsx';
 import RoundIntro from './components/RoundIntro.jsx';
 import ShipShowroom from './components/ShipShowroom.jsx';
+import RouletteStyleLab from './components/RouletteStyleLab.jsx';
+import RouletteStyleLab2 from './components/RouletteStyleLab2.jsx';
+import GaugeLab from './components/GaugeLab.jsx';
 import { RankingSidebar, RankingTopBar } from './components/RankingSidebar.jsx';
 import { t } from './i18n.js';
 import { playPhaseChange, playVotingStart, playError as playSoundError } from './sounds.js';
@@ -21,6 +24,10 @@ import { playPhaseChange, playVotingStart, playError as playSoundError } from '.
 const SEARCH_PARAMS = new URLSearchParams(window.location.search);
 const DEV_MODE = SEARCH_PARAMS.has('dev');
 const SHIPYARD_MODE = SEARCH_PARAMS.has('shipyard');
+const ROULETTE_LAB_MODE = SEARCH_PARAMS.has('rouletteLab') || SEARCH_PARAMS.has('roletas');
+const ROULETTE_LAB2_MODE = SEARCH_PARAMS.has('roletas2');
+const GAUGE_LAB_MODE = SEARCH_PARAMS.has('gauge') || SEARCH_PARAMS.has('manometro');
+const SPECIAL_MODE = SHIPYARD_MODE || ROULETTE_LAB_MODE || ROULETTE_LAB2_MODE || GAUGE_LAB_MODE;
 
 function normalizeRoomCode(code) {
   return String(code || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
@@ -68,6 +75,30 @@ export default function App() {
         reveal: lang === 'pt' ? 'Resultado' : 'Results',
         gameover: lang === 'pt' ? 'Final' : 'Final',
       }[gameState.phase] || gameState.phase)
+    : '';
+  const currentPhase = gameState?.phase;
+  const roundNumber = (gameState?.round ?? 0) + 1;
+  const totalRounds = gameState?.totalRounds ?? '?';
+  const totalRoundsNumber = Number(gameState?.totalRounds || 1);
+  const isTransmitter = activeTransmitterId === myId;
+  const canRevealRoundPayload = !!gameState && !['roulette', 'spinning'].includes(currentPhase);
+  const publicTheme = canRevealRoundPayload ? gameState.currentTheme : null;
+  const publicCard = canRevealRoundPayload ? gameState.currentCard : null;
+  const publicClue = ['voting', 'reveal'].includes(currentPhase) ? gameState?.clue : null;
+  const phaseActionLabel = gameState
+    ? ({
+        roulette: isTransmitter
+          ? (lang === 'pt' ? 'Gire a roleta' : 'Spin the wheel')
+          : (lang === 'pt' ? 'Aguardando giro' : 'Waiting for spin'),
+        spinning: lang === 'pt' ? 'Sinal selado' : 'Signal sealed',
+        psychic: isTransmitter
+          ? (lang === 'pt' ? 'Envie a dica' : 'Send the clue')
+          : (lang === 'pt' ? 'Aguardando dica' : 'Waiting for clue'),
+        voting: isTransmitter
+          ? (lang === 'pt' ? 'Equipe calibrando' : 'Crew calibrating')
+          : (lang === 'pt' ? 'Calibre o gauge' : 'Calibrate gauge'),
+        reveal: lang === 'pt' ? 'Resultado aberto' : 'Results open',
+      }[currentPhase] || phaseLabel)
     : '';
 
   useEffect(() => {
@@ -314,8 +345,11 @@ export default function App() {
       )}
 
       {SHIPYARD_MODE && <ShipShowroom />}
+      {ROULETTE_LAB_MODE && <RouletteStyleLab />}
+      {ROULETTE_LAB2_MODE && <RouletteStyleLab2 />}
+      {GAUGE_LAB_MODE && <GaugeLab />}
 
-      {!SHIPYARD_MODE && screen === 'home' && (
+      {!SPECIAL_MODE && screen === 'home' && (
         <HomeScreen
           lang={lang}
           setLang={setLang}
@@ -325,11 +359,11 @@ export default function App() {
         />
       )}
 
-      {!SHIPYARD_MODE && screen === 'lobby' && gameState && (
+      {!SPECIAL_MODE && screen === 'lobby' && gameState && (
         <Lobby {...sharedProps} lang={lang} setLang={setLang} onSettings={() => setShowSettings(true)} />
       )}
 
-      {!SHIPYARD_MODE && screen === 'game' && gameState && (
+      {!SPECIAL_MODE && screen === 'game' && gameState && (
         <div className="game-shell">
           {gameState.phase === 'gameover' ? (
             <div className="container" style={{ paddingTop: 24, paddingBottom: 40 }}>
@@ -343,76 +377,68 @@ export default function App() {
 
               <div className="game-frame">
                 <aside className="game-rail">
-                  <div className="game-rail-card panel bevel glow-cyan">
-                    <div className="t-title text-dim" style={{ fontSize: 7 }}>
-                      {lang === 'pt' ? 'SALA' : 'ROOM'}
+                  <div className="game-rail-card game-rail-card--status panel bevel glow-cyan">
+                    <div className="game-rail-row">
+                      <span className="t-title text-dim">{lang === 'pt' ? 'SALA' : 'ROOM'}</span>
+                      <strong className="t-read glow-text-cyan">{gameState.code}</strong>
                     </div>
-                    <div className="t-read glow-text-cyan" style={{ fontSize: 28, lineHeight: 1, marginTop: 6 }}>
-                      {gameState.code}
+                    <div className="game-rail-progress" aria-label={lang === 'pt' ? 'Progresso da partida' : 'Match progress'}>
+                      <span style={{ width: `${Math.max(6, Math.min(100, (roundNumber / totalRoundsNumber) * 100))}%` }} />
                     </div>
-                    <div className="game-rail-meta">
-                      <span>{lang === 'pt' ? 'Rodada' : 'Round'} {(gameState.round ?? 0) + 1}/{gameState.totalRounds}</span>
-                      <span>{lang === 'pt' ? 'Fase' : 'Phase'} {phaseLabel}</span>
-                    </div>
-                  </div>
-
-                  <div className="game-rail-card panel bevel glow-amber">
-                    <div className="t-title text-dim" style={{ fontSize: 7 }}>
-                      {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
-                    </div>
-                    <div className="t-read glow-text-amber" style={{ fontSize: 26, lineHeight: 1, marginTop: 8 }}>
-                      {activeTransmitter?.name || '?'}
-                    </div>
-                    <div className="game-rail-meta">
-                      <span>
-                        {gameState.phase === 'psychic' && activeTransmitterId === myId
-                          ? (lang === 'pt' ? 'Sua vez' : 'Your turn')
-                          : (lang === 'pt' ? 'Canal ativo' : 'Active channel')}
-                      </span>
+                    <div className="game-rail-meta game-rail-meta--inline">
+                      <span>{lang === 'pt' ? 'Rodada' : 'Round'} {roundNumber}/{totalRounds}</span>
+                      <span>{phaseLabel}</span>
                     </div>
                   </div>
 
-                  {gameState.currentTheme && (
-                    <div className="game-rail-card panel bevel">
-                      <div className="t-title text-dim" style={{ fontSize: 7 }}>
-                        {lang === 'pt' ? 'TEMA' : 'THEME'}
-                      </div>
-                      <div
-                        style={{
-                          fontFamily: 'var(--f-body)',
-                          fontSize: 13,
-                          fontWeight: 900,
-                          color: gameState.currentTheme.color,
-                          marginTop: 10,
-                          letterSpacing: 1.5,
-                        }}
-                      >
-                        {lang === 'en' ? gameState.currentTheme.shortEN : gameState.currentTheme.shortPT}
-                      </div>
-                      <div className="t-title" style={{ fontSize: 8, color: 'var(--ink)', marginTop: 10 }}>
-                        {lang === 'en' ? gameState.currentTheme.nameEN : gameState.currentTheme.namePT}
-                      </div>
+                  <div className="game-rail-card game-rail-card--signal panel bevel glow-amber">
+                    <div className="t-title text-dim" style={{ fontSize: 7 }}>
+                      {lang === 'pt' ? 'COMANDO' : 'COMMAND'}
                     </div>
-                  )}
+                    <div className="game-rail-transmitter">{activeTransmitter?.name || '?'}</div>
+                    <div className="game-rail-action">{phaseActionLabel}</div>
+                  </div>
 
-                  {gameState.currentCard && (
-                    <div className="game-rail-card panel bevel">
+                  <div className={`game-rail-card game-rail-card--intel panel bevel${publicTheme ? ' glow-cyan' : ''}`}>
+                    <div className="t-title text-dim" style={{ fontSize: 7 }}>
+                      {lang === 'pt' ? 'DADOS DA RODADA' : 'ROUND DATA'}
+                    </div>
+                    {publicTheme ? (
+                      <>
+                        <div className="game-rail-theme" style={{ color: publicTheme.color }}>
+                          {lang === 'en' ? publicTheme.shortEN : publicTheme.shortPT}
+                        </div>
+                        <div className="game-rail-theme-name">
+                          {lang === 'en' ? publicTheme.nameEN : publicTheme.namePT}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="game-rail-sealed">
+                        <b>{lang === 'pt' ? 'SINAL SELADO' : 'SIGNAL SEALED'}</b>
+                        <span>{lang === 'pt' ? 'Tema oculto ate a roleta travar.' : 'Theme hidden until the wheel locks.'}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {publicCard && (
+                    <div className="game-rail-card game-rail-card--spectrum panel bevel">
                       <div className="t-title text-dim" style={{ fontSize: 7 }}>
                         {lang === 'pt' ? 'ESPECTRO' : 'SPECTRUM'}
                       </div>
-                      <div className="game-rail-meta" style={{ marginTop: 12 }}>
-                        <span>{gameState.currentCard[lang === 'en' ? 'lE' : 'lP']}</span>
-                        <span>{gameState.currentCard[lang === 'en' ? 'rE' : 'rP']}</span>
+                      <div className="game-rail-spectrum">
+                        <span>{publicCard[lang === 'en' ? 'lE' : 'lP']}</span>
+                        <i />
+                        <span>{publicCard[lang === 'en' ? 'rE' : 'rP']}</span>
                       </div>
                     </div>
                   )}
 
-                  {gameState.clue && (
-                    <div className="game-rail-card panel bevel glow-mint">
+                  {publicClue && (
+                    <div className="game-rail-card game-rail-card--clue panel bevel glow-mint">
                       <div className="t-title text-dim" style={{ fontSize: 7 }}>
-                        {lang === 'pt' ? 'DICA' : 'CLUE'}
+                        {lang === 'pt' ? 'DICA TRANSMITIDA' : 'TRANSMITTED CLUE'}
                       </div>
-                      <div className="game-rail-clue">{gameState.clue}</div>
+                      <div className="game-rail-clue">{publicClue}</div>
                     </div>
                   )}
                 </aside>

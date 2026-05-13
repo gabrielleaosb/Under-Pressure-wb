@@ -1,25 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { t } from '../i18n.js';
 import { playClick, playJoin } from '../sounds.js';
-import { ShipIcon, ShipPicker } from './ShipRoster.jsx';
+import { SHIP_MODELS, ShipIcon, ShipPicker } from './ShipRoster.jsx';
 
-function PixelLogo({ lang }) {
+function PixelLogo() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+    <div className="home-logo">
+      <div className="home-logo__ships">
         <ShipIcon ship="nova_03" color="red" pixel={5} glow damage={1} />
         <ShipIcon ship="nova_08" color="blue" pixel={5} glow damage={2} />
       </div>
-      <div className="t-title glow-text-cyan flicker" style={{
-        fontSize: 'clamp(26px, 7vw, 48px)',
-        textAlign: 'center',
-        lineHeight: 1.08,
-        textShadow: '0 0 12px rgba(0,255,255,.6), 0 0 28px rgba(0,255,255,.35), 0 4px 0 #000',
-      }}>
-        UNDER<br />
+      <div className="home-logo__title t-title glow-text-cyan flicker">
+        UNDER
+        <br />
         <span className="glow-text-amber">PRESSURE</span>
       </div>
-      <div className="t-title text-dim" style={{ fontSize: 8, letterSpacing: '.18em' }}>SECTOR-7G</div>
+      <div className="home-logo__sector t-title text-dim">SECTOR-7G</div>
     </div>
   );
 }
@@ -30,6 +26,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
   const [code, setCode] = useState(inviteCode);
   const [ship, setShip] = useState(() => localStorage.getItem('up_ship') || 'nova_01');
   const [shipColor, setShipColor] = useState(() => localStorage.getItem('up_ship_color') || 'blue');
+  const [shipAccent, setShipAccent] = useState(() => localStorage.getItem('up_ship_accent') || 'cyan');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -52,7 +49,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
     try {
       if (mode === 'create') {
         playJoin();
-        await onCreate(name.trim(), { ship, shipColor });
+        await onCreate(name.trim(), { ship, shipColor, shipAccent });
       } else {
         if (code.length < 4) {
           setErr(lang === 'pt' ? 'Codigo invalido.' : 'Invalid code.');
@@ -60,7 +57,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
           return;
         }
         playJoin();
-        await onJoin(code.trim(), name.trim(), { ship, shipColor });
+        await onJoin(code.trim(), name.trim(), { ship, shipColor, shipAccent });
       }
     } catch (e) {
       setErr(e.message);
@@ -70,73 +67,38 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
   };
 
   return (
-    <div className="screen" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+    <div className="screen home-screen">
       {pickerOpen && (
         <ShipPicker
           currentShip={ship}
           currentColor={shipColor}
+          currentAccent={shipAccent}
           lang={lang}
-          onConfirm={(nextShip, nextColor) => {
+          onConfirm={(nextShip, nextColor, nextAccent) => {
             setShip(nextShip);
             setShipColor(nextColor);
+            setShipAccent(nextAccent);
             localStorage.setItem('up_ship', nextShip);
             localStorage.setItem('up_ship_color', nextColor);
+            localStorage.setItem('up_ship_accent', nextAccent);
             setPickerOpen(false);
           }}
           onClose={() => setPickerOpen(false)}
         />
       )}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        backgroundImage: 'linear-gradient(rgba(0,255,255,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,255,.055) 1px, transparent 1px)',
-        backgroundSize: '40px 40px',
-        maskImage: 'radial-gradient(ellipse at center, black 35%, transparent 78%)',
-        pointerEvents: 'none',
-      }} />
 
-      <div style={{
-        position: 'absolute',
-        top: 14,
-        left: 0,
-        right: 0,
-        zIndex: 2,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: 10,
-        padding: '0 16px',
-        fontFamily: 'var(--f-read)',
-        color: 'var(--ink-dim)',
-        fontSize: 14,
-      }}>
-        <span className="glow-text-cyan">▌SECTOR-7G</span>
+      <div className="home-grid-overlay" />
+
+      <div className="home-top-status">
+        <span className="glow-text-cyan">SECTOR-7G</span>
         <span>v1.0 // ONLINE</span>
-        <span className="glow-text-mint">12 NAVES</span>
+        <span className="glow-text-mint">{lang === 'pt' ? `${SHIP_MODELS.length} NAVES` : `${SHIP_MODELS.length} SHIPS`}</span>
       </div>
 
-      <div style={{
-        position: 'relative',
-        zIndex: 1,
-        width: '100%',
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 16,
-        padding: '64px 18px 24px',
-      }}>
-        <PixelLogo lang={lang} />
+      <div className="home-center">
+        <PixelLogo />
 
-        <div className="panel bevel glow-cyan" style={{
-          width: 'min(430px, 100%)',
-          padding: 18,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 14,
-          background: 'linear-gradient(180deg, rgba(13,15,40,.96), rgba(7,8,24,.96))',
-        }}>
+        <div className="home-card panel bevel glow-cyan">
           {inviteCode && (
             <div className="t-mono glow-text-amber" style={{ fontSize: 14 }}>
               {inviteCode}
@@ -144,8 +106,8 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
           )}
 
           <div>
-            <label className="t-title text-dim" style={{ display: 'block', fontSize: 8, marginBottom: 6 }}>
-              PILOT ▸
+            <label className="home-field-label t-title text-dim">
+              {lang === 'pt' ? 'PILOTO' : 'PILOT'}
             </label>
             <input
               className="input"
@@ -162,35 +124,25 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
           </div>
 
           <button
-            className="panel bevel"
+            className="home-ship-trigger panel bevel"
             onClick={() => {
               playClick();
               setPickerOpen(true);
             }}
-            style={{
-              padding: '10px 12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              cursor: 'pointer',
-              textAlign: 'left',
-              background: 'rgba(255,255,255,.025)',
-              borderColor: 'var(--metal-2)',
-            }}
           >
-            <ShipIcon ship={ship} color={shipColor} pixel={3} glow />
-            <div style={{ flex: 1 }}>
-              <div className="t-title text-dim" style={{ fontSize: 7, marginBottom: 4 }}>
+            <ShipIcon ship={ship} color={shipColor} accent={shipAccent} pixel={3} glow />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="home-mini-label t-title text-dim">
                 {lang === 'pt' ? 'SUA NAVE' : 'YOUR SHIP'}
               </div>
-              <div className="t-title glow-text-cyan" style={{ fontSize: 9 }}>
+              <div className="home-ship-trigger__action t-title glow-text-cyan">
                 {lang === 'pt' ? 'MUDAR NAVE' : 'CHANGE SHIP'}
               </div>
             </div>
           </button>
 
           {mode === null && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="home-action-grid">
               <button className="btn btn-primary btn-pulse" onClick={() => { playClick(); setMode('create'); }}>
                 {lang === 'pt' ? 'CRIAR' : 'CREATE'}
               </button>
@@ -201,7 +153,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
           )}
 
           {mode === 'create' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="home-action-stack">
               <button className="btn btn-primary btn-pulse" onClick={go} disabled={!name.trim() || busy}>
                 {busy ? '...' : lang === 'pt' ? 'CRIAR SALA' : 'CREATE ROOM'}
               </button>
@@ -212,10 +164,10 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
           )}
 
           {mode === 'join' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="home-action-stack">
               <div>
-                <label className="t-title text-dim" style={{ display: 'block', fontSize: 8, marginBottom: 6 }}>
-                  ROOM ▸
+                <label className="home-field-label t-title text-dim">
+                  {lang === 'pt' ? 'SALA' : 'ROOM'}
                 </label>
                 <input
                   className="input code-input"
@@ -243,8 +195,8 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
 
           {err && <div className="home-error">{err}</div>}
 
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center' }}>
-            <div className="panel" style={{ display: 'flex', padding: 3, gap: 2, borderRadius: 4 }}>
+          <div className="home-language-wrap">
+            <div className="home-language-switcher panel">
               {['pt', 'en'].map((languageCode) => (
                 <button
                   key={languageCode}

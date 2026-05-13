@@ -1,0 +1,316 @@
+/* ══════════════════════════════════════════
+   GAUGE LAB — Painéis Navais
+   ══════════════════════════════════════════ */
+
+.gl {
+  position: relative;
+  z-index: 1;
+  width: min(1440px, calc(100vw - 32px));
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 34px 0 56px;
+}
+
+/* ── Hero ── */
+.gl-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+  gap: 24px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+
+.gl-hero h1 {
+  max-width: 820px;
+  margin-top: 16px;
+  font-size: clamp(22px, 4vw, 38px);
+  line-height: 1.18;
+}
+
+.gl-hero h1 span { display: block; }
+
+.gl-hero p {
+  max-width: 800px;
+  margin-top: 16px;
+  color: var(--ink-dim);
+  font-size: 17px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.gl-hero__callout {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gl-hero__callout strong {
+  font-family: var(--f-pixel);
+  color: var(--neon-amber);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.gl-hero__callout small {
+  color: var(--ink-dim);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* ── Grid ── */
+.gl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+  gap: 18px;
+}
+
+/* ── Card ── */
+.gl-card {
+  min-width: 0;
+  padding: 18px;
+  border: 2px solid rgba(255,255,255,.09);
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(14,16,42,.97), rgba(6,7,22,.98));
+  box-shadow: 0 0 0 1px #000, inset 0 1px 0 rgba(255,255,255,.04);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  contain: layout paint;
+}
+
+.gl-card.is-selected {
+  border-color: var(--neon-amber);
+  box-shadow: 0 0 0 1px #000, 0 0 26px rgba(255,224,0,.2), inset 0 0 18px rgba(255,224,0,.05);
+}
+
+.gl-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.gl-card__tone {
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 3px;
+  color: var(--ink-dim);
+  font-family: var(--f-body);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.gl-card h2 {
+  font-family: var(--f-pixel);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.gl-card p {
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.gl-pick {
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 3px;
+  background: rgba(255,255,255,.03);
+  color: var(--ink-dim);
+  font-family: var(--f-body);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.is-selected .gl-pick {
+  border-color: rgba(255,224,0,.55);
+  color: var(--neon-amber);
+  background: rgba(255,224,0,.08);
+}
+
+/* ── SVG gauge ── */
+.gl-gauge-svg {
+  display: block;
+  width: 100%;
+  /* aspect-ratio driven by viewBox */
+}
+
+/* ── Labels row ── */
+.gl-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px;
+  margin-top: -6px;
+}
+
+.gl-label-left,
+.gl-label-right {
+  font-family: var(--f-body);
+  font-size: 11px;
+  font-weight: 800;
+  max-width: 46%;
+  word-break: break-word;
+}
+
+.gl-label-left  { color: rgba(80,150,255,.75); }
+.gl-label-right { color: rgba(255,90,60,.75); text-align: right; }
+
+/* ══════════════════════════════════════════
+   VARIANT CARD BACKGROUNDS
+   ══════════════════════════════════════════ */
+
+/* Binnacle — dark mahogany with subtle grain */
+.gl-card--binnacle {
+  background:
+    repeating-linear-gradient(
+      46deg,
+      rgba(80,40,10,.07) 0px, rgba(80,40,10,.07) 1px,
+      transparent 1px, transparent 8px
+    ),
+    linear-gradient(180deg, rgba(28,14,6,.97), rgba(14,7,3,.98));
+  border-color: rgba(160,100,20,.35);
+}
+
+.gl-card--binnacle .gl-card__tone {
+  border-color: rgba(200,160,48,.4);
+  color: #c8a030;
+}
+
+.gl-card--binnacle h2 { color: #d4c090; }
+
+.gl-card--binnacle .gl-label-left  { color: rgba(180,130,30,.75); }
+.gl-card--binnacle .gl-label-right { color: rgba(200,100,20,.75); }
+
+/* Sonar — phosphor CRT dark green */
+.gl-card--sonar {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0,255,136,.018) 0px, rgba(0,255,136,.018) 1px,
+      transparent 1px, transparent 3px
+    ),
+    linear-gradient(180deg, rgba(4,14,8,.97), rgba(2,8,4,.98));
+  border-color: rgba(0,100,50,.4);
+}
+
+.gl-card--sonar .gl-card__tone {
+  border-color: rgba(0,200,100,.35);
+  color: #00cc66;
+}
+
+.gl-card--sonar h2 { color: rgba(0,255,136,.8); }
+
+.gl-card--sonar .gl-label-left  { color: rgba(0,180,100,.7); }
+.gl-card--sonar .gl-label-right { color: rgba(0,200,110,.7); text-align: right; }
+
+/* Bulkhead — industrial steel grey */
+.gl-card--bulkhead {
+  background:
+    linear-gradient(180deg, rgba(22,22,22,.97), rgba(12,12,12,.98));
+  border-color: #444;
+}
+
+.gl-card--bulkhead .gl-card__tone {
+  border-color: rgba(180,180,180,.3);
+  color: #aaa;
+}
+
+.gl-card--bulkhead h2 { color: #ccc; }
+
+.gl-card--bulkhead .gl-label-left  { color: rgba(255,100,50,.7); }
+.gl-card--bulkhead .gl-label-right { color: rgba(100,200,80,.7); text-align: right; }
+
+/* Hazard stripe at bottom of bulkhead card */
+.gl-card--bulkhead::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  border-radius: 0 0 4px 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    #ffcc00 0px, #ffcc00 12px,
+    #1a1a1a 12px, #1a1a1a 24px
+  );
+}
+
+.gl-card--bulkhead { position: relative; overflow: hidden; }
+
+/* Barometer — aged wood & brass */
+.gl-card--barometer {
+  background:
+    repeating-linear-gradient(
+      62deg,
+      rgba(100,58,12,.07) 0px, rgba(100,58,12,.07) 1px,
+      transparent 1px, transparent 10px
+    ),
+    linear-gradient(180deg, rgba(28,16,6,.97), rgba(14,8,4,.98));
+  border-color: rgba(140,90,16,.4);
+}
+
+.gl-card--barometer .gl-card__tone {
+  border-color: rgba(200,160,40,.38);
+  color: #c8a030;
+}
+
+.gl-card--barometer h2 { color: #d4c090; }
+
+.gl-card--barometer .gl-label-left  { color: rgba(100,80,180,.75); }
+.gl-card--barometer .gl-label-right { color: rgba(160,130,40,.75); text-align: right; }
+
+/* Combat MFD — deep navy tactical */
+.gl-card--combat {
+  background:
+    linear-gradient(180deg, rgba(4,10,28,.97), rgba(2,5,18,.98));
+  border-color: rgba(30,60,160,.5);
+}
+
+.gl-card--combat .gl-card__tone {
+  border-color: rgba(68,136,255,.35);
+  color: #4488ff;
+}
+
+.gl-card--combat h2 { color: rgba(100,160,255,.9); }
+
+.gl-card--combat .gl-label-left  { color: rgba(40,100,220,.75); }
+.gl-card--combat .gl-label-right { color: rgba(80,130,255,.75); text-align: right; }
+
+/* ── Responsive ── */
+@media (max-width: 780px) {
+  .gl {
+    width: calc(100% - 28px);
+    overflow-x: clip;
+    padding-top: 26px;
+  }
+
+  .gl-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .gl-hero h1 {
+    font-size: clamp(20px, 7vw, 26px);
+    line-height: 1.28;
+  }
+
+  .gl-grid { grid-template-columns: 1fr; }
+
+  .gl-card {
+    padding: 14px;
+  }
+
+  .gl-card__header { flex-direction: column; }
+
+  .gl-pick { width: 100%; }
+}

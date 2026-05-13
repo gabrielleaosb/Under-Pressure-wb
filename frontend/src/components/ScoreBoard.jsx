@@ -60,7 +60,7 @@ export default function ScoreBoard({ gameState, myId, lang, onSettings }) {
           {round+1}/{totalRounds}
         </span>
         <button onClick={onSettings} className="btn btn-ghost" style={{ fontSize:13, padding:'2px 6px', minHeight:26, height:26, marginTop:2 }}
-          title="Settings">CONFIG</button>
+          title={lang === 'pt' ? 'Ajustes' : 'Settings'}>{lang === 'pt' ? 'AJUSTES' : 'SETTINGS'}</button>
       </div>
     </div>
   );

@@ -162,6 +162,114 @@ export const SHIP_MODELS = [
 .....200002.......
 ......2222........
   ` },
+  { id: 'nova_13', name: 'Corsair', role: 'Raider', sprite: `
+........222.......
+......220022......
+....2200330022....
+552200774400222...
+6620003333000022..
+662000344430000222
+552200774400222...
+....2200330022....
+......220022......
+........222.......
+  ` },
+  { id: 'nova_14', name: 'Trident', role: 'Breaker', sprite: `
+2......222......2.
+22....22022....22.
+2022..20002..2202.
+20022200300222002.
+55200034443000255.
+66200777777002666.
+55200034443000255.
+20022200300222002.
+2022..20002..2202.
+22....22022....22.
+2......222......2.
+  ` },
+  { id: 'nova_15', name: 'Lantern', role: 'Beacon', sprite: `
+.......222........
+.....2200022......
+...22034443022....
+..2003477743002...
+5520037777300255..
+6620003444300266..
+5520037777300255..
+..2003477743002...
+...22034443022....
+.....2200022......
+.......222........
+  ` },
+  { id: 'nova_16', name: 'Dagger', role: 'Striker', sprite: `
+...........2......
+.........22222....
+.......22000022...
+.....220033330222.
+552222007777000222
+662000003443300022
+552222007777000222
+.....220033330222.
+.......22000022...
+.........22222....
+...........2......
+  ` },
+  { id: 'nova_17', name: 'Bastion', role: 'Bulwark', sprite: `
+...22222222222....
+.22000000000022...
+2003377777730022..
+20030034443000022.
+66200733333700266.
+66200000000000266.
+66200733333700266.
+20030034443000022.
+2003377777730022..
+.22000000000022...
+...22222222222....
+  ` },
+  { id: 'nova_18', name: 'Wraith', role: 'Phantom', sprite: `
+55................
+6655..............
+5566222...........
+..55200022........
+....200330222.....
+.....20074400222..
+......200333000222
+.....20074400222..
+....200330222.....
+..55200022........
+5566222...........
+6655..............
+55................
+  ` },
+  { id: 'nova_19', name: 'Harpoon', role: 'Hunter', sprite: `
+..2...........2...
+.222.........222..
+22022.......22022.
+2200222222220022.
+5520000333300255.
+66200774447702666
+....220000022.....
+......203302......
+....2207447022....
+66200774447702666
+5520000333300255.
+2200222222220022.
+  ` },
+  { id: 'nova_20', name: 'Oracle', role: 'Surveyor', sprite: `
+.....2222222......
+...22000000022....
+..2002233322002...
+.2002.34743.2002..
+.2002.37773.2002..
+5520037447300255..
+6620003777300266..
+5520037447300255..
+.2002.37773.2002..
+.2002.34743.2002..
+..2002233322002...
+...22000000022....
+.....2222222......
+  ` },
 ];
 
 export const SHIP_IDS = SHIP_MODELS.map((model) => model.id);
@@ -189,25 +297,27 @@ function shadeColor(hex, amount) {
   return `#${next.join('')}`;
 }
 
-function makePalette(color) {
-  if (PALETTE_CACHE.has(color)) return PALETTE_CACHE.get(color);
+function makePalette(color, accent = 'cyan') {
+  const key = `${color}:${accent}`;
+  if (PALETTE_CACHE.has(key)) return PALETTE_CACHE.get(key);
   const base = SHIP_SWATCHES[color] || SHIP_SWATCHES.blue;
+  const accentBase = SHIP_SWATCHES[accent] || SHIP_SWATCHES.cyan;
   const palette = {
     '0': base,
     '1': shadeColor(base, -56),
     '2': shadeColor(base, 38),
     '3': '#10203d',
-    '4': color === 'amber' ? '#fff4a3' : '#7ef6ff',
+    '4': accent === 'amber' ? '#fff4a3' : shadeColor(accentBase, 42),
     '5': '#ff9f38',
     '6': '#ffe56d',
-    '7': shadeColor(base, 74),
+    '7': accentBase,
     '8': '#040812',
     '9': '#3a3a48',
     a: '#ff6a1f',
     b: '#ffd54a',
     c: '#ff3758',
   };
-  PALETTE_CACHE.set(color, palette);
+  PALETTE_CACHE.set(key, palette);
   return palette;
 }
 
@@ -389,8 +499,9 @@ function PixelArt({ rows, palette, pixel, glow = false, shake = false }) {
   const canvasRef = useRef(null);
   const width = rows[0]?.length || 1;
   const height = rows.length || 1;
-  const cssWidth = width * pixel;
-  const cssHeight = height * pixel;
+  const pixelSize = Math.max(1, Math.round(Number(pixel) || 1));
+  const cssWidth = width * pixelSize;
+  const cssHeight = height * pixelSize;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -409,10 +520,10 @@ function PixelArt({ rows, palette, pixel, glow = false, shake = false }) {
       row.split('').forEach((char, x) => {
         if (char === '.') return;
         ctx.fillStyle = palette[char] || '#ff00ff';
-        ctx.fillRect(x * pixel, y * pixel, pixel, pixel);
+        ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
       });
     });
-  }, [rows, palette, pixel, cssWidth, cssHeight]);
+  }, [rows, palette, pixelSize, cssWidth, cssHeight]);
 
   return (
     <canvas
@@ -423,7 +534,7 @@ function PixelArt({ rows, palette, pixel, glow = false, shake = false }) {
       style={{
         width: cssWidth,
         height: cssHeight,
-        filter: glow ? `drop-shadow(0 0 ${Math.max(8, pixel * 2)}px rgba(0,255,255,0.35))` : undefined,
+        filter: glow ? `drop-shadow(0 0 ${Math.max(8, pixelSize * 2)}px rgba(0,255,255,0.35))` : undefined,
         display: 'block',
         imageRendering: 'pixelated',
       }}
@@ -434,6 +545,7 @@ function PixelArt({ rows, palette, pixel, glow = false, shake = false }) {
 export const ShipIcon = memo(function ShipIcon({
   ship = SHIP_MODELS[0].id,
   color = 'blue',
+  accent = 'cyan',
   pixel = 4,
   glow = false,
   shake = false,
@@ -443,7 +555,7 @@ export const ShipIcon = memo(function ShipIcon({
   const model = useMemo(() => getShipModel(safeShip), [safeShip]);
   const baseSprite = useMemo(() => buildSprite(model), [model]);
   const rows = useMemo(() => applyDamage(baseSprite, damage, safeShip.length, safeShip), [baseSprite, damage, safeShip]);
-  const palette = useMemo(() => makePalette(color), [color]);
+  const palette = useMemo(() => makePalette(color, accent), [color, accent]);
 
   return (
     <div className="pixel" aria-hidden="true">
@@ -452,11 +564,52 @@ export const ShipIcon = memo(function ShipIcon({
   );
 });
 
-export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'blue', lang = 'pt', onConfirm, onClose }) {
+function SwatchPicker({ label, value, onChange }) {
+  return (
+    <div>
+      <div className="t-title text-dim" style={{ fontSize: 7, marginBottom: 8 }}>
+        {label}
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {SHIP_COLORS.map((swatch) => {
+          const active = swatch === value;
+          const fill = SHIP_SWATCHES[swatch];
+          return (
+            <button
+              key={swatch}
+              onClick={() => onChange(swatch)}
+              style={{
+                width: 34,
+                height: 34,
+                background: fill,
+                border: `2.5px solid ${active ? 'var(--neon-cyan)' : '#000'}`,
+                boxShadow: active ? `0 0 12px ${fill}, 0 0 0 2px var(--neon-cyan)` : `0 0 6px ${fill}66`,
+                cursor: 'pointer',
+                borderRadius: 6,
+                contain: 'layout paint',
+              }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function ShipPicker({
+  currentShip = SHIP_MODELS[0].id,
+  currentColor = 'blue',
+  currentAccent = 'cyan',
+  lang = 'pt',
+  onConfirm,
+  onClose,
+}) {
   const initialShip = typeof currentShip === 'string' && SHIP_IDS.includes(currentShip) ? currentShip : SHIP_MODELS[0].id;
   const initialColor = typeof currentColor === 'string' && SHIP_COLORS.includes(currentColor) ? currentColor : 'blue';
+  const initialAccent = typeof currentAccent === 'string' && SHIP_COLORS.includes(currentAccent) ? currentAccent : 'cyan';
   const [ship, setShip] = useState(initialShip);
   const [color, setColor] = useState(initialColor);
+  const [accent, setAccent] = useState(initialAccent);
   const selectedModel = SHIP_MODELS.find((model) => model.id === ship) || SHIP_MODELS[0];
 
   return (
@@ -492,7 +645,9 @@ export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'bl
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div>
-            <div className="t-title glow-text-cyan" style={{ fontSize: 'clamp(9px,2.5vw,12px)' }}>HANGAR</div>
+            <div className="t-title glow-text-cyan" style={{ fontSize: 'clamp(9px,2.5vw,12px)' }}>
+              {lang === 'pt' ? 'HANGAR' : 'HANGAR'}
+            </div>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={onClose} style={{ minWidth: 32, minHeight: 32, fontSize: 16, padding: 0 }}>
             X
@@ -500,7 +655,7 @@ export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'bl
         </div>
 
         <div className="panel bevel" style={{ padding: 20, minHeight: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-          <ShipIcon ship={ship} color={color} pixel={7} glow />
+          <ShipIcon ship={ship} color={color} accent={accent} pixel={7} glow />
           <div className="t-title glow-text-amber" style={{ fontSize: 10 }}>
             {SHIP_LABELS[lang]?.[ship] || ship}
           </div>
@@ -511,7 +666,7 @@ export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'bl
 
         <div>
           <div className="t-title text-dim" style={{ fontSize: 7, marginBottom: 8 }}>
-            SHIP
+            {lang === 'pt' ? 'NAVE' : 'SHIP'}
           </div>
           <div className="ship-picker-grid">
             {SHIP_MODELS.map((model) => {
@@ -536,7 +691,7 @@ export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'bl
                     transition: 'border-color .08s linear, background .08s linear, transform .08s linear',
                   }}
                 >
-                  <ShipIcon ship={model.id} color={color} pixel={3.2} glow={active} />
+                  <ShipIcon ship={model.id} color={color} accent={accent} pixel={3} glow={active} />
                   <span style={{ fontFamily: 'var(--f-body)', fontSize: 11, fontWeight: 800, color: active ? 'var(--neon-cyan)' : 'var(--ink-dim)' }}>
                     {model.name}
                   </span>
@@ -549,35 +704,12 @@ export function ShipPicker({ currentShip = SHIP_MODELS[0].id, currentColor = 'bl
           </div>
         </div>
 
-        <div>
-          <div className="t-title text-dim" style={{ fontSize: 7, marginBottom: 8 }}>
-            COLOR
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {SHIP_COLORS.map((swatch) => {
-              const active = swatch === color;
-              const fill = SHIP_SWATCHES[swatch];
-              return (
-                <button
-                  key={swatch}
-                  onClick={() => setColor(swatch)}
-                  style={{
-                    width: 34,
-                    height: 34,
-                    background: fill,
-                    border: `2.5px solid ${active ? 'var(--neon-cyan)' : '#000'}`,
-                    boxShadow: active ? `0 0 12px ${fill}, 0 0 0 2px var(--neon-cyan)` : `0 0 6px ${fill}66`,
-                    cursor: 'pointer',
-                    borderRadius: 6,
-                    contain: 'layout paint',
-                  }}
-                />
-              );
-            })}
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+          <SwatchPicker label={lang === 'pt' ? 'COR PRIMARIA' : 'PRIMARY COLOR'} value={color} onChange={setColor} />
+          <SwatchPicker label={lang === 'pt' ? 'COR SECUNDARIA' : 'SECONDARY COLOR'} value={accent} onChange={setAccent} />
         </div>
 
-        <button className="btn btn-primary" style={{ fontSize: 11 }} onClick={() => onConfirm(ship, color)}>
+        <button className="btn btn-primary" style={{ fontSize: 11 }} onClick={() => onConfirm(ship, color, accent)}>
           OK
         </button>
       </div>

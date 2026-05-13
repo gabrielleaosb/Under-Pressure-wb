@@ -90,7 +90,7 @@ export default function DevPanel({ gameState, myId, send, isHost }) {
         {isHost && phase === 'lobby' && (
           <>
             <Btn color="#00ffff" onClick={() => send('dev_setup_transmitter_test')}>
-              2. Testar transmissor
+              2. Testar navegador
             </Btn>
             <Btn color="#00ff88" onClick={() => send('dev_setup_voter_test')}>
               3. Testar adivinhacao
@@ -112,7 +112,7 @@ export default function DevPanel({ gameState, myId, send, isHost }) {
 
         <div style={{ fontSize: 10, color: 'var(--dim2)', lineHeight: 1.55, borderTop: '1px solid var(--dim)', paddingTop: 8, marginTop: 2 }}>
           <b style={{ color: 'var(--white)' }}>Fluxo rapido:</b><br />
-          transmissor = voce escreve dica<br />
+          navegador = voce escreve dica<br />
           adivinhacao = bot transmite, voce vota
         </div>
       </div>

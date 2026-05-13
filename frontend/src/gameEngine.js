@@ -71,15 +71,18 @@ function getShipLoadout(index = 0) {
   return {
     ship: SHIP_IDS[index % SHIP_IDS.length] || 'nova_01',
     shipColor: SHIP_COLORS[index % SHIP_COLORS.length] || 'blue',
+    shipAccent: SHIP_COLORS[(index + 5) % SHIP_COLORS.length] || 'cyan',
   };
 }
 
 function sanitizeShipLoadout(loadout = {}, fallback = {}) {
   const fallbackShip = SHIP_IDS.includes(fallback.ship) ? fallback.ship : getShipLoadout(0).ship;
   const fallbackColor = SHIP_COLORS.includes(fallback.shipColor) ? fallback.shipColor : getShipLoadout(0).shipColor;
+  const fallbackAccent = SHIP_COLORS.includes(fallback.shipAccent) ? fallback.shipAccent : getShipLoadout(0).shipAccent;
   return {
     ship: SHIP_IDS.includes(loadout.ship) ? loadout.ship : fallbackShip,
     shipColor: SHIP_COLORS.includes(loadout.shipColor) ? loadout.shipColor : fallbackColor,
+    shipAccent: SHIP_COLORS.includes(loadout.shipAccent) ? loadout.shipAccent : fallbackAccent,
   };
 }
 
@@ -599,9 +602,11 @@ export class GameEngine {
       case 'set_ship': {
         // Any player can set their own ship; host can set bots
         if (by !== data.playerId && !isHost) return;
+        const targetPlayer = room.players?.[data.playerId || by] || {};
         const ship = SHIP_IDS.includes(data.ship) ? data.ship : SHIP_IDS[0];
         const color = SHIP_COLORS.includes(data.color) ? data.color : 'blue';
-        await update(rref(this.roomCode, 'players', data.playerId || by), { ship, shipColor: color });
+        const accent = SHIP_COLORS.includes(data.accent) ? data.accent : (targetPlayer.shipAccent || 'cyan');
+        await update(rref(this.roomCode, 'players', data.playerId || by), { ship, shipColor: color, shipAccent: accent });
         break;
       }
 

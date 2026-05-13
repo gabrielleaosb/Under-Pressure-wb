@@ -23,7 +23,13 @@ function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send 
         style={{ position: 'relative', flex: '0 0 auto', cursor: isMe ? 'pointer' : 'default' }}
         onClick={isMe ? onPickShip : undefined}
       >
-        <ShipIcon ship={player.ship || 'nova_01'} color={player.shipColor || 'blue'} pixel={3.4} glow={isTx || isMe} />
+        <ShipIcon
+          ship={player.ship || 'nova_01'}
+          color={player.shipColor || 'blue'}
+          accent={player.shipAccent || 'cyan'}
+          pixel={3.4}
+          glow={isTx || isMe}
+        />
         {isMe && (
           <div style={{
             position: 'absolute',
@@ -60,7 +66,7 @@ function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
         {isTx && (
           <span className="badge badge-captain">
-            {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
+            {lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR'}
           </span>
         )}
         {isMe && <span className="badge badge-you">{t('you', lang)}</span>}
@@ -130,9 +136,13 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
         <ShipPicker
           currentShip={me?.ship || 'nova_01'}
           currentColor={me?.shipColor || 'blue'}
+          currentAccent={me?.shipAccent || 'cyan'}
           lang={lang}
-          onConfirm={(ship, color) => {
-            send('set_ship', { playerId: myId, ship, color });
+          onConfirm={(ship, color, accent) => {
+            localStorage.setItem('up_ship', ship);
+            localStorage.setItem('up_ship_color', color);
+            localStorage.setItem('up_ship_accent', accent);
+            send('set_ship', { playerId: myId, ship, color, accent });
             setPickerOpen(false);
           }}
           onClose={() => setPickerOpen(false)}
@@ -157,7 +167,9 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
             flexWrap: 'wrap',
           }}>
             <div>
-              <div className="t-title text-dim" style={{ fontSize: 8, marginBottom: 4 }}>ROOM</div>
+              <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 4 }}>
+                {lang === 'pt' ? 'SALA' : 'ROOM'}
+              </div>
               <div className="t-read glow-text-amber" style={{ fontSize: 40, letterSpacing: '.18em' }}>{code}</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -177,7 +189,7 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
                 {copied ? t('copied', lang) : t('copy_link', lang)}
               </button>
               <button className="btn btn-ghost" onClick={() => { playClick(); onSettings?.(); }} style={{ minHeight: 38, padding: '8px 12px', fontSize: 9 }}>
-                CONFIG
+                {lang === 'pt' ? 'AJUSTES' : 'SETTINGS'}
               </button>
             </div>
           </div>
@@ -198,11 +210,17 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
             >
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <div className="badge badge-captain">TX</div>
-                <ShipIcon ship={transmitter.ship || 'nova_01'} color={transmitter.shipColor || 'amber'} pixel={5} glow />
+                <ShipIcon
+                  ship={transmitter.ship || 'nova_01'}
+                  color={transmitter.shipColor || 'amber'}
+                  accent={transmitter.shipAccent || 'cyan'}
+                  pixel={5}
+                  glow
+                />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 8 }}>
-                  {lang === 'pt' ? 'TRANSMISSOR INICIAL' : 'STARTING TRANSMITTER'}
+                  {lang === 'pt' ? 'NAVEGADOR INICIAL' : 'STARTING NAVIGATOR'}
                 </div>
                 <div className="t-title glow-text-amber" style={{ fontSize: 'clamp(15px, 2.4vw, 22px)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {transmitter.name}

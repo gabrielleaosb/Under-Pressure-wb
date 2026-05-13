@@ -11,7 +11,7 @@ export default function ShipShowroom() {
         <div>
           <div className="home-eyebrow">CATALOGO DE NAVES</div>
           <h1 className="t-title glow-text-cyan" style={{ fontSize: 'clamp(18px,4vw,32px)', lineHeight: 1.2, marginTop: 16 }}>
-            30 MODELOS
+            {SHIP_MODELS.length} MODELOS
             <br />
             PIXEL ART
           </h1>
@@ -41,7 +41,7 @@ export default function ShipShowroom() {
                 boxShadow: active ? '0 0 18px rgba(0,255,255,0.25)' : 'none',
               }}
             >
-              <ShipIcon ship={model.id} color={monoColor} pixel={4.2} glow={active} />
+              <ShipIcon ship={model.id} color={monoColor} pixel={4} glow={active} />
               <div className="ship-showroom__label">{model.id}</div>
               <div className="ship-showroom__name">{model.name}</div>
             </button>

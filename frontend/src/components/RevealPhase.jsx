@@ -23,18 +23,6 @@ function voteOverdrive(vote) {
   return typeof vote === 'object' && !!vote?.overdrive;
 }
 
-function highlightLabel(highlight, lang) {
-  const name = highlight.playerName || '?';
-  const labels = {
-    perfect: lang === 'pt' ? `${name} cravou` : `${name} nailed it`,
-    boost_hit: lang === 'pt' ? `${name} boost acertou` : `${name} boost paid off`,
-    boost_miss: lang === 'pt' ? `${name} boost errou` : `${name} boost backfired`,
-    streak: lang === 'pt' ? `${name} em série x${highlight.value}` : `${name} streak x${highlight.value}`,
-    clean_tx: lang === 'pt' ? `${name} guiou todos` : `${name} guided everyone`,
-  };
-  return labels[highlight.type] || name;
-}
-
 export default function RevealPhase({ gameState, myId, lang, send }) {
   const result = gameState.revealResult;
   const psychic = gameState.players.find((player) => player.id === gameState.psychicId);
@@ -83,7 +71,6 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
 
   const allVotes = result.votes || {};
   const roundScores = result.roundScores || {};
-  const highlights = result.highlights || [];
   const txScore = result.transmitterScore ?? 0;
   const averageVote = result.averageVote ?? result.target;
   const isPsychic = gameState.psychicId === myId;
@@ -99,8 +86,8 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
   const headline = gradeFromDiff(isPsychic ? Math.abs(averageVote - result.target) : myDiff, lang);
 
   return (
-    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, paddingBottom: 28 }}>
-      <div className="panel bevel glow-amber" style={{ padding: '14px 22px', textAlign: 'center', width: 'min(560px, 100%)' }}>
+    <div className="phase-shell phase-shell--reveal">
+      <div className="panel bevel glow-amber" style={{ padding: '10px 18px', textAlign: 'center', width: 'min(560px, 100%)' }}>
         <div className="t-title" style={{ fontSize: 'clamp(13px, 2.5vw, 17px)', color: gameState.currentTheme?.color, marginBottom: 6 }}>
           {lang === 'en' ? gameState.currentTheme?.shortEN : gameState.currentTheme?.shortPT}
         </div>
@@ -108,11 +95,11 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
           "{gameState.clue}"
         </div>
         <div className="t-title text-dim" style={{ fontSize: 9, marginTop: 6 }}>
-          ▸ {psychic?.name || '?'} · {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
+          {psychic?.name || '?'} - {lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR'}
         </div>
       </div>
 
-      <div className="panel bevel glow-cyan" style={{ width: 'min(560px, 100%)', padding: 18 }}>
+      <div className="panel bevel glow-cyan" style={{ width: 'min(560px, 100%)', padding: 12 }}>
         <PressurePanel
           card={gameState.currentCard}
           lang={lang}
@@ -129,7 +116,7 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
       </div>
 
       <div className="panel bevel" style={{
-        padding: '12px 20px',
+        padding: '9px 16px',
         display: 'flex',
         alignItems: 'center',
         gap: 18,
@@ -157,31 +144,21 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
         </div>
       </div>
 
-      {highlights.length > 0 && (
-        <div className="panel bevel glow-mint" style={{ width: 'min(560px, 100%)', padding: 12, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {highlights.map((highlight, index) => (
-            <span key={`${highlight.type}-${highlight.playerId}-${index}`} className="t-title" style={{ fontSize: 9, color: 'var(--neon-mint)' }}>
-              {highlightLabel(highlight, lang)}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="panel bevel" style={{ width: 'min(560px, 100%)', padding: 16 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="panel bevel reveal-score-sheet" style={{ width: 'min(560px, 100%)', padding: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr auto',
             alignItems: 'center',
             gap: 8,
-            padding: '7px 9px',
+            padding: '6px 8px',
             borderRadius: 4,
             border: '1px solid rgba(255,224,0,.3)',
             background: 'rgba(255,224,0,.05)',
           }}>
             <div style={{ minWidth: 0 }}>
               <div className="t-body" style={{ fontWeight: 800, fontSize: 15, color: 'var(--neon-amber)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{psychic?.name || '?'}</div>
-              <div className="t-title text-dim" style={{ fontSize: 8, marginTop: 2 }}>{lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}</div>
+              <div className="t-title text-dim" style={{ fontSize: 8, marginTop: 2 }}>{lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR'}</div>
             </div>
             <div className="t-read glow-text-amber" style={{ fontSize: 26 }}>{txScore >= 0 ? '+' : ''}{txScore}</div>
           </div>
@@ -199,7 +176,7 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
                 gridTemplateColumns: 'minmax(0, 1fr) auto auto',
                 alignItems: 'center',
                 gap: 8,
-                padding: '10px 12px',
+                padding: '7px 9px',
                 borderRadius: 4,
                 border: `1px solid ${isMe ? player.color : 'rgba(255,255,255,.06)'}`,
                 background: isMe ? `${player.color}12` : 'rgba(255,255,255,.02)',
@@ -247,7 +224,7 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
               send('advance_round');
             }}
           >
-            NEXT
+            {lang === 'pt' ? 'PROXIMA' : 'NEXT'}
           </button>
         )}
       </div>

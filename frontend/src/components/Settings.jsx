@@ -35,7 +35,7 @@ export default function Settings({ lang, setLang, onLeaveRoom, onClose, inGame }
         <div className="settings-panel__header">
           <div>
             <h2 className="t-title glow-text-cyan" style={{ fontSize: 'clamp(10px,2.4vw,13px)' }}>
-              CONFIG
+              {lang === 'pt' ? 'AJUSTES' : 'SETTINGS'}
             </h2>
           </div>
 
@@ -114,12 +114,12 @@ export default function Settings({ lang, setLang, onLeaveRoom, onClose, inGame }
               onLeaveRoom();
             }}
           >
-            EXIT
+            {lang === 'pt' ? 'SAIR DA SALA' : 'EXIT ROOM'}
           </button>
         )}
 
         <button className="btn btn-ghost btn-full" onClick={onClose}>
-          CLOSE
+          {lang === 'pt' ? 'FECHAR' : 'CLOSE'}
         </button>
       </div>
     </div>

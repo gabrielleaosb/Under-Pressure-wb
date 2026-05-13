@@ -26,7 +26,7 @@ function PlayerRow({ p, rank, compact, lang, transmitterId }) {
           color:'var(--neon-amber)',
           letterSpacing:'0.1em',
         }}>
-          {lang === 'pt' ? 'TRANSMISSOR' : 'TRANSMITTER'}
+          {lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR'}
         </div>
       )}
       <div style={{
@@ -45,7 +45,13 @@ function PlayerRow({ p, rank, compact, lang, transmitterId }) {
 
       {/* Ship icon */}
       <div style={{ flex:'0 0 auto' }}>
-        <ShipIcon ship={p.ship || 'nova_01'} color={p.shipColor || 'blue'} pixel={compact ? 1.8 : 2.8} damage={p.damage || 0}/>
+        <ShipIcon
+          ship={p.ship || 'nova_01'}
+          color={p.shipColor || 'blue'}
+          accent={p.shipAccent || 'cyan'}
+          pixel={compact ? 1.8 : 2.8}
+          damage={p.damage || 0}
+        />
       </div>
 
       {/* Name + indicator + damage bar */}
@@ -108,7 +114,9 @@ export function RankingSidebar({ gameState, myId, lang, onSettings }) {
           </div>
         </div>
         <button onClick={onSettings} className="btn btn-ghost btn-icon"
-          style={{ minHeight:38, height:38, width:72, padding:0, fontSize:8 }}>CONFIG</button>
+          style={{ minHeight:38, height:38, width:86, padding:0, fontSize:8 }}>
+          {lang === 'pt' ? 'AJUSTES' : 'SETTINGS'}
+        </button>
       </div>
 
       <div className="t-title text-dim" style={{ fontSize:9 }}>
@@ -134,6 +142,20 @@ export function RankingTopBar({ gameState, myId, lang, onSettings }) {
     .filter(p => p.isBot || p.connected !== false)
     .map(p => ({ ...p, score: playerScores?.[p.id] || 0, isMe: p.id === myId }))
     .sort((a, b) => (b.score - a.score) || (a.damage - b.damage));
+  const me = sorted.find((p) => p.isMe);
+  const compactPlayers = sorted.slice(0, 3);
+  if (me && !compactPlayers.some((p) => p.id === me.id)) {
+    compactPlayers.push(me);
+  }
+  const hiddenCount = Math.max(0, sorted.length - compactPlayers.length);
+  const phaseLabel = {
+    roulette: lang === 'pt' ? 'Roleta' : 'Roulette',
+    spinning: lang === 'pt' ? 'Giro' : 'Spin',
+    psychic: lang === 'pt' ? 'Dica' : 'Clue',
+    voting: lang === 'pt' ? 'Voto' : 'Vote',
+    reveal: lang === 'pt' ? 'Resultado' : 'Result',
+    gameover: lang === 'pt' ? 'Final' : 'Final',
+  }[gameState.phase] || gameState.phase;
 
   return (
     <div className="panel bevel" style={{
@@ -148,13 +170,14 @@ export function RankingTopBar({ gameState, myId, lang, onSettings }) {
         <div className="t-read glow-text-cyan" style={{ fontSize:24, lineHeight:1 }}>
           {round + 1}<span className="text-faded" style={{ fontSize:12 }}>/{totalRounds}</span>
         </div>
+        <div className="t-mono text-dim" style={{ fontSize:12, lineHeight:1 }}>{phaseLabel}</div>
       </div>
 
       <div style={{ width:1, height:24, background:'var(--metal-2)', flexShrink:0 }}/>
 
       {/* All players */}
-      <div style={{ display:'flex', gap:6, flex:1, overflow:'hidden' }}>
-        {sorted.slice(0, 5).map((p) => {
+      <div style={{ display:'flex', gap:6, flex:1, overflow:'hidden', minWidth:0 }}>
+        {compactPlayers.map((p) => {
           const isTx = p.id === transmitterId;
           return (
             <div key={p.id} style={{
@@ -164,17 +187,34 @@ export function RankingTopBar({ gameState, myId, lang, onSettings }) {
               background: p.isMe ? 'rgba(0,255,255,0.06)' : isTx ? 'rgba(255,224,0,0.06)' : 'transparent',
               flexShrink:0,
             }}>
-              <ShipIcon ship={p.ship || 'nova_01'} color={p.shipColor || 'blue'} pixel={1.6} damage={p.damage} />
+              <ShipIcon
+                ship={p.ship || 'nova_01'}
+                color={p.shipColor || 'blue'}
+                accent={p.shipAccent || 'cyan'}
+                pixel={1.6}
+                damage={p.damage}
+              />
               <span className="t-read" style={{ fontSize:22, color: isTx ? 'var(--neon-amber)' : 'var(--ink)', lineHeight:1 }}>
                 {p.score}
               </span>
             </div>
           );
         })}
+        {hiddenCount > 0 && (
+          <div className="t-title text-dim" style={{
+            display:'flex', alignItems:'center', justifyContent:'center',
+            padding:'5px 8px', border:'1px solid rgba(255,255,255,0.08)',
+            borderRadius:3, flexShrink:0, fontSize:8,
+          }}>
+            +{hiddenCount}
+          </div>
+        )}
       </div>
 
       <button onClick={onSettings} className="btn btn-ghost btn-icon"
-        style={{ minHeight:34, height:34, width:66, padding:0, fontSize:7, flexShrink:0 }}>CONFIG</button>
+        style={{ minHeight:34, height:34, width:74, padding:0, fontSize:7, flexShrink:0 }}>
+        {lang === 'pt' ? 'AJUSTES' : 'SETTINGS'}
+      </button>
     </div>
   );
 }

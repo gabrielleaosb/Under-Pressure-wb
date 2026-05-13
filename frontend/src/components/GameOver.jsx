@@ -110,6 +110,7 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
                 <ShipIcon
                   ship={p.ship || 'nova_01'}
                   color={p.shipColor || 'blue'}
+                  accent={p.shipAccent || 'cyan'}
                   pixel={rank === 1 ? 6 : 5}
                   glow={isWin}
                 />
