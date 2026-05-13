@@ -25,7 +25,7 @@ function useConfetti(active) {
   return pieces;
 }
 
-export default function GameOver({ gameState, myId, lang, send, isHost }) {
+export default function GameOver({ gameState, myId, lang, send, isHost, onLeave }) {
   const { players, playerScores, winner, winnerIds, settings } = gameState;
   const soundPlayed = useRef(false);
 
@@ -207,7 +207,7 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
       </div>
 
       {/* Stats */}
-      {stats && (
+      {stats && (stats.bestTx || stats.bestVote) && (
         <div className="panel bevel p-16" style={{ width:'100%', maxWidth:460 }}>
           <div className="label mb-12" style={{ color:'var(--ink-dim)' }}>
             {lang==='pt'?'DESTAQUES':'HIGHLIGHTS'}
@@ -232,20 +232,27 @@ export default function GameOver({ gameState, myId, lang, send, isHost }) {
       )}
 
       {/* Buttons */}
-      {isHost ? (
-        <div style={{ display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center' }}>
-          <button className="btn btn-primary btn-lg" onClick={() => { playClick(); send('new_game'); }}>
-            {t('new_mission', lang)}
+      <div style={{ display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center' }}>
+        {isHost ? (
+          <>
+            <button className="btn btn-primary btn-lg" onClick={() => { playClick(); send('new_game'); }}>
+              {t('new_mission', lang)}
+            </button>
+            <button className="btn btn-ghost" onClick={() => { playClick(); send('back_to_lobby'); }}>
+              {t('new_crew', lang)}
+            </button>
+          </>
+        ) : (
+          <div style={{ fontFamily:'var(--f-body)', fontSize:14, color:'var(--ink-dim)' }}>
+            {lang==='pt'?'Aguardando capitao...':'Waiting for captain...'}
+          </div>
+        )}
+        {onLeave && (
+          <button className="btn btn-ghost" onClick={() => { playClick(); onLeave(); }}>
+            {lang === 'pt' ? 'SAIR DA SALA' : 'LEAVE ROOM'}
           </button>
-          <button className="btn btn-ghost" onClick={() => { playClick(); send('back_to_lobby'); }}>
-            {t('new_crew', lang)}
-          </button>
-        </div>
-      ) : (
-        <div style={{ fontFamily:'var(--f-body)', fontSize:14, color:'var(--ink-dim)' }}>
-          {lang==='pt'?'Aguardando capitao...':'Waiting for captain...'}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

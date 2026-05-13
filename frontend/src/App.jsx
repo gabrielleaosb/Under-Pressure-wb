@@ -374,7 +374,7 @@ export default function App() {
         <div className="game-shell">
           {gameState.phase === 'gameover' ? (
             <div className="container" style={{ paddingTop: 24, paddingBottom: 40 }}>
-              <GameOver {...sharedProps} />
+              <GameOver {...sharedProps} onLeave={leaveRoom} />
             </div>
           ) : (
             <>
