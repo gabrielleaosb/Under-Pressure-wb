@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Background — Pixel Art Retro Sci-Fi</title>
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --px: 3px;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #00000a;
+    }
+
+    #space-bg {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+    }
+
+    /* ── Demo overlay (remova em produção) ───────────────── */
+    #demo-label {
+      position: fixed;
+      bottom: 18px;
+      right: 22px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(100, 60, 200, 0.55);
+      pointer-events: none;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="space-bg"></canvas>
+<div id="demo-label">// game background</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('space-bg');
+  const ctx    = canvas.getContext('2d');
+
+  /* ── CONFIG ──────────────────────────────────────────── */
+  const PX       = 3;       // tamanho do "pixel" em px reais
+  const FPS      = 30;
+  const STAR_COUNT     = 180;
+  const DUST_COUNT     = 70;
+
+  let W, H, COLS, ROWS;
+  let t = 0;
+  let lastFrame = 0;
+
+  /* ── RESIZE ──────────────────────────────────────────── */
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    COLS = Math.ceil(W / PX);
+    ROWS = Math.ceil(H / PX);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  /* ── HELPERS ─────────────────────────────────────────── */
+  const rnd  = (a, b) => a + Math.random() * (b - a);
+  const irnd = (a, b) => Math.floor(rnd(a, b));
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  function px(gx, gy, r, g, b, a = 1) {
+    if (gx < 0 || gy < 0 || gx >= COLS || gy >= ROWS) return;
+    ctx.fillStyle = `rgba(${r|0},${g|0},${b|0},${a})`;
+    ctx.fillRect(gx * PX, gy * PX, PX, PX);
+  }
+
+  /* ── STARS ───────────────────────────────────────────── */
+  const STARS = Array.from({ length: STAR_COUNT }, () => ({
+    x   : irnd(0, 100),   // % of COLS
+    y   : irnd(0, 100),   // % of ROWS
+    size: Math.random() < 0.12 ? 2 : 1,
+    br  : rnd(0.3, 1),
+    spd : rnd(0.015, 0.055),
+    off : rnd(0, Math.PI * 2),
+    type: irnd(0, 3),     // 0=white 1=blue 2=yellow
+  }));
+
+  /* ── DUST / NEBULA ───────────────────────────────────── */
+  const DUST = Array.from({ length: DUST_COUNT }, () => ({
+    x  : irnd(0, 100),
+    y  : irnd(0, 100),
+    br : rnd(0.06, 0.22),
+    spd: rnd(0.008, 0.025),
+    off: rnd(0, Math.PI * 2),
+    hue: Math.random() < 0.5 ? 'purple' : 'teal',
+  }));
+
+  /* ── GALAXY ──────────────────────────────────────────── */
+  // centro relativo (% de COLS/ROWS) → recalculado no draw
+  const GAL = { cx: 0.72, cy: 0.22, rot: 0 };
+
+  // pixels pré-calculados (offset relativo ao centro)
+  const galPixels = [];
+  for (let dy = -22; dy <= 22; dy++) {
+    for (let dx = -34; dx <= 34; dx++) {
+      const dist = Math.sqrt((dx / 1.6) ** 2 + dy ** 2);
+      if (dist > 22) continue;
+      const angle  = Math.atan2(dy, dx);
+      const arm1   = Math.sin(angle * 2 + dist * 0.55);
+      const arm2   = Math.cos(angle * 2 + dist * 0.55);
+      const armFac = Math.max(arm1, arm2);
+      const prob   = (1 - dist / 22) * 0.65 + armFac * 0.18;
+      if (Math.random() > prob) continue;
+
+      let r, g, b;
+      if      (dist < 3)  { r = 255; g = 245; b = 200; }
+      else if (dist < 7)  { r = 220; g = 180; b = 255; }
+      else if (dist < 13) { r = 130; g = 100; b = 240; }
+      else                { r = 55;  g = 40;  b = 160; }
+
+      const br = 0.4 + Math.random() * 0.6;
+      galPixels.push({
+        dx, dy,
+        r: r * br | 0, g: g * br | 0, b: b * br | 0,
+        twinkle : Math.random() < 0.35,
+        tSpd    : rnd(0.025, 0.07),
+        tOff    : rnd(0, Math.PI * 2),
+      });
+    }
+  }
+
+  /* ── BLACK HOLE ──────────────────────────────────────── */
+  const BH = { cx: 0.22, cy: 0.68, rot: 0 };
+  const BH_R    = 8;    // raio do núcleo (em grid-pixels)
+  const BH_DISC = 15;   // raio externo do disco
+
+  // disco de acreção
+  const discPixels = [];
+  for (let dy = -BH_DISC - 5; dy <= BH_DISC + 5; dy++) {
+    for (let dx = -(BH_DISC + 8); dx <= BH_DISC + 8; dx++) {
+      const dist = Math.sqrt((dx / 1.55) ** 2 + dy ** 2);
+      if (dist < BH_R + 0.5 || dist > BH_DISC + 4) continue;
+      const t2 = (dist - BH_R) / (BH_DISC - BH_R + 4);
+      const prob = (1 - t2) * 0.6;
+      if (Math.random() > prob) continue;
+
+      let r, g, b;
+      if      (t2 < 0.3) { r = 255; g = 160 + (t2 * 200) | 0; b = 0;  }
+      else if (t2 < 0.6) { r = 255; g = 60;  b = 10; }
+      else               { r = 160; g = 15;  b = 90; }
+
+      discPixels.push({
+        dx, dy, r, g, b,
+        orbSpd : rnd(0.006, 0.018) * (Math.random() < 0.5 ? 1 : -1),
+        orbOff : rnd(0, Math.PI * 2),
+        tSpd   : rnd(0.04, 0.09),
+        tOff   : rnd(0, Math.PI * 2),
+        dist,
+      });
+    }
+  }
+
+  // arco de lensing gravitacional
+  const lensArcs = [];
+  for (let a = 0; a < Math.PI * 2; a += 0.07) {
+    const r = BH_R + 1.2 + Math.sin(a * 4) * 0.8;
+    lensArcs.push({
+      dx: Math.round(Math.cos(a) * r * 1.6),
+      dy: Math.round(Math.sin(a) * r),
+      a,
+    });
+  }
+
+  // névoa ao redor do buraco negro
+  const nebulaRing = [];
+  for (let i = 0; i < 200; i++) {
+    const ang  = rnd(0, Math.PI * 2);
+    const dist = rnd(BH_DISC + 1, BH_DISC + 18);
+    nebulaRing.push({
+      dx  : Math.round(Math.cos(ang) * dist * 1.35),
+      dy  : Math.round(Math.sin(ang) * dist),
+      br  : rnd(0.04, 0.28),
+      tSpd: rnd(0.015, 0.04),
+      tOff: rnd(0, Math.PI * 2),
+    });
+  }
+
+  /* ── SHOOTING STAR ───────────────────────────────────── */
+  let shotTimer = irnd(200, 500);
+  const shots   = [];
+
+  function spawnShot() {
+    const fromLeft = Math.random() < 0.5;
+    shots.push({
+      x  : fromLeft ? 0 : COLS,
+      y  : irnd(2, ROWS * 0.5),
+      vx : fromLeft ? rnd(1.2, 2.2) : rnd(-2.2, -1.2),
+      vy : rnd(0.4, 0.9),
+      len: irnd(6, 14),
+      life: 0,
+      maxLife: irnd(30, 60),
+    });
+  }
+
+  /* ── MAIN DRAW ───────────────────────────────────────── */
+  function draw(now = 0) {
+    requestAnimationFrame(draw);
+    if (document.hidden || now - lastFrame < 1000 / FPS) return;
+    lastFrame = now;
+    t++;
+
+    /* fundo */
+    ctx.fillStyle = '#00000a';
+    ctx.fillRect(0, 0, W, H);
+
+    const gcx = (GAL.cx * COLS) | 0;
+    const gcy = (GAL.cy * ROWS) | 0;
+    const bhx = (BH.cx  * COLS) | 0;
+    const bhy = (BH.cy  * ROWS) | 0;
+
+    /* ── pó cósmico / nebulosa de fundo ── */
+    for (const d of DUST) {
+      const tw  = 0.4 + 0.6 * Math.sin(t * d.spd + d.off);
+      const gx  = ((d.x / 100) * COLS) | 0;
+      const gy  = ((d.y / 100) * ROWS) | 0;
+      const br  = d.br * tw;
+      if (d.hue === 'purple')
+        px(gx, gy, 60 * br | 0, 10 * br | 0, 120 * br | 0);
+      else
+        px(gx, gy, 0, 80 * br | 0, 100 * br | 0);
+    }
+
+    /* ── estrelas ── */
+    for (const s of STARS) {
+      const tw = 0.45 + 0.55 * Math.sin(t * s.spd + s.off);
+      const v  = (tw * 255 * s.br) | 0;
+      const gx = ((s.x / 100) * COLS) | 0;
+      const gy = ((s.y / 100) * ROWS) | 0;
+      let r = v, g = v, b = v;
+      if      (s.type === 1) b = Math.min(255, v + 60);     // azulada
+      else if (s.type === 2) { g = Math.min(255, v + 30); b = Math.max(0, v - 40); } // amarelada
+      for (let sy = 0; sy < s.size; sy++)
+        for (let sx = 0; sx < s.size; sx++)
+          px(gx + sx, gy + sy, r, g, b);
+    }
+
+    /* ── névoa do buraco negro ── */
+    for (const p of nebulaRing) {
+      const tw = 0.3 + 0.7 * Math.sin(t * p.tSpd + p.tOff);
+      const br = p.br * tw;
+      px(bhx + p.dx, bhy + p.dy,
+        (40 + 30 * tw) * br | 0,
+        (5  + 5  * tw) * br | 0,
+        (100 + 60 * tw)* br | 0);
+    }
+
+    /* ── disco de acreção ── */
+    BH.rot += 0.0015;
+    for (const p of discPixels) {
+      const orb  = t * p.orbSpd + p.orbOff;
+      const cosO = Math.cos(orb), sinO = Math.sin(orb);
+      const rx   = (p.dx * cosO - p.dy * sinO) | 0;
+      const ry   = (p.dx * sinO + p.dy * cosO) | 0;
+      const tw   = 0.45 + 0.55 * Math.sin(t * p.tSpd + p.tOff);
+      px(bhx + rx, bhy + ry,
+        clamp(p.r * tw, 0, 255),
+        clamp(p.g * tw, 0, 255),
+        clamp(p.b * tw, 0, 255));
+    }
+
+    /* ── anel de lensing ── */
+    for (const arc of lensArcs) {
+      const phase = 0.5 + 0.5 * Math.sin(t * 0.04 + arc.a * 3);
+      px(bhx + arc.dx, bhy + arc.dy,
+        (160 * phase) | 0, (80 * phase) | 0, (255 * phase) | 0);
+    }
+
+    /* ── núcleo negro do buraco ── */
+    for (let dy = -BH_R; dy <= BH_R; dy++) {
+      for (let dx = -(BH_R * 2 + 2); dx <= BH_R * 2 + 2; dx++) {
+        if (Math.sqrt((dx / 2.1) ** 2 + dy ** 2) <= BH_R)
+          px(bhx + dx, bhy + dy, 0, 0, 0);
+      }
+    }
+
+    /* ── horizonte de eventos (shimmer) ── */
+    for (let a = 0; a < Math.PI * 2; a += 0.12) {
+      const shim = 0.3 + 0.7 * Math.sin(t * 0.06 + a * 5);
+      const ex   = bhx + Math.round(Math.cos(a) * (BH_R * 2.15));
+      const ey   = bhy + Math.round(Math.sin(a) * BH_R);
+      px(ex, ey, (90 * shim) | 0, 0, (200 * shim) | 0);
+    }
+
+    /* ── galáxia espiral ── */
+    GAL.rot += 0.0022;
+    for (const p of galPixels) {
+      const tw   = p.twinkle ? 0.55 + 0.45 * Math.sin(t * p.tSpd + p.tOff) : 1;
+      const dist = Math.sqrt(p.dx ** 2 + p.dy ** 2);
+      const spin = GAL.rot * (1 - dist / 24);
+      const cosS = Math.cos(spin), sinS = Math.sin(spin);
+      const rx   = (p.dx * cosS - p.dy * sinS) | 0;
+      const ry   = (p.dx * sinS + p.dy * cosS) | 0;
+      px(gcx + rx, gcy + ry,
+        clamp(p.r * tw, 0, 255),
+        clamp(p.g * tw, 0, 255),
+        clamp(p.b * tw, 0, 255));
+    }
+
+    /* ── estrela cadente ── */
+    shotTimer--;
+    if (shotTimer <= 0) {
+      spawnShot();
+      shotTimer = irnd(300, 700);
+    }
+    for (let i = shots.length - 1; i >= 0; i--) {
+      const s = shots[i];
+      s.x += s.vx; s.y += s.vy; s.life++;
+      const progress = s.life / s.maxLife;
+      const alpha    = 1 - progress;
+      for (let j = 0; j < s.len; j++) {
+        const a2 = alpha * (1 - j / s.len);
+        const gx = (s.x - s.vx * j) | 0;
+        const gy = (s.y - s.vy * j) | 0;
+        px(gx, gy, 255, 255, (180 + j * 5) | 0, a2);
+      }
+      if (s.life >= s.maxLife) shots.splice(i, 1);
+    }
+  }
+
+  draw();
+})();
+</script>
+</body>
+</html>

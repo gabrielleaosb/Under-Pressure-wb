@@ -17,6 +17,7 @@ import ShipShowroom from './components/ShipShowroom.jsx';
 import RouletteStyleLab from './components/RouletteStyleLab.jsx';
 import RouletteStyleLab2 from './components/RouletteStyleLab2.jsx';
 import GaugeLab from './components/GaugeLab.jsx';
+import BackgroundLab from './components/BackgroundLab.jsx';
 import { RankingSidebar, RankingTopBar } from './components/RankingSidebar.jsx';
 import { t } from './i18n.js';
 import { playPhaseChange, playVotingStart, playError as playSoundError } from './sounds.js';
@@ -27,7 +28,8 @@ const SHIPYARD_MODE = SEARCH_PARAMS.has('shipyard');
 const ROULETTE_LAB_MODE = SEARCH_PARAMS.has('rouletteLab') || SEARCH_PARAMS.has('roletas');
 const ROULETTE_LAB2_MODE = SEARCH_PARAMS.has('roletas2');
 const GAUGE_LAB_MODE = SEARCH_PARAMS.has('gauge') || SEARCH_PARAMS.has('manometro');
-const SPECIAL_MODE = SHIPYARD_MODE || ROULETTE_LAB_MODE || ROULETTE_LAB2_MODE || GAUGE_LAB_MODE;
+const BACKGROUND_LAB_MODE = SEARCH_PARAMS.has('backgrounds') || SEARCH_PARAMS.has('fundos') || SEARCH_PARAMS.has('bg');
+const SPECIAL_MODE = SHIPYARD_MODE || ROULETTE_LAB_MODE || ROULETTE_LAB2_MODE || GAUGE_LAB_MODE || BACKGROUND_LAB_MODE;
 
 function normalizeRoomCode(code) {
   return String(code || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
@@ -348,6 +350,7 @@ export default function App() {
       {ROULETTE_LAB_MODE && <RouletteStyleLab />}
       {ROULETTE_LAB2_MODE && <RouletteStyleLab2 />}
       {GAUGE_LAB_MODE && <GaugeLab />}
+      {BACKGROUND_LAB_MODE && <BackgroundLab />}
 
       {!SPECIAL_MODE && screen === 'home' && (
         <HomeScreen

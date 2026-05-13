@@ -163,6 +163,10 @@ body::before {
 }
 @keyframes blink-bar { 0%,100%{opacity:1;} 50%{opacity:.3;} }
 @keyframes progress-shrink { from{transform:scaleX(1);} to{transform:scaleX(0);} }
+@keyframes deep-drift-far { to { transform:translate3d(-28px, 8px, 0); } }
+@keyframes deep-drift-mid { to { transform:translate3d(-54px, 16px, 0); } }
+@keyframes deep-drift-near { to { transform:translate3d(-82px, 24px, 0); } }
+@keyframes deep-drift-course { to { transform:translate3d(-44px, 0, 0); } }
 @keyframes pulse-cyan {
   0%,100%{ box-shadow:0 4px 0 #002a35,0 0 14px rgba(0,255,255,.4),inset 0 1px 0 rgba(255,255,255,.4); }
   50%    { box-shadow:0 4px 0 #002a35,0 0 32px rgba(0,255,255,.85),inset 0 1px 0 rgba(255,255,255,.4); }
@@ -391,35 +395,24 @@ body::before {
 .home-grid-overlay {
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(0,255,255,.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,255,255,.055) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse at center, black 35%, transparent 78%);
+  display: none;
   pointer-events: none;
 }
 
 .home-top-status {
-  position: absolute;
-  top: 14px;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  position: static;
+  z-index: 1;
+  display: flex;
   align-items: center;
-  gap: 10px;
-  width: min(100%, 1440px);
-  margin: 0 auto;
-  padding: 0 16px;
+  justify-content: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: center;
   font-family: var(--f-read);
   color: var(--ink-dim);
   font-size: 14px;
   letter-spacing: .03em;
-}
-
-.home-top-status > :last-child {
-  text-align: right;
 }
 
 .home-center {
@@ -431,8 +424,24 @@ body::before {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 54px 18px 24px;
+}
+
+.home-main-stack {
+  --home-scale: 1.25;
+  width: min(430px, calc((100vw - 32px) / var(--home-scale)));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 16px;
-  padding: 64px 18px 24px;
+  zoom: var(--home-scale);
+}
+
+@supports not (zoom: 1) {
+  .home-main-stack {
+    transform: scale(var(--home-scale));
+    transform-origin: center;
+  }
 }
 
 .home-logo {
@@ -462,8 +471,8 @@ body::before {
 }
 
 .home-card {
-  width: min(430px, calc(100vw - 32px));
-  max-width: calc(100vw - 32px);
+  width: 100%;
+  max-width: 100%;
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -694,10 +703,7 @@ body::before {
 }
 
 .lobby-shell {
-  background-image:
-    linear-gradient(rgba(0,255,255,.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,255,255,.04) 1px, transparent 1px);
-  background-size: 32px 32px;
+  background-image: none;
 }
 
 .lobby-room-card {
@@ -1639,8 +1645,69 @@ body::before {
 }
 
 /* ── Starfield ── */
+.space-canvas-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: #00000a;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
 .starfield { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; contain: strict; }
 .star { position:absolute; background:#fff; border-radius:50%; animation:twinkle var(--tw,3s) ease-in-out infinite; will-change: opacity, transform; }
+.starfield--deep-drift {
+  background:
+    radial-gradient(circle at 52% 16%, rgba(0,170,255,.08), transparent 34%),
+    radial-gradient(circle at 16% 78%, rgba(0,255,255,.07), transparent 32%),
+    linear-gradient(180deg, rgba(1,3,10,.25), rgba(4,8,22,.38));
+}
+.deep-drift__nebula,
+.deep-drift__grid,
+.deep-drift__course,
+.deep-drift__layer {
+  position:absolute;
+  pointer-events:none;
+}
+.deep-drift__nebula,
+.deep-drift__grid,
+.deep-drift__course,
+.deep-drift__layer {
+  inset:0;
+}
+.deep-drift__nebula {
+  background:
+    radial-gradient(circle at 22% 32%, rgba(0,255,255,.075), transparent 28%),
+    radial-gradient(circle at 78% 24%, rgba(255,224,0,.045), transparent 22%),
+    radial-gradient(circle at 62% 82%, rgba(80,128,168,.095), transparent 36%);
+  opacity:.8;
+}
+.deep-drift__grid {
+  display:none;
+}
+.deep-drift__course {
+  background:
+    radial-gradient(circle at 18% 68%, rgba(168,196,224,.5) 0 1px, transparent 2px),
+    radial-gradient(circle at 48% 40%, rgba(0,255,255,.42) 0 1px, transparent 2px),
+    radial-gradient(circle at 78% 58%, rgba(255,224,0,.35) 0 1px, transparent 2px);
+  background-size:100% 100%;
+  animation:deep-drift-course 90s linear infinite;
+  opacity:.72;
+  will-change:transform;
+}
+.deep-drift__layer--far { animation:deep-drift-far 110s linear infinite; }
+.deep-drift__layer--mid { animation:deep-drift-mid 84s linear infinite; }
+.deep-drift__layer--near { animation:deep-drift-near 64s linear infinite; }
+.star--deep {
+  background:#dfeeff;
+  animation-name:twinkle;
+  animation-timing-function:steps(4);
+  will-change:opacity;
+}
 
 /* ── Overlay flashes ── */
 .scanflash     { position:fixed; inset:0; pointer-events:none; z-index:9998; background:rgba(0,255,255,.06); animation:scanflash .45s ease forwards; }
@@ -1755,27 +1822,19 @@ body::before {
   .btn-lg { font-size:10px; padding:14px 22px; }
   .container { padding:10px; }
   .scoreboard { padding:7px 10px; }
-  .home-center { justify-content: flex-start; padding: 86px 14px 24px; }
-  .home-top-status {
-    grid-template-columns: 1fr auto;
-    row-gap: 2px;
-    font-size: 13px;
+  .home-center { justify-content: flex-start; padding: 54px 14px 24px; }
+  .home-main-stack {
+    --home-scale: 1.08;
+    width: min(360px, calc(100vw - 28px));
   }
-  .home-top-status > :nth-child(2) {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    justify-self: center;
-  }
-  .home-top-status > :last-child {
-    display: none;
-  }
+  .home-top-status { font-size: 13px; }
   .home-logo__ships { transform: scale(.82); }
   .home-logo__title { font-size: clamp(23px, 9.2vw, 34px); }
   .home-card {
-    align-self: flex-start;
-    width: min(360px, calc(100vw - 80px));
-    max-width: 430px;
-    margin-left: 16px;
+    align-self: stretch;
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
     padding: 16px;
   }
   .home-action-grid { grid-template-columns: 1fr; }
@@ -1792,6 +1851,8 @@ body::before {
 
 @media (prefers-reduced-motion: reduce) {
   .starfield > div,
+  .deep-drift__layer,
+  .deep-drift__course,
   .star,
   .flicker,
   .btn-pulse,

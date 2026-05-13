@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { t } from '../i18n.js';
 import { playClick, playJoin } from '../sounds.js';
-import { SHIP_MODELS, ShipIcon, ShipPicker } from './ShipRoster.jsx';
+import { ShipIcon, ShipPicker } from './ShipRoster.jsx';
 
 function PixelLogo() {
   return (
@@ -15,7 +15,6 @@ function PixelLogo() {
         <br />
         <span className="glow-text-amber">PRESSURE</span>
       </div>
-      <div className="home-logo__sector t-title text-dim">SECTOR-7G</div>
     </div>
   );
 }
@@ -89,128 +88,128 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
 
       <div className="home-grid-overlay" />
 
-      <div className="home-top-status">
-        <span className="glow-text-cyan">SECTOR-7G</span>
-        <span>v1.0 // ONLINE</span>
-        <span className="glow-text-mint">{lang === 'pt' ? `${SHIP_MODELS.length} NAVES` : `${SHIP_MODELS.length} SHIPS`}</span>
-      </div>
-
       <div className="home-center">
-        <PixelLogo />
+        <div className="home-main-stack">
+          <PixelLogo />
 
-        <div className="home-card panel bevel glow-cyan">
-          {inviteCode && (
-            <div className="t-mono glow-text-amber" style={{ fontSize: 14 }}>
-              {inviteCode}
+          <div className="home-card panel bevel glow-cyan">
+            {inviteCode && (
+              <div className="t-mono glow-text-amber" style={{ fontSize: 14 }}>
+                {inviteCode}
+              </div>
+            )}
+
+            <div>
+              <label className="home-field-label t-title text-dim">
+                {lang === 'pt' ? 'PILOTO' : 'PILOT'}
+              </label>
+              <input
+                className="input"
+                value={name}
+                onChange={(e) => setName(e.target.value.slice(0, 20))}
+                placeholder={t('playerNamePh', lang)}
+                maxLength={20}
+                disabled={busy}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && mode) go();
+                }}
+                autoFocus
+              />
             </div>
-          )}
 
-          <div>
-            <label className="home-field-label t-title text-dim">
-              {lang === 'pt' ? 'PILOTO' : 'PILOT'}
-            </label>
-            <input
-              className="input"
-              value={name}
-              onChange={(e) => setName(e.target.value.slice(0, 20))}
-              placeholder={t('playerNamePh', lang)}
-              maxLength={20}
-              disabled={busy}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && mode) go();
+            <button
+              className="home-ship-trigger panel bevel"
+              onClick={() => {
+                playClick();
+                setPickerOpen(true);
               }}
-              autoFocus
-            />
+            >
+              <ShipIcon ship={ship} color={shipColor} accent={shipAccent} pixel={3} glow />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="home-mini-label t-title text-dim">
+                  {lang === 'pt' ? 'SUA NAVE' : 'YOUR SHIP'}
+                </div>
+                <div className="home-ship-trigger__action t-title glow-text-cyan">
+                  {lang === 'pt' ? 'MUDAR NAVE' : 'CHANGE SHIP'}
+                </div>
+              </div>
+            </button>
+
+            {mode === null && (
+              <div className="home-action-grid">
+                <button className="btn btn-primary btn-pulse" onClick={() => { playClick(); setMode('create'); }}>
+                  {lang === 'pt' ? 'CRIAR' : 'CREATE'}
+                </button>
+                <button className="btn btn-yellow" onClick={() => { playClick(); setMode('join'); }}>
+                  {lang === 'pt' ? 'ENTRAR' : 'JOIN'}
+                </button>
+              </div>
+            )}
+
+            {mode === 'create' && (
+              <div className="home-action-stack">
+                <button className="btn btn-primary btn-pulse" onClick={go} disabled={!name.trim() || busy}>
+                  {busy ? '...' : lang === 'pt' ? 'CRIAR SALA' : 'CREATE ROOM'}
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => { playClick(); setMode(inviteCode ? 'join' : null); }}>
+                  {lang === 'pt' ? 'VOLTAR' : 'BACK'}
+                </button>
+              </div>
+            )}
+
+            {mode === 'join' && (
+              <div className="home-action-stack">
+                <div>
+                  <label className="home-field-label t-title text-dim">
+                    {lang === 'pt' ? 'SALA' : 'ROOM'}
+                  </label>
+                  <input
+                    className="input code-input"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4))}
+                    placeholder="ABCD"
+                    maxLength={4}
+                    disabled={busy}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') go();
+                    }}
+                  />
+                </div>
+                <button className="btn btn-yellow" onClick={go} disabled={!name.trim() || code.length < 4 || busy}>
+                  {busy ? '...' : lang === 'pt' ? 'ENTRAR NA SALA' : 'JOIN ROOM'}
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => {
+                  playClick();
+                  setMode(null);
+                }}>
+                  {lang === 'pt' ? 'VOLTAR' : 'BACK'}
+                </button>
+              </div>
+            )}
+
+            {err && <div className="home-error">{err}</div>}
+
+            <div className="home-language-wrap">
+              <div className="home-language-switcher panel">
+                {['pt', 'en'].map((languageCode) => (
+                  <button
+                    key={languageCode}
+                    className={`btn ${lang === languageCode ? 'btn-primary' : 'btn-ghost'}`}
+                    onClick={() => {
+                      playClick();
+                      setLang(languageCode);
+                    }}
+                    style={{ minHeight: 32, padding: '6px 12px', fontSize: 9, borderRadius: 2 }}
+                  >
+                    {languageCode.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <button
-            className="home-ship-trigger panel bevel"
-            onClick={() => {
-              playClick();
-              setPickerOpen(true);
-            }}
-          >
-            <ShipIcon ship={ship} color={shipColor} accent={shipAccent} pixel={3} glow />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="home-mini-label t-title text-dim">
-                {lang === 'pt' ? 'SUA NAVE' : 'YOUR SHIP'}
-              </div>
-              <div className="home-ship-trigger__action t-title glow-text-cyan">
-                {lang === 'pt' ? 'MUDAR NAVE' : 'CHANGE SHIP'}
-              </div>
-            </div>
-          </button>
-
-          {mode === null && (
-            <div className="home-action-grid">
-              <button className="btn btn-primary btn-pulse" onClick={() => { playClick(); setMode('create'); }}>
-                {lang === 'pt' ? 'CRIAR' : 'CREATE'}
-              </button>
-              <button className="btn btn-yellow" onClick={() => { playClick(); setMode('join'); }}>
-                {lang === 'pt' ? 'ENTRAR' : 'JOIN'}
-              </button>
-            </div>
-          )}
-
-          {mode === 'create' && (
-            <div className="home-action-stack">
-              <button className="btn btn-primary btn-pulse" onClick={go} disabled={!name.trim() || busy}>
-                {busy ? '...' : lang === 'pt' ? 'CRIAR SALA' : 'CREATE ROOM'}
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => { playClick(); setMode(inviteCode ? 'join' : null); }}>
-                {lang === 'pt' ? 'VOLTAR' : 'BACK'}
-              </button>
-            </div>
-          )}
-
-          {mode === 'join' && (
-            <div className="home-action-stack">
-              <div>
-                <label className="home-field-label t-title text-dim">
-                  {lang === 'pt' ? 'SALA' : 'ROOM'}
-                </label>
-                <input
-                  className="input code-input"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4))}
-                  placeholder="ABCD"
-                  maxLength={4}
-                  disabled={busy}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') go();
-                  }}
-                />
-              </div>
-              <button className="btn btn-yellow" onClick={go} disabled={!name.trim() || code.length < 4 || busy}>
-                {busy ? '...' : lang === 'pt' ? 'ENTRAR NA SALA' : 'JOIN ROOM'}
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => {
-                playClick();
-                setMode(null);
-              }}>
-                {lang === 'pt' ? 'VOLTAR' : 'BACK'}
-              </button>
-            </div>
-          )}
-
-          {err && <div className="home-error">{err}</div>}
-
-          <div className="home-language-wrap">
-            <div className="home-language-switcher panel">
-              {['pt', 'en'].map((languageCode) => (
-                <button
-                  key={languageCode}
-                  className={`btn ${lang === languageCode ? 'btn-primary' : 'btn-ghost'}`}
-                  onClick={() => {
-                    playClick();
-                    setLang(languageCode);
-                  }}
-                  style={{ minHeight: 32, padding: '6px 12px', fontSize: 9, borderRadius: 2 }}
-                >
-                  {languageCode.toUpperCase()}
-                </button>
-              ))}
-            </div>
+          <div className="home-top-status">
+            <span>v1.0 // ONLINE</span>
           </div>
         </div>
       </div>
