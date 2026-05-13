@@ -4,106 +4,81 @@ import { playClick } from '../sounds.js';
 import { ShipIcon, ShipPicker } from './ShipRoster.jsx';
 
 function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send }) {
-  const isTx = player.id === transmitterId;
+  const isNavigator = player.id === transmitterId;
   const isMe = player.id === me?.id;
 
   return (
-    <div className={`panel ${isTx ? 'glow-cyan' : 'bevel'}`} style={{
-      padding: '14px 16px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 14,
-      background: isTx
-        ? 'linear-gradient(180deg, rgba(255,224,0,.06), rgba(0,255,255,.03))'
-        : 'rgba(255,255,255,.02)',
-      borderColor: isTx ? 'var(--neon-amber)' : isMe ? 'var(--neon-cyan)' : undefined,
-      boxShadow: isTx ? '0 0 16px rgba(255,224,0,.28)' : undefined,
-    }}>
-      <div
-        style={{ position: 'relative', flex: '0 0 auto', cursor: isMe ? 'pointer' : 'default' }}
+    <article className={`lobby-crew-card panel bevel${isNavigator ? ' is-navigator' : ''}${isMe ? ' is-me' : ''}`}>
+      <button
+        type="button"
+        className="lobby-ship-port"
         onClick={isMe ? onPickShip : undefined}
+        disabled={!isMe}
+        aria-label={isMe ? (lang === 'pt' ? 'Trocar nave' : 'Change ship') : player.name}
       >
         <ShipIcon
           ship={player.ship || 'nova_01'}
           color={player.shipColor || 'blue'}
           accent={player.shipAccent || 'cyan'}
-          pixel={3.4}
-          glow={isTx || isMe}
+          pixel={3.5}
+          glow={isNavigator || isMe}
         />
-        {isMe && (
-          <div style={{
-            position: 'absolute',
-            bottom: -4,
-            right: -4,
-            width: 18,
-            height: 18,
-            borderRadius: 2,
-            background: 'var(--neon-cyan)',
-            border: '2px solid var(--space-0)',
-            color: '#00211f',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 10,
-            fontFamily: 'var(--f-title)',
-          }}>+</div>
-        )}
-      </div>
+        {isMe && <span className="lobby-ship-port__edit">+</span>}
+      </button>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="t-title" style={{
-          fontSize: 11,
-          color: isTx ? 'var(--neon-amber)' : isMe ? 'var(--neon-cyan)' : 'var(--ink)',
-          textShadow: isTx ? '0 0 8px var(--neon-amber)' : isMe ? '0 0 6px var(--neon-cyan)' : 'none',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}>
-          {player.name}
+      <div className="lobby-crew-card__body">
+        <div className="lobby-crew-card__name t-title">{player.name}</div>
+        <div className="lobby-crew-card__meta t-mono">
+          {isNavigator
+            ? (lang === 'pt' ? 'Navegador inicial' : 'Starting navigator')
+            : (lang === 'pt' ? 'Tripulacao conectada' : 'Crew connected')}
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-        {isTx && (
-          <span className="badge badge-captain">
-            {lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR'}
-          </span>
-        )}
+      <div className="lobby-crew-card__badges">
+        {isNavigator && <span className="badge badge-captain">{lang === 'pt' ? 'NAV' : 'NAV'}</span>}
         {isMe && <span className="badge badge-you">{t('you', lang)}</span>}
         {player.isBot && <span className="badge badge-bot">BOT</span>}
-        {isHost && !player.isBot && !isTx && (
+        {isHost && !player.isBot && !isNavigator && (
           <button
-            className="btn btn-ghost btn-sm"
+            className="btn btn-ghost btn-sm lobby-promote-btn"
             onClick={() => {
               playClick();
               send('set_transmitter', { playerId: player.id });
             }}
-            style={{ minHeight: 34, fontSize: 8, padding: '6px 10px' }}
           >
-            TX
+            NAV
           </button>
         )}
       </div>
-    </div>
+    </article>
   );
 }
 
 function SettingRow({ label, options, labels, value, onChange, suffix = '' }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div className="t-title text-dim" style={{ fontSize: 9 }}>{label}</div>
-      <div style={{ display: 'flex', gap: 8 }}>
+    <div className="lobby-setting-row">
+      <div className="t-title text-dim lobby-setting-row__label">{label}</div>
+      <div className="lobby-setting-row__options">
         {options.map((option, i) => (
           <button
             key={option}
             className={`btn btn-sm ${value === option ? 'btn-cyan' : 'btn-ghost'}`}
             onClick={() => onChange(option)}
-            style={{ flex: 1, fontSize: 9, minHeight: 40 }}
           >
             {labels ? labels[i] : `${option}${suffix}`}
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function MissionStat({ label, value }) {
+  return (
+    <div className="lobby-mission-stat">
+      <span className="t-title text-dim">{label}</span>
+      <strong className="t-read">{value}</strong>
     </div>
   );
 }
@@ -115,8 +90,10 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
   const me = players.find((player) => player.id === myId);
   const transmitterId = gameState.transmitterId || gameState.hostId;
   const transmitter = players.find((player) => player.id === transmitterId) || players[0];
-  const crew = players.filter((player) => player.id !== transmitterId);
   const canStart = players.length >= 2;
+  const missionReadyLabel = canStart
+    ? (lang === 'pt' ? 'Pronta' : 'Ready')
+    : (lang === 'pt' ? 'Aguardando' : 'Waiting');
 
   const copyLink = async () => {
     const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${code}`;
@@ -149,95 +126,88 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
         />
       )}
 
-      <div className="screen lobby-shell" style={{ minHeight: '100vh' }}>
-        <div style={{
-          position: 'relative',
-          width: 'min(1060px, 100%)',
-          padding: '24px 18px 96px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 16,
-        }}>
-          <div className="panel bevel rivets" style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '16px 18px',
-            gap: 16,
-            flexWrap: 'wrap',
-          }}>
-            <div>
-              <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 4 }}>
-                {lang === 'pt' ? 'SALA' : 'ROOM'}
-              </div>
-              <div className="t-read glow-text-amber" style={{ fontSize: 40, letterSpacing: '.18em' }}>{code}</div>
+      <div className="screen lobby-shell">
+        <main className="lobby-hangar">
+          <section className="lobby-command-bar panel bevel glow-cyan">
+            <div className="lobby-room-readout">
+              <span className="t-title text-dim">{lang === 'pt' ? 'SALA' : 'ROOM'}</span>
+              <strong className="t-read glow-text-amber">{code}</strong>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              {['pt', 'en'].map((languageCode) => (
-                <button
-                  key={languageCode}
-                  className={`btn btn-sm ${lang === languageCode ? 'btn-cyan' : 'btn-ghost'}`}
-                  onClick={() => {
-                    playClick();
-                    setLang(languageCode);
-                  }}
-                >
-                  {languageCode.toUpperCase()}
-                </button>
-              ))}
+
+            <div className="lobby-command-actions">
+              <div className="lobby-lang-switch panel">
+                {['pt', 'en'].map((languageCode) => (
+                  <button
+                    key={languageCode}
+                    className={`btn btn-sm ${lang === languageCode ? 'btn-cyan' : 'btn-ghost'}`}
+                    onClick={() => {
+                      playClick();
+                      setLang(languageCode);
+                    }}
+                  >
+                    {languageCode.toUpperCase()}
+                  </button>
+                ))}
+              </div>
               <button className={`btn btn-sm ${copied ? 'btn-green' : 'btn-yellow'}`} onClick={copyLink}>
                 {copied ? t('copied', lang) : t('copy_link', lang)}
               </button>
-              <button className="btn btn-ghost" onClick={() => { playClick(); onSettings?.(); }} style={{ minHeight: 38, padding: '8px 12px', fontSize: 9 }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => { playClick(); onSettings?.(); }}>
                 {lang === 'pt' ? 'AJUSTES' : 'SETTINGS'}
               </button>
             </div>
-          </div>
+          </section>
 
-          {transmitter && (
-            <div className="panel glow-cyan" style={{
-              padding: '22px 22px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 20,
-              borderColor: 'var(--neon-amber)',
-              background: 'linear-gradient(180deg, rgba(255,224,0,.10), rgba(0,255,255,.035))',
-              marginBottom: 10,
-              boxShadow: '0 0 24px rgba(255,224,0,.20)',
-              cursor: transmitter.id === myId ? 'pointer' : 'default',
-            }}
-              onClick={transmitter.id === myId ? () => setPickerOpen(true) : undefined}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                <div className="badge badge-captain">TX</div>
+          <section className="lobby-brief-grid">
+            <article className="lobby-nav-bay panel bevel glow-amber">
+              <button
+                type="button"
+                className="lobby-nav-bay__ship"
+                onClick={transmitter?.id === myId ? () => setPickerOpen(true) : undefined}
+                disabled={transmitter?.id !== myId}
+                aria-label={lang === 'pt' ? 'Trocar nave' : 'Change ship'}
+              >
                 <ShipIcon
-                  ship={transmitter.ship || 'nova_01'}
-                  color={transmitter.shipColor || 'amber'}
-                  accent={transmitter.shipAccent || 'cyan'}
-                  pixel={5}
+                  ship={transmitter?.ship || 'nova_01'}
+                  color={transmitter?.shipColor || 'amber'}
+                  accent={transmitter?.shipAccent || 'cyan'}
+                  pixel={6}
                   glow
                 />
+              </button>
+              <div className="lobby-nav-bay__copy">
+                <span className="t-title text-dim">{lang === 'pt' ? 'NAVEGADOR INICIAL' : 'STARTING NAVIGATOR'}</span>
+                <strong className="t-title glow-text-amber">{transmitter?.name || '?'}</strong>
+                <p className="t-mono text-dim">
+                  {lang === 'pt' ? 'O controle muda a cada rodada.' : 'Control rotates every round.'}
+                </p>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 8 }}>
-                  {lang === 'pt' ? 'NAVEGADOR INICIAL' : 'STARTING NAVIGATOR'}
-                </div>
-                <div className="t-title glow-text-amber" style={{ fontSize: 'clamp(15px, 2.4vw, 22px)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {transmitter.name}
-                </div>
-                <div className="t-mono text-dim" style={{ fontSize: 16, marginTop: 8 }}>
-                  {lang === 'pt' ? 'A funcao gira a cada rodada' : 'Role rotates every round'}
-                </div>
+            </article>
+
+            <aside className="lobby-mission-panel panel bevel">
+              <div className="lobby-mission-panel__head">
+                <span className="t-title text-dim">{lang === 'pt' ? 'BRIEFING' : 'BRIEFING'}</span>
+                <b className={canStart ? 'glow-text-mint' : 'glow-text-amber'}>{missionReadyLabel}</b>
               </div>
+              <div className="lobby-mission-stats">
+                <MissionStat label={lang === 'pt' ? 'Tripulacao' : 'Crew'} value={players.length} />
+                <MissionStat label={t('rounds', lang)} value={settings.rounds} />
+                <MissionStat label={lang === 'pt' ? 'Dica' : 'Clue'} value={`${settings.clueTimer}s`} />
+                <MissionStat label={lang === 'pt' ? 'Voto' : 'Vote'} value={`${settings.voteTimer}s`} />
+              </div>
+            </aside>
+          </section>
+
+          <section className="lobby-section-head">
+            <div>
+              <span className="t-title text-dim">{lang === 'pt' ? 'HANGAR' : 'HANGAR'}</span>
+              <strong className="t-title">{lang === 'pt' ? 'Tripulacao' : 'Crew'}</strong>
             </div>
-          )}
+            <span className="t-mono text-dim">{players.length}/8</span>
+          </section>
 
-          <div className="t-title text-dim" style={{ fontSize: 9, marginTop: 4 }}>
-            {lang === 'pt' ? 'TRIPULACAO' : 'CREW'} · {players.length}
-          </div>
-
-          <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 10 }}>
-            {crew.map((player) => (
+          <section className="lobby-crew-grid">
+            {players.map((player) => (
               <PlayerCard
                 key={player.id}
                 player={player}
@@ -249,22 +219,17 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
                 onPickShip={() => setPickerOpen(true)}
               />
             ))}
-            {crew.length === 0 && (
-              <div className="panel bevel" style={{ padding: 22, textAlign: 'center', gridColumn: '1 / -1' }}>
-                <div className="t-body text-dim" style={{ fontSize: 17 }}>
-                  {lang === 'pt' ? 'Aguardando jogadores...' : 'Waiting for players...'}
-                </div>
-              </div>
-            )}
-          </div>
+          </section>
+
+          {players.length < 2 && (
+            <div className="lobby-waiting panel bevel">
+              <div className="t-title glow-text-cyan">{lang === 'pt' ? 'AGUARDANDO MAIS UM PILOTO' : 'WAITING FOR ONE MORE PILOT'}</div>
+              <div className="t-mono text-dim">{lang === 'pt' ? 'Compartilhe o codigo ou o link da sala.' : 'Share the room code or invite link.'}</div>
+            </div>
+          )}
 
           {isHost && (
-            <div className="panel bevel" style={{
-              padding: '16px 18px',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-              gap: 14,
-            }}>
+            <section className="lobby-settings panel bevel">
               <SettingRow
                 label={t('rounds', lang)}
                 options={[5, 7, 10, 15]}
@@ -295,38 +260,37 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
                 }}
               />
               <SettingRow
-                label={lang === 'pt' ? 'POSIÇÃO ALVO' : 'TARGET POSITION'}
+                label={lang === 'pt' ? 'POSICAO ALVO' : 'TARGET POSITION'}
                 options={['random', 'choose']}
-                labels={lang === 'pt' ? ['ALEATÓRIA', 'LIVRE'] : ['RANDOM', 'FREE']}
+                labels={lang === 'pt' ? ['ALEATORIA', 'LIVRE'] : ['RANDOM', 'FREE']}
                 value={settings.targetMode ?? 'random'}
                 onChange={(value) => {
                   playClick();
                   send('update_settings', { ...settings, targetMode: value });
                 }}
               />
-            </div>
+            </section>
           )}
 
-          <div className="sticky-footer">
+          <div className="lobby-launch-dock">
             {isHost ? (
               <button
-                className={`btn ${canStart ? 'btn-primary btn-pulse' : 'btn-ghost'} btn-lg btn-full`}
+                className={`btn ${canStart ? 'btn-primary' : 'btn-ghost'} btn-lg btn-full`}
                 onClick={() => {
                   playClick();
                   send('start_game');
                 }}
                 disabled={!canStart}
-                style={{ maxWidth: 460, opacity: canStart ? 1 : .35, fontSize: 12, minHeight: 58 }}
               >
-                ▸ {t('start_mission', lang)}
+                {t('start_mission', lang)}
               </button>
             ) : (
-              <div className="t-body text-dim" style={{ fontSize: 15, padding: '10px 0' }}>
+              <div className="lobby-client-wait panel bevel">
                 {t('waiting_host', lang)}
               </div>
             )}
           </div>
-        </div>
+        </main>
       </div>
     </>
   );

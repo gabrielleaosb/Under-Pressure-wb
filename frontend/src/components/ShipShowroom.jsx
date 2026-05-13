@@ -22,9 +22,6 @@ export default function ShipShowroom() {
 
         <div className="panel bevel glow-cyan ship-showroom__hero">
           <ShipIcon ship={selected} color={monoColor} pixel={9} glow />
-          <div className="t-title glow-text-amber" style={{ fontSize: 10 }}>
-            {selected}
-          </div>
         </div>
       </div>
 
@@ -36,14 +33,14 @@ export default function ShipShowroom() {
               key={model.id}
               className="ship-showroom__card"
               onClick={() => setSelected(model.id)}
+              aria-label={model.name}
+              title={model.name}
               style={{
                 borderColor: active ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.08)',
                 boxShadow: active ? '0 0 18px rgba(0,255,255,0.25)' : 'none',
               }}
             >
               <ShipIcon ship={model.id} color={monoColor} pixel={4} glow={active} />
-              <div className="ship-showroom__label">{model.id}</div>
-              <div className="ship-showroom__name">{model.name}</div>
             </button>
           );
         })}

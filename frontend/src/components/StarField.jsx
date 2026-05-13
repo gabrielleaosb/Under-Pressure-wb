@@ -21,7 +21,7 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => Math.floor(rnd(a, b));
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-function StarField() {
+function StarField({ variant = 'menu' }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -32,6 +32,7 @@ function StarField() {
     if (!ctx) return undefined;
 
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+    const isGame = variant === 'game';
 
     let width = 0;
     let height = 0;
@@ -554,10 +555,23 @@ function StarField() {
       if (document.hidden || elapsed < 1000 / FPS) return;
       const frameStep = clamp(elapsed / (1000 / FPS), 0.75, 2.5);
       lastTime = now;
-      frame += BG_SPEED * frameStep;
+      const activeSpeed = isGame ? 0.72 : BG_SPEED;
+      frame += activeSpeed * frameStep;
 
-      ctx.fillStyle = '#00000a';
+      ctx.fillStyle = isGame ? '#000008' : '#00000a';
       ctx.fillRect(0, 0, width, height);
+
+      if (isGame) {
+        ctx.fillStyle = 'rgba(0,255,255,0.025)';
+        const gridY = Math.round((frame * 0.18) % 58);
+        for (let y = gridY; y < height; y += 58) ctx.fillRect(0, y, width, 1);
+        ctx.fillStyle = 'rgba(80,130,255,0.018)';
+        const gridX = Math.round((frame * 0.12) % 86);
+        for (let x = gridX; x < width; x += 86) ctx.fillRect(x, 0, 1, height);
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.fillRect(0, 0, width, Math.max(1, Math.round(height * 0.08)));
+        ctx.fillRect(0, Math.round(height * 0.92), width, Math.max(1, Math.round(height * 0.08)));
+      }
 
       galaxy.cx = galaxy.baseCx + Math.sin(frame * 0.0065) * 0.012;
       galaxy.cy = galaxy.baseCy + Math.cos(frame * 0.0045) * 0.01;
@@ -565,9 +579,9 @@ function StarField() {
       blackHole.cy = blackHole.baseCy + Math.cos(frame * 0.0058 + 0.7) * 0.012;
       station.cx = station.baseCx + Math.sin(frame * 0.0026 + 2.4) * 0.004;
       station.cy = station.baseCy + Math.cos(frame * 0.0032 + 0.8) * 0.004;
-      galaxy.rot += 0.0048 * BG_SPEED * frameStep;
-      blackHole.rot += 0.0022 * BG_SPEED * frameStep;
-      blackHole.axis += 0.001 * BG_SPEED * frameStep;
+      galaxy.rot += 0.0048 * activeSpeed * frameStep;
+      blackHole.rot += 0.0022 * activeSpeed * frameStep;
+      blackHole.axis += 0.001 * activeSpeed * frameStep;
 
       const galaxyX = galaxy.cx * width;
       const galaxyY = galaxy.cy * height;
@@ -595,6 +609,7 @@ function StarField() {
         drawScaledPx(bhX, bhY, scale, p.x, p.y, r, g, b, a);
       };
 
+      if (!isGame) {
       glow(galaxyX, galaxyY, Math.min(width, height) * 0.24, [
         [0, 'rgba(255,244,205,.17)'],
         [0.2, 'rgba(210,190,255,.14)'],
@@ -685,6 +700,7 @@ function StarField() {
         const corePulse = 0.72 + 0.28 * Math.sin(frame * 0.028 + distant.off);
         canvasPx(originX, originY, 255 * corePulse, 238 * corePulse, 185 * corePulse, clamp(0.28 + distant.brightness * 0.18, 0.32, 0.6), 1);
       }
+      }
 
       for (const item of dust) {
         const tw = 0.4 + 0.6 * Math.sin(frame * item.spd + item.off);
@@ -692,7 +708,7 @@ function StarField() {
         const driftY = Math.cos(frame * item.drift * 0.72 + item.off) * item.depth * 0.82;
         const x = ((((item.x + driftX) % 100 + 100) % 100) / 100) * width;
         const y = ((((item.y + driftY) % 100 + 100) % 100) / 100) * height;
-        const br = item.br * tw;
+        const br = item.br * tw * (isGame ? 0.42 : 1);
         if (item.hue === 'purple') canvasPx(x, y, 60 * br, 10 * br, 120 * br, 1, PX);
         else canvasPx(x, y, 0, 80 * br, 100 * br, 1, PX);
       }
@@ -701,7 +717,7 @@ function StarField() {
         const wave = 0.5 + 0.5 * Math.sin(frame * star.spd + star.off);
         const blink = 0.1 + 0.9 * (wave ** 1.8);
         const flare = Math.sin(frame * star.spd * star.pulse + star.off * 2.3) > 0.965 ? 1.65 : 1;
-        const v = clamp((25 + blink * 245) * star.br * flare, 0, 255);
+        const v = clamp((25 + blink * 245) * star.br * flare * (isGame ? 0.52 : 1), 0, 255);
         const driftX = Math.sin(frame * star.drift + star.off) * star.depth * 1.18;
         const driftY = Math.cos(frame * star.drift * 0.8 + star.off) * star.depth * 0.64;
         const x = ((((star.x + driftX) % 100 + 100) % 100) / 100) * width;
@@ -711,9 +727,10 @@ function StarField() {
         let b = v;
         if (star.type === 1) b = Math.min(255, v + 60);
         else if (star.type === 2) { g = Math.min(255, v + 30); b = Math.max(0, v - 40); }
-        canvasPx(x, y, r, g, b, 1, PX * star.size);
+        canvasPx(x, y, r, g, b, isGame ? 0.72 : 1, PX * (isGame ? 1 : star.size));
       }
 
+      if (!isGame) {
       for (const [dx, dy] of stationShadow) {
         drawSpritePx(stationX, stationY, station.scale, dx, dy, 6, 7, 20, 0.58);
       }
@@ -745,7 +762,9 @@ function StarField() {
           0.92,
         );
       }
+      }
 
+      if (!isGame) {
       for (const point of nebulaRing) {
         const tw = 0.3 + 0.7 * Math.sin(frame * point.tSpd + point.tOff);
         const br = point.br * tw;
@@ -859,7 +878,9 @@ function StarField() {
           200 * shim,
         );
       }
+      }
 
+      if (!isGame) {
       for (const point of galaxyHalo) {
         const spin = galaxy.rot * (0.42 - point.radius / 180);
         const cosS = Math.cos(spin);
@@ -934,23 +955,26 @@ function StarField() {
         const ry = (point.dx * sinS + point.dy * cosS) | 0;
         drawScaledPx(galaxyX, galaxyY, galaxy.scale, rx, ry, clamp(point.r * tw, 0, 255), clamp(point.g * tw, 0, 255), clamp(point.b * tw, 0, 255));
       }
-
-      shotTimer -= frameStep;
-      if (shotTimer <= 0) {
-        spawnShot();
-        shotTimer = irnd(210, 500);
       }
-      for (let i = shots.length - 1; i >= 0; i -= 1) {
-        const shot = shots[i];
-        shot.x += shot.vx * frameStep;
-        shot.y += shot.vy * frameStep;
-        shot.life += frameStep;
-        const alpha = 1 - shot.life / shot.maxLife;
-        for (let j = 0; j < shot.len; j += 1) {
-          const a2 = alpha * (1 - j / shot.len);
-          px((shot.x - shot.vx * j) | 0, (shot.y - shot.vy * j) | 0, 255, 255, 180 + j * 5, a2);
+
+      if (!isGame) {
+        shotTimer -= frameStep;
+        if (shotTimer <= 0) {
+          spawnShot();
+          shotTimer = irnd(210, 500);
         }
-        if (shot.life >= shot.maxLife) shots.splice(i, 1);
+        for (let i = shots.length - 1; i >= 0; i -= 1) {
+          const shot = shots[i];
+          shot.x += shot.vx * frameStep;
+          shot.y += shot.vy * frameStep;
+          shot.life += frameStep;
+          const alpha = 1 - shot.life / shot.maxLife;
+          for (let j = 0; j < shot.len; j += 1) {
+            const a2 = alpha * (1 - j / shot.len);
+            px((shot.x - shot.vx * j) | 0, (shot.y - shot.vy * j) | 0, 255, 255, 180 + j * 5, a2);
+          }
+          if (shot.life >= shot.maxLife) shots.splice(i, 1);
+        }
       }
 
     };
@@ -964,9 +988,9 @@ function StarField() {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
     };
-  }, []);
+  }, [variant]);
 
-  return <canvas ref={canvasRef} className="space-canvas-bg" aria-hidden="true" />;
+  return <canvas ref={canvasRef} className={`space-canvas-bg space-canvas-bg--${variant}`} aria-hidden="true" />;
 }
 
 export default memo(StarField);

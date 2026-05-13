@@ -9,6 +9,8 @@ import { db, ref, get, set, update, remove, push, onValue, onChildAdded } from '
 import { PLAYER_COLORS, TEAM_NAME_PAIRS, CARDS, THEMES, selectCard, genId } from './gameData.js';
 import { SHIP_IDS, SHIP_COLORS } from './components/ShipRoster.jsx';
 
+const ROUND_INTRO_DURATION_MS = 4600;
+
 // ── Scoring ───────────────────────────────────────────────────────────────────
 
 function scoreFromDiff(diff) {
@@ -246,18 +248,20 @@ export class GameEngine {
     const startId = room.startingTransmitterId || room.transmitterId || this.hostId;
     const startIndex = Math.max(0, players.findIndex(p => p.id === startId));
     const tx = players[(startIndex + (room.round || 0)) % players.length] || players[0];
+    const roundIntroUntil = Date.now() + ROUND_INTRO_DURATION_MS;
 
     await Promise.all([
       roomUpdate(this.roomCode, {
         phase: 'roulette', psychicId: tx.id, transmitterId: tx.id,
         clue: null, revealResult: null, currentTheme: null, currentCard: null, timerEnd: null,
+        roundIntroUntil,
       }),
       remove(rref(this.roomCode, 'votes')),
       remove(rref(this.roomCode, 'psychicSecret')),
       remove(rref(this.roomCode, 'emojiReactions')),
     ]);
 
-    if (tx.isBot) setTimeout(() => this._autoSpinForBot(), 1600);
+    if (tx.isBot) setTimeout(() => this._autoSpinForBot(), ROUND_INTRO_DURATION_MS + 450);
     else this._setTimer(20000, async () => {
       const r = await getRoom(this.roomCode);
       if (!r || r.phase !== 'roulette') return;
@@ -283,6 +287,7 @@ export class GameEngine {
   async _spinRoulette(requestedBy, forced = false) {
     const room = await getRoom(this.roomCode);
     if (!room || room.phase !== 'roulette') return;
+    if (!forced && Number(room.roundIntroUntil || 0) > Date.now()) return;
     const tx = Object.values(room.players || {}).find(p => p.id === room.psychicId);
     const canSpin = forced || room.psychicId === requestedBy || (requestedBy === this.hostId && tx?.isBot);
     if (!canSpin) return;

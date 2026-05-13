@@ -94,10 +94,23 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
 
           <div className="home-card panel bevel glow-cyan">
             {inviteCode && (
-              <div className="t-mono glow-text-amber" style={{ fontSize: 14 }}>
+              <div className="home-invite-code t-mono glow-text-amber">
                 {inviteCode}
               </div>
             )}
+
+            <div className="home-flow-header">
+              <span className="t-title text-dim">
+                {mode === null
+                  ? (lang === 'pt' ? 'ACESSO' : 'ACCESS')
+                  : mode === 'create'
+                    ? (lang === 'pt' ? 'NOVA SALA' : 'NEW ROOM')
+                    : (lang === 'pt' ? 'ENTRAR NA SALA' : 'JOIN ROOM')}
+              </span>
+              <b className="t-mono glow-text-cyan">
+                {lang === 'pt' ? 'PILOTO ONLINE' : 'PILOT ONLINE'}
+              </b>
+            </div>
 
             <div>
               <label className="home-field-label t-title text-dim">
@@ -137,10 +150,10 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
 
             {mode === null && (
               <div className="home-action-grid">
-                <button className="btn btn-primary" onClick={() => { playClick(); setMode('create'); }}>
-                  {lang === 'pt' ? 'CRIAR' : 'CREATE'}
+                <button className="btn btn-primary home-choice-btn" onClick={() => { playClick(); setMode('create'); }}>
+                  {lang === 'pt' ? 'CRIAR SALA' : 'CREATE ROOM'}
                 </button>
-                <button className="btn btn-yellow" onClick={() => { playClick(); setMode('join'); }}>
+                <button className="btn btn-yellow home-choice-btn" onClick={() => { playClick(); setMode('join'); }}>
                   {lang === 'pt' ? 'ENTRAR' : 'JOIN'}
                 </button>
               </div>

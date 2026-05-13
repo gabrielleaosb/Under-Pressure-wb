@@ -102,6 +102,7 @@ export default function App() {
         reveal: lang === 'pt' ? 'Resultado aberto' : 'Results open',
       }[currentPhase] || phaseLabel)
     : '';
+  const backgroundVariant = !SPECIAL_MODE && screen === 'game' ? 'game' : 'menu';
 
   useEffect(() => {
     localStorage.setItem('up_lang', lang);
@@ -147,17 +148,18 @@ export default function App() {
       setStatus('connected');
       setRawRoom(raw);
       setScreen(raw.phase === 'lobby' ? 'lobby' : 'game');
+      const roundIntroUntil = Number(raw.roundIntroUntil || 0);
+      const shouldShowRoundIntro = raw.phase === 'roulette' && roundIntroUntil > Date.now();
 
       if (prevPhase.current && prevPhase.current !== raw.phase) {
         flash();
         if (raw.phase === 'roulette') {
           playPhaseChange();
-          setShowRoundIntro(true);
         }
-        if (raw.phase === 'spinning') setShowRoundIntro(false);
         if (raw.phase === 'voting') playVotingStart();
         if (raw.phase === 'psychic') playPhaseChange();
       }
+      setShowRoundIntro(shouldShowRoundIntro);
 
       prevPhase.current = raw.phase;
       prevRoom.current = raw;
@@ -296,7 +298,7 @@ export default function App() {
 
   return (
     <>
-      <StarField />
+      <StarField variant={backgroundVariant} />
       {scanFlash && <div className="scanflash" />}
 
 
@@ -448,14 +450,14 @@ export default function App() {
 
                 <main className="game-main">
                   <div className="game-stage">
-                    {(gameState.phase === 'roulette' || gameState.phase === 'spinning') && (
+                    {!showRoundIntro && (gameState.phase === 'roulette' || gameState.phase === 'spinning') && (
                       <Roulette {...sharedProps} spinning={gameState.phase === 'spinning'} />
                     )}
-                    {gameState.phase === 'psychic' && (
+                    {!showRoundIntro && gameState.phase === 'psychic' && (
                       <PsychicPhase {...sharedProps} myTargetPos={myTargetPos} />
                     )}
-                    {gameState.phase === 'voting' && <VotingPhase {...sharedProps} />}
-                    {gameState.phase === 'reveal' && <RevealPhase {...sharedProps} />}
+                    {!showRoundIntro && gameState.phase === 'voting' && <VotingPhase {...sharedProps} />}
+                    {!showRoundIntro && gameState.phase === 'reveal' && <RevealPhase {...sharedProps} />}
                   </div>
                 </main>
 

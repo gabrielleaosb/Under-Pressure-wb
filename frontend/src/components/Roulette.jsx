@@ -29,6 +29,7 @@ export default function Roulette({ gameState, myId, lang, send, spinning, isHost
   const [angle, setAngle] = useState(0);
   const [revealVisible, setRevealVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [introLocked, setIntroLocked] = useState(() => Number(gameState.roundIntroUntil || 0) > Date.now());
   const hasAnimated = useRef(false);
   const angleRef = useRef(0);
 
@@ -68,6 +69,20 @@ export default function Roulette({ gameState, myId, lang, send, spinning, isHost
     }
   }, [spinning, selectedTheme]);
 
+  useEffect(() => {
+    const until = Number(gameState.roundIntroUntil || 0);
+    if (!until || until <= Date.now()) {
+      setIntroLocked(false);
+      return undefined;
+    }
+
+    setIntroLocked(true);
+    const timeout = setTimeout(() => setIntroLocked(false), Math.max(0, until - Date.now()) + 80);
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [gameState.roundIntroUntil]);
+
   const viewport = typeof window !== 'undefined' ? window.innerWidth : 1280;
   const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 900;
   const widthCap = viewport < 900 ? viewport - 40 : 420;
@@ -77,7 +92,7 @@ export default function Roulette({ gameState, myId, lang, send, spinning, isHost
 
   const themeName = (th) => lang === 'en' ? th.shortEN : th.shortPT;
   const fullName = (th) => lang === 'en' ? th.nameEN : th.namePT;
-  const canSpin = isPsychic && !spinning && !isAnimating;
+  const canSpin = isPsychic && !spinning && !isAnimating && !introLocked;
 
   const spin = () => {
     if (!canSpin) return;

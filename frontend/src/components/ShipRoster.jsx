@@ -610,7 +610,6 @@ export function ShipPicker({
   const [ship, setShip] = useState(initialShip);
   const [color, setColor] = useState(initialColor);
   const [accent, setAccent] = useState(initialAccent);
-  const selectedModel = SHIP_MODELS.find((model) => model.id === ship) || SHIP_MODELS[0];
 
   return (
     <div
@@ -656,12 +655,6 @@ export function ShipPicker({
 
         <div className="panel bevel" style={{ padding: 20, minHeight: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
           <ShipIcon ship={ship} color={color} accent={accent} pixel={7} glow />
-          <div className="t-title glow-text-amber" style={{ fontSize: 10 }}>
-            {SHIP_LABELS[lang]?.[ship] || ship}
-          </div>
-          <div className="t-mono text-dim" style={{ fontSize: 13 }}>
-            {selectedModel.role}
-          </div>
         </div>
 
         <div>
@@ -675,11 +668,15 @@ export function ShipPicker({
                 <button
                   key={model.id}
                   onClick={() => setShip(model.id)}
+                  aria-label={model.name}
+                  title={model.name}
                   style={{
-                    padding: 12,
+                    minHeight: 92,
+                    padding: 14,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: 10,
                     background: active ? 'rgba(0,255,255,0.12)' : 'rgba(255,255,255,0.02)',
                     border: `2px solid ${active ? 'var(--neon-cyan)' : 'var(--metal-2)'}`,
@@ -692,12 +689,6 @@ export function ShipPicker({
                   }}
                 >
                   <ShipIcon ship={model.id} color={color} accent={accent} pixel={3} glow={active} />
-                  <span style={{ fontFamily: 'var(--f-body)', fontSize: 11, fontWeight: 800, color: active ? 'var(--neon-cyan)' : 'var(--ink-dim)' }}>
-                    {model.name}
-                  </span>
-                  <span className="t-mono" style={{ fontSize: 10, color: active ? 'var(--neon-amber)' : 'var(--ink-faint)' }}>
-                    {model.role}
-                  </span>
                 </button>
               );
             })}
