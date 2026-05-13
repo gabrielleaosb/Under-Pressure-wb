@@ -29,13 +29,24 @@ function boostBonus(diff) {
 }
 
 function transmitterScore(voters, votes, target) {
-  const hitters = voters.filter(p => {
+  const submittedVoters = voters.filter(p => {
     const vote = votes[p.id];
-    if (!vote) return false;
-    return Math.abs(vote.position - target) <= 25;
+    return vote && Number.isFinite(vote.position);
   });
-  const cleanSweep = hitters.length === voters.length && voters.length > 0 ? 1 : 0;
-  return hitters.length + cleanSweep;
+  const hitters = submittedVoters.filter(p => Math.abs(votes[p.id].position - target) <= 25);
+  const strongHits = hitters.filter(p => Math.abs(votes[p.id].position - target) <= 15);
+  const cleanSweep = voters.length > 0 && submittedVoters.length === voters.length && hitters.length === voters.length;
+  const cleanSweepBonus = cleanSweep ? Math.ceil(voters.length / 2) : 0;
+
+  return {
+    points: hitters.length * 2 + strongHits.length + cleanSweepBonus,
+    hits: hitters.length,
+    strongHits: strongHits.length,
+    submitted: submittedVoters.length,
+    expected: voters.length,
+    cleanSweep,
+    cleanSweepBonus,
+  };
 }
 
 function normalizeVote(raw) {
@@ -391,7 +402,7 @@ export class GameEngine {
     );
     const target = secretSnap.val()?.targetPosition ?? 50;
 
-    const voters = allPlayers(room).filter(p => p.id !== room.psychicId);
+    const voters = allPlayers(room).filter(p => p.id !== room.psychicId && (p.isBot || p.connected !== false || votes[p.id]));
     const roundScores = {};
     const roundStreaks = {};
     const highlights = [];
@@ -420,16 +431,14 @@ export class GameEngine {
     const averageVote = numericVotes.length
       ? Math.round(numericVotes.reduce((sum, pos) => sum + pos, 0) / numericVotes.length)
       : target;
-    const txPoints = transmitterScore(voters, votes, target);
+    const txScore = transmitterScore(voters, votes, target);
+    const txPoints = txScore.points;
     if (room.psychicId) {
-      const txStreak = voters.length > 0 && voters.every(p => {
-        const vote = votes[p.id];
-        return vote && Math.abs(vote.position - target) <= 25;
-      }) ? (previousStreaks[room.psychicId] || 0) + 1 : 0;
+      const txStreak = txScore.cleanSweep ? (previousStreaks[room.psychicId] || 0) + 1 : 0;
       roundScores[room.psychicId] = txPoints + (txStreak >= 3 ? 1 : 0);
       roundStreaks[room.psychicId] = txStreak;
       const tx = allPlayers(room).find(p => p.id === room.psychicId);
-      if (txPoints >= voters.length && voters.length >= 2) {
+      if (txScore.cleanSweep && voters.length >= 2) {
         highlights.push(buildHighlight('clean_tx', room.psychicId, tx?.name || '?', txPoints));
       }
     }
@@ -461,6 +470,7 @@ export class GameEngine {
       streaks: streakUpdates,
       highlights: highlights.slice(0, 5),
       transmitterScore: txPoints,
+      transmitterScoreBreakdown: txScore,
     });
 
     await roomUpdate(this.roomCode, {
@@ -473,6 +483,7 @@ export class GameEngine {
         streaks: streakUpdates,
         highlights: highlights.slice(0, 5),
         transmitterScore: txPoints,
+        transmitterScoreBreakdown: txScore,
       },
       timerEnd: null,
     });

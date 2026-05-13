@@ -110,7 +110,7 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
               >
                 <span className="boost-toggle__label">BOOST</span>
                 <span className="boost-toggle__hint">
-                  {lang === 'pt' ? 'Bonus se chegar perto. Penalidade se errar longe.' : 'Bonus if close. Penalty if far.'}
+                  {lang === 'pt' ? 'Alto risco. Alta recompensa.' : 'High risk. High reward.'}
                 </span>
               </button>
 

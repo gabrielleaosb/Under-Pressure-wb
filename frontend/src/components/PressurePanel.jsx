@@ -238,90 +238,94 @@ export default function PressurePanel({
         width: '100%',
         maxWidth: size,
         margin: '0 auto',
-        '--pressure-readout-top': `${(radius / (svgHeight + 10)) * 100}%`,
       }}
     >
-      <div className="pressure-readout pressure-readout--combat">
-        <div className="pressure-readout__label">
-          {readoutLabel || (lang === 'pt' ? 'PRESSAO' : 'PRESSURE')}
-        </div>
-        <div className="pressure-readout__value">
-          {String(Math.round(value)).padStart(2, '0')}
-        </div>
+      <div className="pressure-axis-labels">
+        <span title={leftLabel}>{`<- ${leftLabel}`}</span>
+        <span title={rightLabel}>{`${rightLabel} ->`}</span>
       </div>
 
-      <svg
-        ref={svgRef}
-        width="100%"
-        height={svgHeight}
-        viewBox={viewBox}
-        className="gauge-svg gauge-svg--combat"
-        onMouseDown={onDown}
-        onTouchStart={onDown}
-        style={{ cursor: disabled ? 'default' : 'grab', userSelect: 'none', touchAction: 'none', display: 'block' }}
+      <div
+        className="pressure-gauge-wrap"
+        style={{ '--pressure-readout-top': `${(radius / (svgHeight + 10)) * 100}%` }}
       >
-        <defs>
-          <filter id={glowId} x="-40%" y="-80%" width="180%" height="220%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id={softId} x="-30%" y="-70%" width="160%" height="200%">
-            <feGaussianBlur stdDeviation="1.2" />
-          </filter>
-        </defs>
+        <div className="pressure-readout pressure-readout--combat">
+          <div className="pressure-readout__label">
+            {readoutLabel || (lang === 'pt' ? 'PRESSAO' : 'PRESSURE')}
+          </div>
+          <div className="pressure-readout__value">
+            {String(Math.round(value)).padStart(2, '0')}
+          </div>
+        </div>
 
-        <path d={arcPath(arcStart, arcEnd, trackR + 32)} fill="none" stroke="#071738" strokeWidth={20} opacity={0.92} />
-        <path d={arcPath(arcStart, arcEnd, trackR + 31)} fill="none" stroke="#123878" strokeWidth={2.2} filter={`url(#${glowId})`} />
-        <path d={arcPath(arcStart, arcEnd, trackR + 18)} fill="none" stroke="#05102a" strokeWidth={14} />
-        <path d={arcPath(arcStart, arcEnd, trackR + 3)} fill="none" stroke="#07132f" strokeWidth={26} />
+        <svg
+          ref={svgRef}
+          width="100%"
+          height={svgHeight}
+          viewBox={viewBox}
+          className="gauge-svg gauge-svg--combat"
+          onMouseDown={onDown}
+          onTouchStart={onDown}
+          style={{ cursor: disabled ? 'default' : 'grab', userSelect: 'none', touchAction: 'none', display: 'block' }}
+        >
+          <defs>
+            <filter id={glowId} x="-40%" y="-80%" width="180%" height="220%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id={softId} x="-30%" y="-70%" width="160%" height="200%">
+              <feGaussianBlur stdDeviation="1.2" />
+            </filter>
+          </defs>
 
-        <path d={zoneLeft} fill="none" stroke="#0c2255" strokeWidth={18} strokeLinecap="butt" filter={`url(#${softId})`} />
-        <path d={zoneMid} fill="none" stroke="#0e2a66" strokeWidth={18} strokeLinecap="butt" filter={`url(#${softId})`} />
-        <path d={zoneRight} fill="none" stroke="#0a1e55" strokeWidth={18} strokeLinecap="butt" filter={`url(#${softId})`} />
-        <path d={arcPath(arcStart, arcEnd, trackR)} fill="none" stroke="#2255cc" strokeWidth={2} filter={`url(#${glowId})`} />
-        <path d={arcPath(arcStart, arcEnd, trackR - 19)} fill="none" stroke="#173364" strokeWidth={1.2} strokeDasharray="5 7" opacity={0.75} />
+          <path d={arcPath(arcStart, arcEnd, trackR + 32)} fill="none" stroke="#071738" strokeWidth={20} opacity={0.92} />
+          <path d={arcPath(arcStart, arcEnd, trackR + 31)} fill="none" stroke="#123878" strokeWidth={2.2} filter={`url(#${glowId})`} />
+          <path d={arcPath(arcStart, arcEnd, trackR + 18)} fill="none" stroke="#05102a" strokeWidth={14} />
+          <path d={arcPath(arcStart, arcEnd, trackR + 3)} fill="none" stroke="#07132f" strokeWidth={26} />
 
-        {separatorAngles}
-        {ticks}
-        {tickLabels}
+          <path d={zoneLeft} fill="none" stroke="#0c2255" strokeWidth={18} strokeLinecap="butt" filter={`url(#${softId})`} />
+          <path d={zoneMid} fill="none" stroke="#0e2a66" strokeWidth={18} strokeLinecap="butt" filter={`url(#${softId})`} />
+          <path d={zoneRight} fill="none" stroke="#0a1e55" strokeWidth={18} strokeLinecap="butt" filter={`url(#${softId})`} />
+          <path d={arcPath(arcStart, arcEnd, trackR)} fill="none" stroke="#2255cc" strokeWidth={2} filter={`url(#${glowId})`} />
+          <path d={arcPath(arcStart, arcEnd, trackR - 19)} fill="none" stroke="#173364" strokeWidth={1.2} strokeDasharray="5 7" opacity={0.75} />
 
-        {targetMarker}
-        {myVoteMarker}
-        {voteDots}
-        {avgMarker}
+          {separatorAngles}
+          {ticks}
+          {tickLabels}
 
-        {showPointer && (
-          <g className="needle-glow-cyan" style={{ transition: dragging.current ? 'none' : 'transform 0.2s cubic-bezier(.4,1.6,.5,1)' }}>
-            <polygon
-              points={`${needleTip.x},${needleTip.y} ${needleBaseA.x},${needleBaseA.y} ${needleBaseB.x},${needleBaseB.y}`}
-              fill="#4488ff"
-              stroke="#00081a"
-              strokeWidth={1.2}
-            />
-            <circle cx={radius} cy={radius} r={13} fill="#030816" stroke="#1f56c4" strokeWidth={2} />
-            <circle cx={radius} cy={radius} r={7} fill="none" stroke="#61a0ff" strokeWidth={1.4} />
-            <line x1={radius - 14} y1={radius} x2={radius + 14} y2={radius} stroke="#3377ee" strokeWidth={1} />
-            <line x1={radius} y1={radius - 14} x2={radius} y2={radius + 14} stroke="#3377ee" strokeWidth={1} />
-          </g>
-        )}
+          {targetMarker}
+          {myVoteMarker}
+          {voteDots}
+          {avgMarker}
 
-        {showPointer && (
-          <g style={{ pointerEvents: 'none' }}>
-            <rect x={tipLabel.x - 20} y={tipLabel.y - 11} width={40} height={20} rx={2} fill="#030816" stroke="#3377ee" strokeWidth={1.3} opacity={0.95} />
-            <path d={`M ${tipLabel.x - 25} ${tipLabel.y - 11} h 6 M ${tipLabel.x - 25} ${tipLabel.y + 9} h 6 M ${tipLabel.x + 25} ${tipLabel.y - 11} h -6 M ${tipLabel.x + 25} ${tipLabel.y + 9} h -6`} stroke="#61a0ff" strokeWidth={1.1} />
-            <text x={tipLabel.x} y={tipLabel.y + 4} textAnchor="middle" style={{ fontFamily: 'var(--f-read)', fontSize: 16, fill: '#61a0ff' }}>
-              {Math.round(value)}
-            </text>
-          </g>
-        )}
-      </svg>
+          {showPointer && (
+            <g className="needle-glow-cyan" style={{ transition: dragging.current ? 'none' : 'transform 0.2s cubic-bezier(.4,1.6,.5,1)' }}>
+              <polygon
+                points={`${needleTip.x},${needleTip.y} ${needleBaseA.x},${needleBaseA.y} ${needleBaseB.x},${needleBaseB.y}`}
+                fill="#4488ff"
+                stroke="#00081a"
+                strokeWidth={1.2}
+              />
+              <circle cx={radius} cy={radius} r={13} fill="#030816" stroke="#1f56c4" strokeWidth={2} />
+              <circle cx={radius} cy={radius} r={7} fill="none" stroke="#61a0ff" strokeWidth={1.4} />
+              <line x1={radius - 14} y1={radius} x2={radius + 14} y2={radius} stroke="#3377ee" strokeWidth={1} />
+              <line x1={radius} y1={radius - 14} x2={radius} y2={radius + 14} stroke="#3377ee" strokeWidth={1} />
+            </g>
+          )}
 
-      <div className="pressure-axis-labels">
-        <span>{`<- ${leftLabel}`}</span>
-        <span>{`${rightLabel} ->`}</span>
+          {showPointer && (
+            <g style={{ pointerEvents: 'none' }}>
+              <rect x={tipLabel.x - 20} y={tipLabel.y - 11} width={40} height={20} rx={2} fill="#030816" stroke="#3377ee" strokeWidth={1.3} opacity={0.95} />
+              <path d={`M ${tipLabel.x - 25} ${tipLabel.y - 11} h 6 M ${tipLabel.x - 25} ${tipLabel.y + 9} h 6 M ${tipLabel.x + 25} ${tipLabel.y - 11} h -6 M ${tipLabel.x + 25} ${tipLabel.y + 9} h -6`} stroke="#61a0ff" strokeWidth={1.1} />
+              <text x={tipLabel.x} y={tipLabel.y + 4} textAnchor="middle" style={{ fontFamily: 'var(--f-read)', fontSize: 16, fill: '#61a0ff' }}>
+                {Math.round(value)}
+              </text>
+            </g>
+          )}
+        </svg>
       </div>
     </div>
   );

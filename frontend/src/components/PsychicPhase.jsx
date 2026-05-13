@@ -24,6 +24,7 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
   const remaining = useCountdown(gameState.timerEnd);
   const total = gameState.settings.clueTimer;
   const pct = total > 0 ? remaining / total : 0;
+  const roleLabel = lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR';
 
   const lastTickRef = useRef(null);
   useEffect(() => {
@@ -46,7 +47,7 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
     <div className="phase-shell">
       <div className="phase-card panel bevel glow-amber text-center">
         <div className="phase-kicker t-title text-dim">
-          {psychicPlayer?.name || '?'} / TX
+          {psychicPlayer?.name || '?'} / {roleLabel}
         </div>
         <div className="t-title glow-text-amber" style={{ fontSize: 'clamp(18px, 3vw, 28px)' }}>
           {lang === 'en' ? gameState.currentTheme?.shortEN : gameState.currentTheme?.shortPT}

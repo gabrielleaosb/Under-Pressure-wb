@@ -19,8 +19,22 @@ function votePosition(vote) {
   return null;
 }
 
-function voteOverdrive(vote) {
-  return typeof vote === 'object' && !!vote?.overdrive;
+function signed(points) {
+  return `${points >= 0 ? '+' : ''}${points}`;
+}
+
+function navigatorSummary(breakdown, lang) {
+  if (!breakdown) return lang === 'pt' ? 'resultado da tripulacao' : 'crew result';
+  const hitWord = lang === 'pt' ? 'acertos' : 'hits';
+  const strongWord = lang === 'pt' ? 'muito perto' : 'very close';
+  const base = `${breakdown.hits || 0}/${breakdown.expected || 0} ${hitWord}`;
+  return breakdown.strongHits > 0 ? `${base} · ${breakdown.strongHits} ${strongWord}` : base;
+}
+
+function boostLabel(diff, lang) {
+  if (diff === null) return 'BOOST';
+  if (diff <= 25) return lang === 'pt' ? 'BOOST ACERTOU' : 'BOOST HIT';
+  return lang === 'pt' ? 'BOOST FALHOU' : 'BOOST MISSED';
 }
 
 export default function RevealPhase({ gameState, myId, lang, send }) {
@@ -72,6 +86,7 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
   const allVotes = result.votes || {};
   const roundScores = result.roundScores || {};
   const txScore = result.transmitterScore ?? 0;
+  const txBreakdown = result.transmitterScoreBreakdown;
   const averageVote = result.averageVote ?? result.target;
   const isPsychic = gameState.psychicId === myId;
   const voters = gameState.players.filter((player) => player.id !== gameState.psychicId);
@@ -146,52 +161,51 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
 
       <div className="panel bevel reveal-score-sheet" style={{ width: 'min(560px, 100%)', padding: 10 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr auto',
-            alignItems: 'center',
-            gap: 8,
-            padding: '6px 8px',
-            borderRadius: 4,
-            border: '1px solid rgba(255,224,0,.3)',
-            background: 'rgba(255,224,0,.05)',
-          }}>
-            <div style={{ minWidth: 0 }}>
-              <div className="t-body" style={{ fontWeight: 800, fontSize: 15, color: 'var(--neon-amber)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{psychic?.name || '?'}</div>
-              <div className="t-title text-dim" style={{ fontSize: 8, marginTop: 2 }}>{lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR'}</div>
+          <div className="reveal-score-row reveal-score-row--navigator">
+            <div className="reveal-score-main">
+              <div className="reveal-score-name reveal-score-name--navigator">{psychic?.name || '?'}</div>
+              <div className="reveal-score-detail">
+                {lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR'} · {navigatorSummary(txBreakdown, lang)}
+              </div>
+              {txBreakdown?.cleanSweep && (
+                <div className="reveal-score-tag reveal-score-tag--sync">
+                  {lang === 'pt' ? 'SINCRONIA TOTAL' : 'FULL SYNC'}
+                </div>
+              )}
             </div>
-            <div className="t-read glow-text-amber" style={{ fontSize: 26 }}>{txScore >= 0 ? '+' : ''}{txScore}</div>
+            <div className="reveal-score-points reveal-score-points--navigator">
+              {signed(txScore)}
+            </div>
           </div>
           {sortedVoters.map((player) => {
             const rawVote = allVotes[player.id];
             const vote = votePosition(rawVote);
             const diff = vote !== null ? Math.abs(vote - result.target) : null;
-            const grade = diff !== null ? gradeFromDiff(diff, lang) : null;
             const points = roundScores[player.id] ?? 0;
             const usedSurge = rawVote?.boost;
             const isMe = player.id === myId;
+            const scoreTone = points > 0 ? 'good' : points < 0 ? 'bad' : 'neutral';
             return (
-              <div key={player.id} style={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(0, 1fr) auto auto',
-                alignItems: 'center',
-                gap: 8,
-                padding: '7px 9px',
-                borderRadius: 4,
-                border: `1px solid ${isMe ? player.color : 'rgba(255,255,255,.06)'}`,
-                background: isMe ? `${player.color}12` : 'rgba(255,255,255,.02)',
-              }}>
-                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div className="t-body" style={{ fontWeight: 800, fontSize: 15, color: isMe ? player.color : 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</div>
+              <div
+                key={player.id}
+                className={`reveal-score-row reveal-score-row--${scoreTone}${isMe ? ' is-me' : ''}`}
+                style={{ '--player-color': player.color }}
+              >
+                <div className="reveal-score-main">
+                  <div className="reveal-score-name">{player.name}</div>
+                  <div className="reveal-score-detail">
+                    {vote !== null
+                      ? `${lang === 'pt' ? 'palpite' : 'guess'} ${vote} · ${lang === 'pt' ? 'alvo' : 'target'} ${result.target}`
+                      : (lang === 'pt' ? 'sem voto' : 'no vote')}
+                  </div>
                   {usedSurge && (
-                    <span style={{ fontSize: 8, color: 'var(--neon-amber)', border: '1px solid rgba(255,224,0,0.5)', borderRadius: 2, padding: '1px 4px', whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'var(--f-title)' }}>BOOST</span>
+                    <div className={`reveal-score-tag${diff !== null && diff > 25 ? ' reveal-score-tag--danger' : ''}`}>
+                      {boostLabel(diff, lang)}
+                    </div>
                   )}
                 </div>
-                <div className="t-read" style={{ fontSize: 22, color: grade?.color || 'var(--ink-faint)' }}>
-                  {vote ?? '--'} {diff !== null ? `±${Math.round(diff)}` : ''}
-                </div>
-                <div className="t-read" style={{ fontSize: 20, color: points > 0 ? (grade?.color || 'var(--ink)') : points < 0 ? 'var(--neon-coral)' : 'var(--ink-faint)' }}>
-                  {points >= 0 ? '+' : ''}{points}
+                <div className="reveal-score-points">
+                  {signed(points)}
                 </div>
               </div>
             );
