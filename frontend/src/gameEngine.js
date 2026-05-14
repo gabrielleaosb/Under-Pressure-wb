@@ -6,56 +6,13 @@
  * Streaks and BOOST create round-to-round pressure.
  */
 import { db, ref, get, set, update, remove, push, onValue, onChildAdded } from './firebase.js';
-import { PLAYER_COLORS, TEAM_NAME_PAIRS, CARDS, THEMES, selectCard, selectOpenCards, genId } from './gameData.js';
+import { PLAYER_COLORS, selectCard, selectOpenCards, genId } from './gameData.js';
+import { scoreFromDiff, boostBonus, normalizeVote, transmitterScore } from './gameRules.mjs';
 import { SHIP_IDS, SHIP_COLORS } from './components/ShipRoster.jsx';
 
 const ROUND_INTRO_DURATION_MS = 4600;
 
 // ── Scoring ───────────────────────────────────────────────────────────────────
-
-function scoreFromDiff(diff) {
-  if (diff <=  5) return 5;
-  if (diff <= 15) return 4;
-  if (diff <= 25) return 3;
-  if (diff <= 40) return 2;
-  if (diff <= 60) return 1;
-  return -1;
-}
-
-function boostBonus(diff) {
-  if (diff <= 15) return 3;
-  if (diff <= 25) return 1;
-  return -2;
-}
-
-function transmitterScore(voters, votes, target) {
-  const submittedVoters = voters.filter(p => {
-    const vote = votes[p.id];
-    return vote && Number.isFinite(vote.position);
-  });
-  const hitters = submittedVoters.filter(p => Math.abs(votes[p.id].position - target) <= 25);
-  const strongHits = hitters.filter(p => Math.abs(votes[p.id].position - target) <= 15);
-  const cleanSweep = voters.length > 0 && submittedVoters.length === voters.length && hitters.length === voters.length;
-  const cleanSweepBonus = cleanSweep ? Math.ceil(voters.length / 2) : 0;
-
-  return {
-    points: hitters.length * 2 + strongHits.length + cleanSweepBonus,
-    hits: hitters.length,
-    strongHits: strongHits.length,
-    submitted: submittedVoters.length,
-    expected: voters.length,
-    cleanSweep,
-    cleanSweepBonus,
-  };
-}
-
-function normalizeVote(raw) {
-  if (typeof raw === 'number') {
-    return { position: Math.max(0, Math.min(100, Math.round(raw))), boost: false };
-  }
-  const position = Math.max(0, Math.min(100, Math.round(Number(raw?.position) || 50)));
-  return { position, boost: !!(raw?.boost ?? raw?.surge ?? raw?.overdrive) };
-}
 
 function buildHighlight(type, playerId, playerName, value = null) {
   return { type, playerId, playerName, value };
@@ -474,6 +431,7 @@ export class GameEngine {
     const averageVote = numericVotes.length
       ? Math.round(numericVotes.reduce((sum, pos) => sum + pos, 0) / numericVotes.length)
       : target;
+    const avgDiff = Math.abs(averageVote - target);
     const txScore = transmitterScore(voters, votes, target);
     const txPoints = txScore.points;
     if (room.psychicId) {
@@ -503,6 +461,7 @@ export class GameEngine {
       target,
       votes,
       averageVote,
+      avgDiff,
       roundScores,
       streaks: streakUpdates,
       highlights: highlights.slice(0, 5),
@@ -520,6 +479,8 @@ export class GameEngine {
       clue: room.clue ?? null,
       target,
       averageVote,
+      avgDiff,
+      votes,
       roundScores,
       streaks: streakUpdates,
       highlights: highlights.slice(0, 5),

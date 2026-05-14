@@ -40,46 +40,45 @@ function boostLabel(diff, lang) {
 export default function RevealPhase({ gameState, myId, lang, send }) {
   const result = gameState.revealResult;
   const psychic = gameState.players.find((player) => player.id === gameState.psychicId);
-  const revealed = useRef(false);
+  const soundKeyRef = useRef(null);
   const [lockLeft, setLockLeft] = useState(LOCK_SECONDS);
   const [unlocked, setUnlocked] = useState(false);
+  const revealKey = result
+    ? `${gameState.round}:${gameState.psychicId}:${result.target}:${result.averageVote}`
+    : null;
 
   useEffect(() => {
-    if (!result || revealed.current) return;
-
-    revealed.current = true;
-    playRevealDrum();
+    if (!result || !revealKey) return undefined;
 
     const votes = result.votes || {};
     const myVote = votePosition(votes[myId]);
     const myDiff = myVote !== null ? Math.abs(myVote - result.target) : null;
 
-    setTimeout(() => {
-      if (myDiff !== null && myDiff <= 5) playPerfect();
-      else if (myDiff !== null && myDiff <= 25) playGoodResult();
-      else if (myDiff !== null && myDiff > 40) playDamageHit(myDiff > 60);
-    }, 350);
+    if (soundKeyRef.current !== revealKey) {
+      soundKeyRef.current = revealKey;
+      playRevealDrum();
+      setTimeout(() => {
+        if (myDiff !== null && myDiff <= 5) playPerfect();
+        else if (myDiff !== null && myDiff <= 25) playGoodResult();
+        else if (myDiff !== null && myDiff > 40) playDamageHit(myDiff > 60);
+      }, 350);
+    }
 
     setLockLeft(LOCK_SECONDS);
     setUnlocked(false);
 
-    const timerId = setInterval(() => {
-      setLockLeft((previous) => {
-        if (previous <= 1) {
-          clearInterval(timerId);
-          setUnlocked(true);
-          return 0;
-        }
-        return previous - 1;
-      });
-    }, 1000);
+    const startedAt = Date.now();
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      const next = Math.max(0, LOCK_SECONDS - elapsed);
+      setLockLeft(next);
+      if (next === 0) setUnlocked(true);
+    };
+    tick();
+    const timerId = setInterval(tick, 250);
 
     return () => clearInterval(timerId);
-  }, [result, myId]);
-
-  useEffect(() => {
-    if (!result) revealed.current = false;
-  }, [result]);
+  }, [result, revealKey, myId]);
 
   if (!result) return null;
 

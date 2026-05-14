@@ -150,26 +150,10 @@ export const PLAYER_COLORS = [
   '#00ffcc','#ff0066','#ccff00','#0066ff',
 ];
 
-export const TEAM_NAME_PAIRS = [
-  ['Galáxia Vermelha', 'Nebulosa Azul'],
-  ['Meteoro Carmim',   'Pulsar Ciano'],
-  ['Nova Dourada',     'Quasar Prateado'],
-  ['Cometa Escarlate', 'Éden Safira'],
-];
-
 // ── Utilities ───────────────────────────────────────────────────────────────
 
 export function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-}
-
-export function computeResult(avg, target) {
-  const diff = Math.abs(avg - target);
-  if (diff <=  5) return { points:3, damage:0, grade:'PERFECT',    gradePT:'PERFEITO!'       };
-  if (diff <= 15) return { points:2, damage:0, grade:'VERY CLOSE', gradePT:'MUITO PRÓXIMO!'  };
-  if (diff <= 25) return { points:1, damage:1, grade:'CLOSE',      gradePT:'PRÓXIMO!'        };
-  if (diff <= 40) return { points:0, damage:1, grade:'REASONABLE', gradePT:'RAZOÁVEL...'     };
-  return                 { points:0, damage:2, grade:'FAR',        gradePT:'LONGE!'          };
 }
 
 export function selectCard(usedIds = []) {

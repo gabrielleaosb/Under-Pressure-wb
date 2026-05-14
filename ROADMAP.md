@@ -26,23 +26,23 @@ O projeto esta em alpha jogavel. Precisa consolidar seguranca, panes mecanicas e
 
 Esta lista corrige o descompasso entre o estado real do codigo, o README e os itens marcados como concluidos. Tratar como prioridade antes de adicionar mecanicas permanentes novas.
 
-1. Corrigir `GameOver` e `roundHistory`.
-   - `GameOver` espera campos que nao sao gravados hoje (`avgDiff` e `votes` no historico).
-   - Garantir que destaques finais funcionem com dados reais da engine.
+1. ~~Corrigir `GameOver` e `roundHistory`.~~ ✓
+   - Engine grava `avgDiff` e `votes` no historico.
+   - `GameOver` tambem suporta historico antigo com `averageVote`.
 
-2. Atualizar `README.md` para o jogo atual.
+2. ~~Atualizar `README.md` para o jogo atual.~~ ✓
    - Documentar FFA real, navegador rotativo, voto individual, modo TEMATICO/LIVRE, BOOST e streak.
    - Remover regras antigas de equipes, dano acumulado e nave explodindo.
 
-3. Limpar restos de equipe e dano do codigo ativo.
-   - Remover ou isolar `TEAM_NAME_PAIRS`, `computeResult`, textos de equipe/dano em `i18n`, CSS e componentes legados.
+3. ~~Limpar restos de equipe e dano do codigo ativo.~~ ✓
+   - Remover constantes, helpers, textos e CSS legados de equipe/dano no app ativo.
    - Manter dano apenas como cosmetico de nave, se for intencional.
 
 4. Corrigir encoding/mojibake.
    - Priorizar `README.md`, `gameData.js`, `i18n.js`, `CardPicker.jsx`, `RevealPhase.jsx`, `GameOver.jsx` e comentarios visiveis.
 
 5. Fechar o Firebase e decidir estrategia real para segredo.
-   - As regras atuais permitem leitura/escrita publicas.
+   - As regras atuais ainda permitem leitura/escrita por codigo de sala valido.
    - O alvo secreto ainda fica visivel para clientes comuns via sala inteira.
    - Sem backend/auth, segredo e validacao critica nao ficam realmente seguros.
 

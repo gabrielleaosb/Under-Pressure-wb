@@ -47,15 +47,21 @@ export default function GameOver({ gameState, myId, lang, send, isHost, onLeave 
     const hist = gameState.roundHistory || [];
     if (!hist.length) return null;
 
-    // Best transmitter: avg diff of group when they transmitted
+    // Best navigator: average group miss when they transmitted.
     const txDiffs = {};
     hist.forEach(r => {
       if (!r.transmitterId) return;
       if (!txDiffs[r.transmitterId]) txDiffs[r.transmitterId] = { name:r.transmitterName, diffs:[] };
-      if (r.avgDiff !== undefined) txDiffs[r.transmitterId].diffs.push(r.avgDiff);
+      const avgDiff = r.avgDiff ?? (
+        Number.isFinite(Number(r.averageVote)) && Number.isFinite(Number(r.target))
+          ? Math.abs(Number(r.averageVote) - Number(r.target))
+          : null
+      );
+      if (avgDiff !== null) txDiffs[r.transmitterId].diffs.push(avgDiff);
     });
     let bestTxId=null, bestTxAvg=Infinity;
     Object.entries(txDiffs).forEach(([id,{diffs}]) => {
+      if (!diffs.length) return;
       const avg = diffs.reduce((a,b)=>a+b,0)/diffs.length;
       if (avg < bestTxAvg) { bestTxAvg=avg; bestTxId=id; }
     });
@@ -67,7 +73,7 @@ export default function GameOver({ gameState, myId, lang, send, isHost, onLeave 
         const pos = votePosition(vote);
         if (pos === null) return;
         const d = Math.abs(pos - r.target);
-        if (d < bestDiff && r.transmitterId !== pid) {
+        if (Number.isFinite(Number(r.target)) && d < bestDiff && r.transmitterId !== pid) {
           bestDiff = d;
           bestVote = { name: players.find(p=>p.id===pid)?.name || '?', diff:d, clue:r.clue };
         }

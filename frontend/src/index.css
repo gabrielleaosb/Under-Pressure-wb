@@ -30,10 +30,6 @@
   --neon-mint:   #00ff88;
   --neon-violet: #b066ff;
 
-  /* Team colors */
-  --team-0: var(--neon-coral);
-  --team-1: var(--neon-blue);
-
   /* CSS-compat aliases used throughout components */
   --cyan:    var(--neon-cyan);
   --magenta: var(--neon-violet);
@@ -137,7 +133,6 @@ body::before {
   100% { transform: scale(1); opacity: 1; }
 }
 @keyframes scanflash  { 0%{opacity:0;} 15%{opacity:1;} 100%{opacity:0;} }
-@keyframes damage-alert { 0%,100%{opacity:0;} 40%,60%{opacity:1;} }
 @keyframes round-brief-in {
   from { opacity:0; transform:translate3d(0, 6px, 0); }
   to { opacity:1; transform:translate3d(0, 0, 0); }
@@ -1768,8 +1763,6 @@ body::before {
 }
 .badge-you     { background:var(--neon-amber);             color:#2a1f00; box-shadow:0 0 8px rgba(255,224,0,.6); }
 .badge-captain { background:#2a1f00; color:var(--neon-amber); border:1px solid var(--neon-amber); }
-.badge-team-0  { background:rgba(255,51,85,.2);  color:var(--neon-coral); border:1px solid var(--neon-coral); }
-.badge-team-1  { background:rgba(0,170,255,.2);  color:var(--neon-blue);  border:1px solid var(--neon-blue); }
 .badge-bot     { background:rgba(100,100,130,.15); color:var(--ink-dim); border:1px solid var(--metal-2); }
 
 /* ── Tag (alternate) ── */
@@ -2442,7 +2435,6 @@ body::before {
 
 /* ── Overlay flashes ── */
 .scanflash     { position:fixed; inset:0; pointer-events:none; z-index:9998; background:rgba(0,255,255,.06); animation:scanflash .45s ease forwards; }
-.damage-overlay{ position:fixed; inset:0; pointer-events:none; z-index:9990; background:radial-gradient(ellipse at center,transparent 35%,rgba(255,30,50,.38) 100%); animation:damage-alert 1.2s ease 2; }
 
 .round-brief {
   position:fixed;
@@ -2669,12 +2661,13 @@ body::before {
   .scoreboard { padding:7px 10px; }
   .home-center { justify-content: flex-start; padding: 54px 14px 24px; }
   .home-main-stack {
-    --home-scale: 1.08;
-    width: min(360px, calc(100vw - 28px));
+    --home-scale: 1;
+    width: min(330px, calc(100vw - 44px));
   }
+  .home-logo { max-width: 100%; }
   .home-top-status { font-size: 13px; }
   .home-logo__ships { transform: scale(.82); }
-  .home-logo__title { font-size: clamp(23px, 9.2vw, 34px); }
+  .home-logo__title { font-size: clamp(22px, 7.6vw, 30px); }
   .home-card {
     align-self: stretch;
     width: 100%;
@@ -2682,6 +2675,8 @@ body::before {
     margin-left: 0;
     padding: 16px;
   }
+  .home-flow-header { gap: 8px; }
+  .home-flow-header b { font-size: 11px; }
   .home-action-grid { grid-template-columns: 1fr; }
   .phase-card { padding: 15px; }
   .phase-input-row .btn { width: 100%; }
