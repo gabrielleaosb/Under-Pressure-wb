@@ -31,6 +31,8 @@ const ROULETTE_LAB2_MODE = SEARCH_PARAMS.has('roletas2');
 const GAUGE_LAB_MODE = SEARCH_PARAMS.has('gauge') || SEARCH_PARAMS.has('manometro');
 const BACKGROUND_LAB_MODE = SEARCH_PARAMS.has('backgrounds') || SEARCH_PARAMS.has('fundos') || SEARCH_PARAMS.has('bg');
 const SPECIAL_MODE = SHIPYARD_MODE || ROULETTE_LAB_MODE || ROULETTE_LAB2_MODE || GAUGE_LAB_MODE || BACKGROUND_LAB_MODE;
+const HOST_HEARTBEAT_INTERVAL_MS = 5000;
+const HOST_STALE_AFTER_MS = 18000;
 
 function normalizeRoomCode(code) {
   return String(code || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
@@ -201,29 +203,51 @@ export default function App() {
   }, [roomCode, myId, lang, showError, flash, clearActiveRoom]);
 
   useEffect(() => {
-    if (!rawRoom || !roomCode) return;
-    const players = Object.values(rawRoom.players || {});
-    const connectedHumans = players
-      .filter((player) => !player.isBot && player.connected !== false)
-      .sort((a, b) => String(a.id).localeCompare(String(b.id)));
-    const nextHost = connectedHumans[0];
-    const currentHost = rawRoom.players?.[rawRoom.hostId];
+    if (!isHost || !roomCode) return undefined;
+    const sendHeartbeat = () => {
+      update(ref(db, `rooms/${roomCode}`), { hostHeartbeatAt: Date.now() }).catch(() => {});
+    };
+    sendHeartbeat();
+    const interval = window.setInterval(sendHeartbeat, HOST_HEARTBEAT_INTERVAL_MS);
+    return () => window.clearInterval(interval);
+  }, [isHost, roomCode]);
 
-    if (!nextHost || nextHost.id !== myId || currentHost?.connected !== false) return;
+  useEffect(() => {
+    if (!rawRoom || !roomCode) return undefined;
 
-    const roomUpdates = {
-      [`rooms/${roomCode}/hostId`]: nextHost.id,
-      [`rooms/${roomCode}/players/${nextHost.id}/isHost`]: true,
+    const electHostIfNeeded = () => {
+      const players = Object.values(rawRoom.players || {});
+      const currentHost = rawRoom.players?.[rawRoom.hostId];
+      const heartbeatAt = Number(rawRoom.hostHeartbeatAt || 0);
+      const hostIsStale = heartbeatAt > 0 && Date.now() - heartbeatAt > HOST_STALE_AFTER_MS;
+      const hostIsGone = !currentHost || currentHost.connected === false;
+      const connectedHumans = players
+        .filter((player) => !player.isBot && player.connected !== false)
+        .filter((player) => !hostIsStale || player.id !== rawRoom.hostId)
+        .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+      const nextHost = connectedHumans[0];
+
+      if (!nextHost || nextHost.id !== myId || (!hostIsGone && !hostIsStale)) return;
+
+      const roomUpdates = {
+        [`rooms/${roomCode}/hostId`]: nextHost.id,
+        [`rooms/${roomCode}/hostHeartbeatAt`]: Date.now(),
+        [`rooms/${roomCode}/players/${nextHost.id}/isHost`]: true,
+      };
+
+      if (rawRoom.hostId && rawRoom.hostId !== nextHost.id) {
+        roomUpdates[`rooms/${roomCode}/players/${rawRoom.hostId}/isHost`] = false;
+      }
+      if (rawRoom.phase === 'lobby' && rawRoom.transmitterId === rawRoom.hostId) {
+        roomUpdates[`rooms/${roomCode}/transmitterId`] = nextHost.id;
+      }
+
+      update(ref(db), roomUpdates).catch(() => {});
     };
 
-    if (rawRoom.hostId) {
-      roomUpdates[`rooms/${roomCode}/players/${rawRoom.hostId}/isHost`] = false;
-    }
-    if (rawRoom.phase === 'lobby' && rawRoom.transmitterId === rawRoom.hostId) {
-      roomUpdates[`rooms/${roomCode}/transmitterId`] = nextHost.id;
-    }
-
-    update(ref(db), roomUpdates).catch(() => {});
+    electHostIfNeeded();
+    const interval = window.setInterval(electHostIfNeeded, HOST_HEARTBEAT_INTERVAL_MS);
+    return () => window.clearInterval(interval);
   }, [rawRoom, roomCode, myId]);
 
   useEffect(() => {

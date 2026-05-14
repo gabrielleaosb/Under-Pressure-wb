@@ -19,8 +19,12 @@ O projeto ja tem uma fatia vertical funcional:
 - Modo LIVRE: navegador escolhe entre N cartas estilo Wavelength em vez de roleta tematica.
 - Dev mode com bots para testar fluxo solo.
 - Desconexao de navegador pula a rodada automaticamente; votantes desconectados sao ignorados.
+- Regras do Firebase endurecidas por caminho: sala, jogadores, acoes, votos, placar, historico e locks tem validacao explicita.
+- Host heartbeat com troca de host quando o navegador autoridade fica stale.
+- Timer de reveal/proxima rodada corrigido com `revealUnlockAt` e finalizacao de voto idempotente por `finalizeLocks`.
+- Dependencias auditadas apos upgrade do Firebase; `npm audit --omit=dev` sem vulnerabilidades conhecidas.
 
-O projeto esta em alpha jogavel. Precisa consolidar seguranca, panes mecanicas e playtest real.
+O projeto esta em alpha jogavel. Precisa consolidar segredo real do alvo, panes mecanicas e playtest real.
 
 ## URGENTE - Roadmap Real Recomendado
 
@@ -41,8 +45,10 @@ Esta lista corrige o descompasso entre o estado real do codigo, o README e os it
 4. Corrigir encoding/mojibake.
    - Priorizar `README.md`, `gameData.js`, `i18n.js`, `CardPicker.jsx`, `RevealPhase.jsx`, `GameOver.jsx` e comentarios visiveis.
 
-5. Fechar o Firebase e decidir estrategia real para segredo.
-   - As regras atuais ainda permitem leitura/escrita por codigo de sala valido.
+5. Fechar o Firebase e decidir estrategia real para segredo. (parcialmente feito)
+   - O `.write` amplo de `rooms/$code` foi removido e substituido por permissoes/validacoes granulares.
+   - Acoes aceitam apenas tipos conhecidos e timestamps plausiveis.
+   - Votos rejeitam campos extras e validam `position`/`boost`.
    - O alvo secreto ainda fica visivel para clientes comuns via sala inteira.
    - Sem backend/auth, segredo e validacao critica nao ficam realmente seguros.
 
@@ -102,14 +108,14 @@ Objetivo: permitir uma noite de teste com 4 a 8 amigos sem travar o fluxo.
 
 Tarefas tecnicas:
 
-- Endurecer regras do Firebase.
-- Parar de expor o alvo secreto para todos os clientes.
-- Validar acoes no engine com mais rigor.
-- Tornar a fila de acoes idempotente.
-- ~~Melhorar reconexao e troca de host.~~ ✓ (skip automatico ao desconectar; votantes ignorados)
+- ~~Endurecer regras do Firebase.~~ feito (sem `.write` amplo; validacoes granulares por caminho)
+- Parar de expor o alvo secreto para todos os clientes. (pendente; exige backend/auth ou separacao real de leitura)
+- ~~Validar acoes no engine com mais rigor.~~ feito (whitelist nas regras e validacoes de fase/ator no engine)
+- ~~Tornar a finalizacao de voto idempotente.~~ feito (`finalizeLocks` por rodada)
+- ~~Melhorar reconexao e troca de host.~~ feito (skip automatico, votantes ignorados, heartbeat e host stale election)
 - Criar limpeza de salas antigas.
 - Adicionar tela de erro clara quando Firebase nao estiver configurado.
-- ~~Criar testes unitarios para score, overdrive, streak e final de jogo.~~ (dano removido; testes ainda pendentes)
+- ~~Criar testes unitarios para score, BOOST e pontuacao do navegador.~~ feito (cobertura inicial; testes de fluxo engine ainda pendentes)
 
 Tarefas de UX:
 
@@ -124,7 +130,7 @@ Criterio de pronto:
 
 - Host cria sala, 4 pessoas entram, partida termina e todos veem o mesmo resultado.
 - ~~Um jogador desconectado nao trava a rodada.~~ ✓
-- O alvo secreto nao fica trivialmente visivel para jogadores comuns.
+- O alvo secreto nao fica trivialmente visivel para jogadores comuns. (ainda pendente sem backend/auth)
 
 ## Marco 2 - Identidade De Nave Sob Pressao
 
@@ -220,7 +226,7 @@ Objetivo: preparar o jogo para pessoas fora do circulo direto.
 Tarefas:
 
 - Backend ou funcao autoritativa para segredos e validacao critica.
-- Regras de banco fechadas.
+- Regras de banco fechadas para escrita cliente. (parcial feito; leitura por identidade ainda depende de auth/backend)
 - Rate limit basico para acoes.
 - Room lifecycle completo.
 - Observabilidade minima: logs de erro e eventos anonimos.
@@ -237,7 +243,7 @@ Criterio de pronto:
 ## Prioridades P0
 
 - Corrigir exposicao do alvo secreto.
-- Fechar regras publicas do Firebase.
+- ~~Fechar escrita publica ampla do Firebase.~~ feito (regras granulares por caminho; ainda sem segredo real)
 - ~~Consolidar FFA vs equipes.~~ ✓
 - Playtestar com 4+ pessoas.
 - ~~Transformar overdrive em mecanica de decisao real.~~ ✓ (BOOST com risco/recompensa)
@@ -249,8 +255,8 @@ Criterio de pronto:
 - Mais cartas tematicas (meta: 150+).
 - ~~Pack de cartas abertas estilo Wavelength.~~ ✓
 - ~~Melhor feedback de turno e identidade de fase.~~ ✓ (round intro, card picker, transicoes)
-- ~~Melhor host migration.~~ ✓ (skip automatico, transferencia de host)
-- Testes automaticos de engine.
+- ~~Melhor host migration.~~ feito (skip automatico, transferencia de host e heartbeat stale)
+- Testes automaticos de engine. (parcial: regras puras cobertas; fluxo engine ainda pendente)
 - ~~Melhor estado vazio e mensagens de erro.~~ ✓ (error handling no engine, telas de espera)
 - Panes de comunicacao (primeira iteracao).
 - Rejoin mid-game.

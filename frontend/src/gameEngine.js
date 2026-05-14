@@ -11,6 +11,7 @@ import { scoreFromDiff, boostBonus, clampPosition, normalizeVote, transmitterSco
 import { SHIP_IDS, SHIP_COLORS } from './components/ShipRoster.jsx';
 
 const ROUND_INTRO_DURATION_MS = 4600;
+const PLAYER_NAME_MAX_LENGTH = 24;
 
 // ── Scoring ───────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,10 @@ function sanitizeShipLoadout(loadout = {}, fallback = {}) {
   };
 }
 
+function sanitizePlayerName(name, fallback = 'Player') {
+  return String(name || fallback).trim().slice(0, PLAYER_NAME_MAX_LENGTH) || fallback;
+}
+
 // ── Room code generator ───────────────────────────────────────────────────────
 
 export async function generateRoomCode() {
@@ -71,6 +76,7 @@ export async function generateRoomCode() {
 // ── Create room ───────────────────────────────────────────────────────────────
 
 export async function createRoom(code, hostId, playerName, loadout = {}) {
+  const safeName = sanitizePlayerName(playerName);
   const roomData = {
     code, hostId,
     phase: 'lobby',
@@ -87,7 +93,7 @@ export async function createRoom(code, hostId, playerName, loadout = {}) {
     settings: { rounds: 7, clueTimer: 30, voteTimer: 30, targetMode: 'random', cardMode: 'themed', cardOptions: 3 },
     players: {
       [hostId]: {
-        id: hostId, name: playerName,
+        id: hostId, name: safeName,
         color: PLAYER_COLORS[0],
         ...sanitizeShipLoadout(loadout, getShipLoadout(0)),
         connected: true, isHost: true, isBot: false,
@@ -97,6 +103,7 @@ export async function createRoom(code, hostId, playerName, loadout = {}) {
     playerStreaks: {},
     startingTransmitterId: hostId,
     createdAt: Date.now(),
+    hostHeartbeatAt: Date.now(),
   };
   await set(ref(db, `rooms/${code}`), roomData);
 }
@@ -111,7 +118,7 @@ export async function addPlayerToRoom(code, playerId, playerName, loadout = {}) 
   if (existingById) {
     await update(ref(db, `rooms/${code}/players/${playerId}`), {
       connected: true,
-      name: String(playerName || existingById.name).trim().slice(0, 20) || existingById.name,
+      name: sanitizePlayerName(playerName, existingById.name),
       ...sanitizeShipLoadout(loadout, existingById),
     });
     return { rejoin: true, playerId };
@@ -128,7 +135,7 @@ export async function addPlayerToRoom(code, playerId, playerName, loadout = {}) 
   const shipIdx   = Object.keys(room.players || {}).length;
   const selectedLoadout = sanitizeShipLoadout(loadout, getShipLoadout(shipIdx));
   await set(ref(db, `rooms/${code}/players/${playerId}`), {
-    id: playerId, name: playerName,
+    id: playerId, name: sanitizePlayerName(playerName),
     color: PLAYER_COLORS[colorIdx],
     ...selectedLoadout,
     connected: true, isHost: false, isBot: false,
