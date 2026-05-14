@@ -41,6 +41,8 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
   const result = gameState.revealResult;
   const psychic = gameState.players.find((player) => player.id === gameState.psychicId);
   const soundKeyRef = useRef(null);
+  const startedAtRef = useRef(null);
+  const activeRevealKeyRef = useRef(null);
   const [lockLeft, setLockLeft] = useState(LOCK_SECONDS);
   const [unlocked, setUnlocked] = useState(false);
   const revealKey = result
@@ -48,35 +50,43 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
     : null;
 
   useEffect(() => {
-    if (!result || !revealKey) return undefined;
-
-    const votes = result.votes || {};
-    const myVote = votePosition(votes[myId]);
-    const myDiff = myVote !== null ? Math.abs(myVote - result.target) : null;
-
-    if (soundKeyRef.current !== revealKey) {
-      soundKeyRef.current = revealKey;
-      playRevealDrum();
-      setTimeout(() => {
-        if (myDiff !== null && myDiff <= 5) playPerfect();
-        else if (myDiff !== null && myDiff <= 25) playGoodResult();
-        else if (myDiff !== null && myDiff > 40) playDamageHit(myDiff > 60);
-      }, 350);
+    if (!result || !revealKey) {
+      startedAtRef.current = null;
+      activeRevealKeyRef.current = null;
+      return undefined;
     }
 
-    setLockLeft(LOCK_SECONDS);
-    setUnlocked(false);
+    // New reveal — reset timer and play sounds
+    if (activeRevealKeyRef.current !== revealKey) {
+      activeRevealKeyRef.current = revealKey;
+      startedAtRef.current = Date.now();
+      setLockLeft(LOCK_SECONDS);
+      setUnlocked(false);
 
-    const startedAt = Date.now();
+      if (soundKeyRef.current !== revealKey) {
+        soundKeyRef.current = revealKey;
+        playRevealDrum();
+        const votes = result.votes || {};
+        const myVote = votePosition(votes[myId]);
+        const myDiff = myVote !== null ? Math.abs(myVote - result.target) : null;
+        setTimeout(() => {
+          if (myDiff !== null && myDiff <= 5) playPerfect();
+          else if (myDiff !== null && myDiff <= 25) playGoodResult();
+          else if (myDiff !== null && myDiff > 40) playDamageHit(myDiff > 60);
+        }, 350);
+      }
+    }
+
+    if (!startedAtRef.current) return undefined;
+
     const tick = () => {
-      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000);
       const next = Math.max(0, LOCK_SECONDS - elapsed);
       setLockLeft(next);
       if (next === 0) setUnlocked(true);
     };
     tick();
     const timerId = setInterval(tick, 250);
-
     return () => clearInterval(timerId);
   }, [result, revealKey, myId]);
 
