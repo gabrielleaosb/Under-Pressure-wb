@@ -7,15 +7,18 @@ test('scoreFromDiff maps miss distance to base score', () => {
   assert.equal(scoreFromDiff(5), 5);
   assert.equal(scoreFromDiff(15), 4);
   assert.equal(scoreFromDiff(25), 3);
-  assert.equal(scoreFromDiff(40), 2);
-  assert.equal(scoreFromDiff(60), 1);
-  assert.equal(scoreFromDiff(61), -1);
+  assert.equal(scoreFromDiff(35), 2);
+  assert.equal(scoreFromDiff(49), 1);
+  assert.equal(scoreFromDiff(50), 0);
+  assert.equal(scoreFromDiff(99), 0);
 });
 
 test('boostBonus rewards close guesses and punishes risky misses', () => {
   assert.equal(boostBonus(15), 3);
   assert.equal(boostBonus(25), 1);
   assert.equal(boostBonus(26), -2);
+  assert.equal(boostBonus(50), -2);
+  assert.equal(boostBonus(51), -3);
 });
 
 test('normalizeVote accepts legacy and current vote payloads', () => {

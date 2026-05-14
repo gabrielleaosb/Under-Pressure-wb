@@ -2,15 +2,16 @@ export function scoreFromDiff(diff) {
   if (diff <= 5) return 5;
   if (diff <= 15) return 4;
   if (diff <= 25) return 3;
-  if (diff <= 40) return 2;
-  if (diff <= 60) return 1;
-  return -1;
+  if (diff <= 35) return 2;
+  if (diff < 50) return 1;
+  return 0;
 }
 
 export function boostBonus(diff) {
   if (diff <= 15) return 3;
   if (diff <= 25) return 1;
-  return -2;
+  if (diff <= 50) return -2;
+  return -3;
 }
 
 export function clampPosition(value, fallback = 50, min = 0, max = 100) {
