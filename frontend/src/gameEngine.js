@@ -7,17 +7,20 @@
  */
 import { db, ref, get, set, update, remove, push, onValue, onChildAdded, runTransaction } from './firebase.js';
 import { PLAYER_COLORS, selectCard, selectOpenCards, genId } from './gameData.js';
-import { scoreFromDiff, boostBonus, clampPosition, normalizeVote, transmitterScore } from './gameRules.mjs';
+import {
+  DEFAULT_ROOM_TTL_MS,
+  clampPosition,
+  findRejoinPlayer,
+  isRoomExpired,
+  resolveRound,
+  roomExpiresAt,
+} from './gameRules.mjs';
 import { SHIP_IDS, SHIP_COLORS } from './components/ShipRoster.jsx';
 
 const ROUND_INTRO_DURATION_MS = 4600;
 const PLAYER_NAME_MAX_LENGTH = 24;
 
 // ── Scoring ───────────────────────────────────────────────────────────────────
-
-function buildHighlight(type, playerId, playerName, value = null) {
-  return { type, playerId, playerName, value };
-}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -28,6 +31,13 @@ function rref(roomCode, ...paths) {
 async function getRoom(roomCode) {
   const snap = await get(ref(db, `rooms/${roomCode}`));
   return snap.val();
+}
+
+export async function deleteRoomIfExpired(roomCode, now = Date.now()) {
+  const room = await getRoom(roomCode);
+  if (!room || !isRoomExpired(room, now)) return false;
+  await remove(ref(db, `rooms/${roomCode}`));
+  return true;
 }
 
 async function roomUpdate(roomCode, data) {
@@ -67,8 +77,12 @@ export async function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   for (let attempt = 0; attempt < 20; attempt++) {
     const code = Array.from({length:4}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
-    const snap = await get(ref(db, `rooms/${code}/code`));
+    const snap = await get(ref(db, `rooms/${code}`));
     if (!snap.exists()) return code;
+    if (isRoomExpired(snap.val())) {
+      await remove(ref(db, `rooms/${code}`)).catch(() => {});
+      return code;
+    }
   }
   return genId().slice(0, 4).toUpperCase();
 }
@@ -77,6 +91,7 @@ export async function generateRoomCode() {
 
 export async function createRoom(code, hostId, playerName, loadout = {}) {
   const safeName = sanitizePlayerName(playerName);
+  const createdAt = Date.now();
   const roomData = {
     code, hostId,
     phase: 'lobby',
@@ -102,8 +117,9 @@ export async function createRoom(code, hostId, playerName, loadout = {}) {
     playerScores: {},
     playerStreaks: {},
     startingTransmitterId: hostId,
-    createdAt: Date.now(),
-    hostHeartbeatAt: Date.now(),
+    createdAt,
+    expiresAt: roomExpiresAt(createdAt, DEFAULT_ROOM_TTL_MS),
+    hostHeartbeatAt: createdAt,
   };
   await set(ref(db, `rooms/${code}`), roomData);
 }
@@ -113,6 +129,12 @@ export async function createRoom(code, hostId, playerName, loadout = {}) {
 export async function addPlayerToRoom(code, playerId, playerName, loadout = {}) {
   const room = await getRoom(code);
   if (!room) return { error: 'room_not_found' };
+  if (isRoomExpired(room)) {
+    await remove(ref(db, `rooms/${code}`)).catch(() => {});
+    return { error: 'room_not_found' };
+  }
+
+  const safeName = sanitizePlayerName(playerName);
   const existingById = room.players?.[playerId];
 
   if (existingById) {
@@ -122,6 +144,18 @@ export async function addPlayerToRoom(code, playerId, playerName, loadout = {}) 
       ...sanitizeShipLoadout(loadout, existingById),
     });
     return { rejoin: true, playerId };
+  }
+
+  if (room.phase !== 'lobby') {
+    const rejoinPlayer = findRejoinPlayer(room.players, safeName);
+    if (rejoinPlayer) {
+      await update(ref(db, `rooms/${code}/players/${rejoinPlayer.id}`), {
+        connected: true,
+        name: safeName,
+        ...sanitizeShipLoadout(loadout, rejoinPlayer),
+      });
+      return { rejoin: true, playerId: rejoinPlayer.id };
+    }
   }
 
   if (room.phase !== 'lobby') {
@@ -135,7 +169,7 @@ export async function addPlayerToRoom(code, playerId, playerName, loadout = {}) 
   const shipIdx   = Object.keys(room.players || {}).length;
   const selectedLoadout = sanitizeShipLoadout(loadout, getShipLoadout(shipIdx));
   await set(ref(db, `rooms/${code}/players/${playerId}`), {
-    id: playerId, name: sanitizePlayerName(playerName),
+    id: playerId, name: safeName,
     color: PLAYER_COLORS[colorIdx],
     ...selectedLoadout,
     connected: true, isHost: false, isBot: false,
@@ -413,97 +447,14 @@ export class GameEngine {
         get(rref(this.roomCode, 'psychicSecret')),
       ]);
       const rawVotes = votesSnap.val() || {};
-      const eligibleVoters = allPlayers(room).filter(p => (
-        p.id !== room.psychicId && (p.isBot || p.connected !== false || rawVotes[p.id] !== undefined)
-      ));
-      const votes = Object.fromEntries(
-        eligibleVoters
-          .filter((player) => rawVotes[player.id] !== undefined)
-          .map((player) => [player.id, normalizeVote(rawVotes[player.id])]),
-      );
-      const target = clampPosition(secretSnap.val()?.targetPosition);
-
-      const voters = eligibleVoters;
-      const roundScores = {};
-      const roundStreaks = {};
-      const highlights = [];
-      const previousStreaks = room.playerStreaks || {};
-
-      voters.forEach(p => {
-        const vote = votes[p.id];
-        if (!vote) return;
-        const diff = Math.abs(vote.position - target);
-        const baseScore = scoreFromDiff(diff);
-        const bonus = vote.boost ? boostBonus(diff) : 0;
-        const streak = diff <= 15 ? (previousStreaks[p.id] || 0) + 1 : 0;
-        const streakBonus = streak >= 3 ? 1 : 0;
-        const points = baseScore + bonus + streakBonus;
-
-        roundScores[p.id] = points;
-        roundStreaks[p.id] = streak;
-
-        if (diff <= 5) highlights.push(buildHighlight('perfect', p.id, p.name, diff));
-        else if (vote.boost && diff <= 25) highlights.push(buildHighlight('boost_hit', p.id, p.name, points));
-        else if (vote.boost && diff > 25) highlights.push(buildHighlight('boost_miss', p.id, p.name, bonus));
-        else if (streak >= 3) highlights.push(buildHighlight('streak', p.id, p.name, streak));
-      });
-
-      const numericVotes = Object.values(votes).map(v => v.position).filter(pos => Number.isFinite(pos));
-      const averageVote = numericVotes.length
-        ? Math.round(numericVotes.reduce((sum, pos) => sum + pos, 0) / numericVotes.length)
-        : target;
-      const avgDiff = Math.abs(averageVote - target);
-      const txScore = transmitterScore(voters, votes, target);
-      const txPoints = txScore.points;
-      if (room.psychicId) {
-        const txStreak = txScore.cleanSweep ? (previousStreaks[room.psychicId] || 0) + 1 : 0;
-        roundScores[room.psychicId] = txPoints + (txStreak >= 3 ? 1 : 0);
-        roundStreaks[room.psychicId] = txStreak;
-        const tx = allPlayers(room).find(p => p.id === room.psychicId);
-        if (txScore.cleanSweep && voters.length >= 2) {
-          highlights.push(buildHighlight('clean_tx', room.psychicId, tx?.name || '?', txPoints));
-        }
-      }
-
       const existing = (await get(rref(this.roomCode, 'playerScores'))).val() || {};
-      const scoreUpdates = {};
-      const streakUpdates = {};
-      allPlayers(room).forEach((player) => {
-        scoreUpdates[player.id] = (existing[player.id] || 0) + (roundScores[player.id] || 0);
-        streakUpdates[player.id] = roundStreaks[player.id] || 0;
+      const resolved = resolveRound({
+        room: { ...room, playerScores: existing },
+        rawVotes,
+        target: secretSnap.val()?.targetPosition,
+        now: Date.now(),
       });
-
-      const txName = allPlayers(room).find(p => p.id === room.psychicId)?.name;
-      const revealUnlockAt = Date.now() + 5000;
-      const revealResult = {
-        target,
-        votes,
-        averageVote,
-        avgDiff,
-        roundScores,
-        streaks: streakUpdates,
-        highlights: highlights.slice(0, 5),
-        transmitterScore: txPoints,
-        transmitterScoreBreakdown: txScore,
-        revealUnlockAt,
-      };
-
-      const historyEntry = {
-        round: room.round,
-        transmitterId: room.psychicId,
-        transmitterName: txName,
-        theme: room.currentTheme ?? null,
-        card: room.currentCard ?? null,
-        clue: room.clue ?? null,
-        target,
-        averageVote,
-        avgDiff,
-        votes,
-        roundScores,
-        streaks: streakUpdates,
-        highlights: highlights.slice(0, 5),
-        transmitterScore: txPoints,
-      };
+      const { scoreUpdates, streakUpdates, revealResult, historyEntry } = resolved;
       const historyKey = push(rref(this.roomCode, 'roundHistory')).key || genId();
       await update(ref(db), {
         [`rooms/${this.roomCode}/playerScores`]: scoreUpdates,
@@ -511,7 +462,7 @@ export class GameEngine {
         [`rooms/${this.roomCode}/roundHistory/${historyKey}`]: historyEntry,
         [`rooms/${this.roomCode}/phase`]: 'reveal',
         [`rooms/${this.roomCode}/revealResult`]: revealResult,
-        [`rooms/${this.roomCode}/revealUnlockAt`]: revealUnlockAt,
+        [`rooms/${this.roomCode}/revealUnlockAt`]: revealResult.revealUnlockAt,
         [`rooms/${this.roomCode}/timerEnd`]: null,
       });
       releaseLockOnError = false;

@@ -186,6 +186,56 @@ export function playDamageHit(heavy = false) {
   }
 }
 
+export function playTensionBuild() {
+  const c = ac(); if (!c) return;
+  const t = c.currentTime;
+  // Sub-bass drone rising slowly
+  osc(42, t,      1.0, 'sine', 0.26, 68);
+  osc(84, t+0.12, 0.8, 'sine', 0.12, 110);
+  // Digital scan pulses
+  [0.32, 0.58, 0.82].forEach(d => {
+    osc(440, t+d, 0.04, 'square', 0.055);
+    osc(220, t+d+0.022, 0.035, 'square', 0.04);
+  });
+  // High shimmer
+  osc(2093, t+0.18, 0.28, 'sine', 0.03);
+}
+
+export function playVoteReveal(index = 0) {
+  const c = ac(); if (!c) return;
+  const t = c.currentTime;
+  const pitch = 300 + index * 20;
+  osc(pitch,       t,       0.055, 'square', 0.10);
+  osc(pitch * 1.5, t+0.04,  0.045, 'sine',   0.06);
+}
+
+export function playTargetLock() {
+  const c = ac(); if (!c) return;
+  const t = c.currentTime;
+  // Heavy thud
+  osc(42,   t,        0.58, 'sine',     0.52, 22);
+  osc(72,   t+0.022,  0.42, 'sawtooth', 0.28);
+  // Metallic strike
+  osc(1300, t,        0.09, 'sine',     0.22, 550);
+  osc(820,  t+0.07,   0.20, 'sine',     0.14);
+  // Resonant harmonics
+  [210, 330, 490].forEach((f, i) => osc(f, t+0.04+i*0.033, 0.24, 'sine', 0.07));
+  // Confirmation ping after impact settles
+  osc(1760, t+0.18, 0.14, 'sine', 0.06);
+}
+
+export function playScorePop(positive = true) {
+  const c = ac(); if (!c) return;
+  const t = c.currentTime;
+  if (positive) {
+    osc(680, t,       0.04, 'sine',     0.13);
+    osc(900, t+0.038, 0.06, 'sine',     0.10);
+  } else {
+    osc(250, t,       0.06, 'sawtooth', 0.10);
+    osc(190, t+0.052, 0.08, 'sawtooth', 0.08);
+  }
+}
+
 // ── Game Over ──────────────────────────────────────────────────────────────
 
 export function playWin() {

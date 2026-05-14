@@ -1,15 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import PressurePanel from './PressurePanel.jsx';
-import { playRevealDrum, playPerfect, playGoodResult, playDamageHit, playClick } from '../sounds.js';
+import {
+  playPerfect, playGoodResult, playDamageHit, playClick,
+  playTensionBuild, playVoteReveal, playTargetLock, playScorePop,
+} from '../sounds.js';
 
 const LOCK_SECONDS = 5;
 
 function gradeFromDiff(diff, lang) {
-  if (diff <= 5) return { label: lang === 'pt' ? 'PERFEITO' : 'PERFECT', color: 'var(--neon-mint)' };
+  if (diff <= 5)  return { label: lang === 'pt' ? 'PERFEITO'  : 'PERFECT',    color: 'var(--neon-mint)' };
   if (diff <= 15) return { label: lang === 'pt' ? 'MUITO PERTO' : 'VERY CLOSE', color: 'var(--neon-cyan)' };
-  if (diff <= 25) return { label: lang === 'pt' ? 'PERTO' : 'CLOSE', color: 'var(--neon-amber)' };
-  if (diff <= 40) return { label: lang === 'pt' ? 'RAZOAVEL' : 'REASONABLE', color: 'var(--orange)' };
-  if (diff <= 60) return { label: lang === 'pt' ? 'LONGE' : 'FAR', color: 'var(--neon-coral)' };
+  if (diff <= 25) return { label: lang === 'pt' ? 'PERTO'     : 'CLOSE',      color: 'var(--neon-amber)' };
+  if (diff <= 40) return { label: lang === 'pt' ? 'RAZOAVEL'  : 'REASONABLE', color: 'var(--orange)' };
+  if (diff <= 60) return { label: lang === 'pt' ? 'LONGE'     : 'FAR',        color: 'var(--neon-coral)' };
   return { label: lang === 'pt' ? 'ERROU' : 'MISS', color: 'var(--ink-faint)' };
 }
 
@@ -19,66 +22,180 @@ function votePosition(vote) {
   return null;
 }
 
-function signed(points) {
-  return `${points >= 0 ? '+' : ''}${points}`;
-}
+function signed(n) { return `${n >= 0 ? '+' : ''}${n}`; }
 
 function navigatorSummary(breakdown, lang) {
   if (!breakdown) return lang === 'pt' ? 'resultado da tripulacao' : 'crew result';
-  const hitWord = lang === 'pt' ? 'acertos' : 'hits';
+  const hitWord   = lang === 'pt' ? 'acertos' : 'hits';
   const strongWord = lang === 'pt' ? 'muito perto' : 'very close';
   const base = `${breakdown.hits || 0}/${breakdown.expected || 0} ${hitWord}`;
   return breakdown.strongHits > 0 ? `${base} · ${breakdown.strongHits} ${strongWord}` : base;
 }
 
 function boostLabel(diff, lang) {
-  if (diff === null) return 'BOOST';
+  if (diff === null)  return 'BOOST';
   if (diff <= 25) return lang === 'pt' ? 'BOOST ACERTOU' : 'BOOST HIT';
   return lang === 'pt' ? 'BOOST FALHOU' : 'BOOST MISSED';
 }
 
 export default function RevealPhase({ gameState, myId, lang, send }) {
-  const result = gameState.revealResult;
-  const psychic = gameState.players.find((player) => player.id === gameState.psychicId);
-  const soundKeyRef = useRef(null);
-  const startedAtRef = useRef(null);
+  const result  = gameState.revealResult;
+  const psychic = gameState.players.find(p => p.id === gameState.psychicId);
+
+  const [cascadePhase, setCascadePhase]           = useState('idle');
+  const [revealedVoteCount, setRevealedVoteCount] = useState(0);
+  const [revealedScoreCount, setRevealedScoreCount] = useState(0);
+  const [showTargetOnGauge, setShowTargetOnGauge] = useState(false);
+  const [lockLeft, setLockLeft]                   = useState(LOCK_SECONDS);
+  const [unlocked, setUnlocked]                   = useState(false);
+
   const activeRevealKeyRef = useRef(null);
-  const [lockLeft, setLockLeft] = useState(LOCK_SECONDS);
-  const [unlocked, setUnlocked] = useState(false);
+  const startedAtRef       = useRef(null);
+
   const revealKey = result
     ? `${gameState.round}:${gameState.psychicId}:${result.target}:${result.averageVote}`
     : null;
 
+  const allVotes    = result?.votes       || {};
+  const roundScores = result?.roundScores || {};
+  const txScore     = result?.transmitterScore ?? 0;
+  const txBreakdown = result?.transmitterScoreBreakdown;
+  const isPsychic   = gameState.psychicId === myId;
+  const myVote      = votePosition(allVotes[myId]);
+  const averageVote = result?.averageVote ?? result?.target ?? 50;
+
+  const voters = useMemo(
+    () => gameState.players.filter(p => p.id !== gameState.psychicId),
+    [gameState.players, gameState.psychicId],
+  );
+
+  // Vote reveal order: by position (left → right sweep on gauge)
+  const voteOrder = useMemo(
+    () => [...voters].sort((a, b) =>
+      (votePosition(allVotes[a.id]) ?? 50) - (votePosition(allVotes[b.id]) ?? 50)
+    ),
+    [voters, allVotes],
+  );
+
+  // Score reveal order: worst → best (all players, navigator included)
+  const scoreRevealOrder = useMemo(() => {
+    if (!result) return [];
+    return [...gameState.players].sort((a, b) => {
+      const sa = a.id === gameState.psychicId ? txScore : (roundScores[a.id] ?? 0);
+      const sb = b.id === gameState.psychicId ? txScore : (roundScores[b.id] ?? 0);
+      return sa - sb;
+    });
+  }, [result, gameState.players, gameState.psychicId, txScore, roundScores]);
+
+  // Votes shown as dots on gauge during cascade
+  const visibleVoteDots = useMemo(
+    () => voteOrder.slice(0, revealedVoteCount).map(p => ({
+      playerId: p.id,
+      position: votePosition(allVotes[p.id]) ?? 50,
+    })),
+    [voteOrder, revealedVoteCount, allVotes],
+  );
+
+  // All votes for gauge after target reveal
+  const allVotesDots = useMemo(
+    () => Object.entries(allVotes)
+      .map(([id, v]) => ({ playerId: id, position: votePosition(v) }))
+      .filter(v => v.position !== null),
+    [allVotes],
+  );
+
+  // Rank map (only relevant after target reveal)
+  const rankedPlayers = useMemo(() => {
+    const sorted = [...voters].sort((a, b) => (roundScores[b.id] ?? 0) - (roundScores[a.id] ?? 0));
+    const rankMap = {};
+    sorted.forEach((p, i) => { rankMap[p.id] = i + 1; });
+    return gameState.players.map(p => ({ ...p, rank: rankMap[p.id] ?? null }));
+  }, [voters, roundScores, gameState.players]);
+
+  const isPostTarget = ['target', 'scores', 'done'].includes(cascadePhase);
+
+  // ── Main cascade sequence ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!result || !revealKey) {
-      startedAtRef.current = null;
-      activeRevealKeyRef.current = null;
-      return undefined;
-    }
+    if (!result || !revealKey) { activeRevealKeyRef.current = null; return undefined; }
+    if (activeRevealKeyRef.current === revealKey) return undefined;
+    activeRevealKeyRef.current = revealKey;
 
-    // New reveal — reset timer and play sounds
-    if (activeRevealKeyRef.current !== revealKey) {
-      activeRevealKeyRef.current = revealKey;
-      startedAtRef.current = Date.now();
-      setLockLeft(LOCK_SECONDS);
-      setUnlocked(false);
+    const ids = [];
+    const at = (fn, ms) => ids.push(setTimeout(fn, ms));
 
-      if (soundKeyRef.current !== revealKey) {
-        soundKeyRef.current = revealKey;
-        playRevealDrum();
-        const votes = result.votes || {};
-        const myVote = votePosition(votes[myId]);
-        const myDiff = myVote !== null ? Math.abs(myVote - result.target) : null;
+    setCascadePhase('intro');
+    setRevealedVoteCount(0);
+    setRevealedScoreCount(0);
+    setShowTargetOnGauge(false);
+    setUnlocked(false);
+    setLockLeft(LOCK_SECONDS);
+    startedAtRef.current = null;
+
+    playTensionBuild();
+
+    const INTRO_DUR         = 1100;
+    const VOTE_INTERVAL     = 580;
+    const TARGET_PAUSE      = 700;
+    const SCORE_START_PAUSE = 480;
+    const SCORE_INTERVAL    = 310;
+
+    const numVoters = voteOrder.length;
+
+    // Start vote phase
+    at(() => setCascadePhase('votes'), INTRO_DUR);
+
+    // Reveal each vote one by one
+    voteOrder.forEach((_, i) => {
+      at(() => {
+        setRevealedVoteCount(i + 1);
+        playVoteReveal(i);
+      }, INTRO_DUR + (i + 1) * VOTE_INTERVAL);
+    });
+
+    const afterVotesAt = INTRO_DUR + numVoters * VOTE_INTERVAL;
+
+    // Target lock: THE moment
+    at(() => {
+      setCascadePhase('target');
+      setShowTargetOnGauge(true);
+      playTargetLock();
+      // Personal result sound after impact
+      const myV = votePosition(result.votes?.[myId]);
+      if (myV !== null) {
+        const d = Math.abs(myV - result.target);
         setTimeout(() => {
-          if (myDiff !== null && myDiff <= 5) playPerfect();
-          else if (myDiff !== null && myDiff <= 25) playGoodResult();
-          else if (myDiff !== null && myDiff > 40) playDamageHit(myDiff > 60);
-        }, 350);
+          if (d <= 5)       playPerfect();
+          else if (d <= 25) playGoodResult();
+          else if (d > 40)  playDamageHit(d > 60);
+        }, 430);
       }
-    }
+    }, afterVotesAt + TARGET_PAUSE);
 
-    if (!startedAtRef.current) return undefined;
+    // Scores phase
+    const scoresAt = afterVotesAt + TARGET_PAUSE + SCORE_START_PAUSE;
+    at(() => setCascadePhase('scores'), scoresAt);
 
+    scoreRevealOrder.forEach((p, i) => {
+      at(() => {
+        setRevealedScoreCount(i + 1);
+        const pts = p.id === gameState.psychicId ? txScore : (roundScores[p.id] ?? 0);
+        playScorePop(pts >= 0);
+      }, scoresAt + (i + 1) * SCORE_INTERVAL);
+    });
+
+    // Done → start lock timer
+    const doneAt = scoresAt + (scoreRevealOrder.length + 1) * SCORE_INTERVAL + 180;
+    at(() => {
+      setCascadePhase('done');
+      startedAtRef.current = Date.now();
+    }, doneAt);
+
+    return () => ids.forEach(clearTimeout);
+  }, [revealKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Lock timer (runs only in done phase) ──────────────────────────────────
+  useEffect(() => {
+    if (cascadePhase !== 'done' || !startedAtRef.current) return undefined;
     const tick = () => {
       const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000);
       const next = Math.max(0, LOCK_SECONDS - elapsed);
@@ -86,31 +203,29 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
       if (next === 0) setUnlocked(true);
     };
     tick();
-    const timerId = setInterval(tick, 250);
-    return () => clearInterval(timerId);
-  }, [result, revealKey, myId]);
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [cascadePhase]);
 
   if (!result) return null;
 
-  const allVotes = result.votes || {};
-  const roundScores = result.roundScores || {};
-  const txScore = result.transmitterScore ?? 0;
-  const txBreakdown = result.transmitterScoreBreakdown;
-  const averageVote = result.averageVote ?? result.target;
-  const isPsychic = gameState.psychicId === myId;
-  const voters = gameState.players.filter((player) => player.id !== gameState.psychicId);
-
-  const sortedVoters = [...voters].sort((a, b) => (roundScores[b.id] ?? 0) - (roundScores[a.id] ?? 0));
-  const rankMap = {};
-  sortedVoters.forEach((p, i) => { rankMap[p.id] = i + 1; });
-  const rankedPlayers = gameState.players.map(p => ({ ...p, rank: rankMap[p.id] ?? null }));
-
-  const myVote = votePosition(allVotes[myId]);
-  const myDiff = myVote !== null ? Math.abs(myVote - result.target) : Math.abs(averageVote - result.target);
+  const myDiff   = myVote !== null
+    ? Math.abs(myVote - result.target)
+    : Math.abs(averageVote - result.target);
   const headline = gradeFromDiff(isPsychic ? Math.abs(averageVote - result.target) : myDiff, lang);
+
+  // Gauge props (change per phase)
+  const gaugeValue       = isPsychic ? averageVote : (myVote ?? averageVote);
+  const gaugeOtherVotes  = isPostTarget ? allVotesDots : visibleVoteDots;
+  const gaugePlayers     = isPostTarget ? rankedPlayers : [];
+  const gaugeShowTarget  = showTargetOnGauge ? result.target : null;
+  const gaugeShowNeedle  = isPostTarget && !isPsychic && myVote !== null;
+  const gaugeShowMyVote  = isPostTarget && !isPsychic && myVote !== null ? myVote : null;
 
   return (
     <div className="phase-shell phase-shell--reveal">
+
+      {/* ── Clue card ── */}
       <div className="panel bevel glow-amber" style={{ padding: '10px 18px', textAlign: 'center', width: 'min(560px, 100%)' }}>
         <div className="t-title" style={{ fontSize: 'clamp(13px, 2.5vw, 17px)', color: gameState.currentTheme?.color, marginBottom: 6 }}>
           {lang === 'en' ? gameState.currentTheme?.shortEN : gameState.currentTheme?.shortPT}
@@ -119,138 +234,200 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
           "{gameState.clue}"
         </div>
         <div className="t-title text-dim" style={{ fontSize: 9, marginTop: 6 }}>
-          {psychic?.name || '?'} - {lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR'}
+          {psychic?.name || '?'} — {lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR'}
         </div>
       </div>
 
-      <div className="panel bevel glow-cyan" style={{ width: 'min(560px, 100%)', padding: 12 }}>
+      {/* ── Gauge ── */}
+      <div className={`reveal-gauge-panel panel bevel glow-cyan${cascadePhase === 'target' ? ' reveal-gauge-panel--locked' : ''}`}>
+        {cascadePhase === 'intro' && (
+          <div className="cascade-scan-overlay">
+            <div className="cascade-scan-line" />
+            <span className="cascade-scan-text">
+              {lang === 'pt' ? 'ABRINDO ARQUIVO...' : 'OPENING FILE...'}
+            </span>
+            <div className="cascade-scan-bar">
+              <div className="cascade-scan-bar-fill" />
+            </div>
+          </div>
+        )}
         <PressurePanel
           card={gameState.currentCard}
           lang={lang}
-          value={isPsychic ? averageVote : (myVote ?? averageVote)}
+          value={gaugeValue}
           onChange={() => {}}
           disabled
-          showTarget={result.target}
-          showNeedle={!isPsychic && myVote !== null}
-          showMyVote={!isPsychic && myVote !== null ? myVote : null}
-          readoutLabel={isPsychic ? (lang === 'pt' ? 'MEDIA' : 'AVERAGE') : (lang === 'pt' ? 'SEU PALPITE' : 'YOUR GUESS')}
-          otherVotes={Object.entries(allVotes).map(([id, vote]) => ({ playerId: id, position: votePosition(vote) })).filter(v => v.position !== null)}
-          players={rankedPlayers}
+          showTarget={gaugeShowTarget}
+          showNeedle={gaugeShowNeedle}
+          showMyVote={gaugeShowMyVote}
+          readoutLabel={isPsychic
+            ? (lang === 'pt' ? 'MEDIA' : 'AVERAGE')
+            : (lang === 'pt' ? 'SEU PALPITE' : 'YOUR GUESS')}
+          otherVotes={gaugeOtherVotes}
+          players={gaugePlayers}
         />
+        {cascadePhase === 'target' && <div className="cascade-target-flash" />}
       </div>
 
-      <div className="panel bevel" style={{
-        padding: '9px 16px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 18,
-        borderColor: headline.color,
-        boxShadow: `0 0 24px ${headline.color}55`,
-        width: 'min(560px, 100%)',
-        justifyContent: 'center',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 6 }}>
-            {isPsychic ? (lang === 'pt' ? 'MEDIA / ALVO' : 'AVG / TARGET') : (lang === 'pt' ? 'PALPITE / ALVO' : 'GUESS / TARGET')}
-          </div>
-          <div className="t-read glow-text-mint" style={{ fontSize: 34 }}>
-            {isPsychic ? averageVote : (myVote ?? '--')} / {result.target}
-          </div>
-        </div>
-        <div style={{ width: 1, height: 36, background: 'var(--metal-2)' }} />
-        <div style={{ textAlign: 'center' }}>
-          <div className="t-title" style={{ fontSize: 17, color: headline.color, textShadow: `0 0 10px ${headline.color}` }}>
-            {headline.label}
-          </div>
-          <div className="t-mono" style={{ fontSize: 17, marginTop: 6, color: headline.color }}>
-            ±{Math.round(myDiff)} · {(roundScores[myId] ?? 0) >= 0 ? '+' : ''}{roundScores[myId] ?? 0}
-          </div>
-        </div>
-      </div>
-
-      <div className="panel bevel reveal-score-sheet" style={{ width: 'min(560px, 100%)', padding: 10 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <div className="reveal-score-row reveal-score-row--navigator">
-            <div className="reveal-score-main">
-              <div className="reveal-score-name reveal-score-name--navigator">{psychic?.name || '?'}</div>
-              <div className="reveal-score-detail">
-                {lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR'} · {navigatorSummary(txBreakdown, lang)}
-              </div>
-              {txBreakdown?.cleanSweep && (
-                <div className="reveal-score-tag reveal-score-tag--sync">
-                  {lang === 'pt' ? 'SINCRONIA TOTAL' : 'FULL SYNC'}
-                </div>
-              )}
-            </div>
-            <div className="reveal-score-points reveal-score-points--navigator">
-              {signed(txScore)}
-            </div>
-          </div>
-          {sortedVoters.map((player) => {
-            const rawVote = allVotes[player.id];
-            const vote = votePosition(rawVote);
-            const diff = vote !== null ? Math.abs(vote - result.target) : null;
-            const points = roundScores[player.id] ?? 0;
-            const usedSurge = rawVote?.boost;
-            const isMe = player.id === myId;
-            const scoreTone = points > 0 ? 'good' : points < 0 ? 'bad' : 'neutral';
-            return (
+      {/* ── Vote progress dots (votes phase) ── */}
+      {cascadePhase === 'votes' && (
+        <div className="cascade-vote-progress">
+          <span className="t-title text-dim" style={{ fontSize: 8, letterSpacing: 2 }}>
+            {lang === 'pt' ? 'DETECTANDO SINAIS' : 'DETECTING SIGNALS'}
+          </span>
+          <div className="cascade-vote-dots">
+            {voteOrder.map((p, i) => (
               <div
-                key={player.id}
-                className={`reveal-score-row reveal-score-row--${scoreTone}${isMe ? ' is-me' : ''}`}
-                style={{ '--player-color': player.color }}
-              >
-                <div className="reveal-score-main">
-                  <div className="reveal-score-name">{player.name}</div>
-                  <div className="reveal-score-detail">
-                    {vote !== null
-                      ? `${lang === 'pt' ? 'palpite' : 'guess'} ${vote} · ${lang === 'pt' ? 'alvo' : 'target'} ${result.target}`
-                      : (lang === 'pt' ? 'sem voto' : 'no vote')}
-                  </div>
-                  {usedSurge && (
-                    <div className={`reveal-score-tag${diff !== null && diff > 25 ? ' reveal-score-tag--danger' : ''}`}>
-                      {boostLabel(diff, lang)}
+                key={p.id}
+                className={[
+                  'cascade-vote-dot',
+                  i < revealedVoteCount
+                    ? (i === revealedVoteCount - 1 ? 'is-live' : 'is-revealed')
+                    : '',
+                ].filter(Boolean).join(' ')}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Target confirmed banner (target phase) ── */}
+      {cascadePhase === 'target' && (
+        <div className="cascade-target-banner panel bevel glow-mint">
+          <div style={{ textAlign: 'center' }}>
+            <div className="t-title" style={{ fontSize: 9, color: 'var(--neon-mint)', letterSpacing: 2, marginBottom: 4 }}>
+              {lang === 'pt' ? '▣  ALVO CONFIRMADO' : '▣  TARGET CONFIRMED'}
+            </div>
+            <div className="t-read" style={{ color: 'var(--neon-mint)', fontSize: 48, textShadow: '0 0 22px rgba(0,255,136,0.85)', lineHeight: 1 }}>
+              {result.target}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── My result headline (after target) ── */}
+      {isPostTarget && (
+        <div
+          className="panel bevel"
+          style={{
+            padding: '9px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 18,
+            borderColor: headline.color,
+            boxShadow: `0 0 24px ${headline.color}55`,
+            width: 'min(560px, 100%)',
+            justifyContent: 'center',
+            animation: cascadePhase === 'target' ? 'cascade-slide-in 0.4s ease-out 0.4s both' : 'none',
+          }}
+        >
+          <div style={{ textAlign: 'center' }}>
+            <div className="t-title text-dim" style={{ fontSize: 9, marginBottom: 6 }}>
+              {isPsychic
+                ? (lang === 'pt' ? 'MEDIA / ALVO' : 'AVG / TARGET')
+                : (lang === 'pt' ? 'PALPITE / ALVO' : 'GUESS / TARGET')}
+            </div>
+            <div className="t-read glow-text-mint" style={{ fontSize: 34 }}>
+              {isPsychic ? averageVote : (myVote ?? '--')} / {result.target}
+            </div>
+          </div>
+          <div style={{ width: 1, height: 36, background: 'var(--metal-2)' }} />
+          <div style={{ textAlign: 'center' }}>
+            <div className="t-title" style={{ fontSize: 17, color: headline.color, textShadow: `0 0 10px ${headline.color}` }}>
+              {headline.label}
+            </div>
+            <div className="t-mono" style={{ fontSize: 17, marginTop: 6, color: headline.color }}>
+              ±{Math.round(myDiff)} · {signed(isPsychic ? txScore : (roundScores[myId] ?? 0))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Score list (scores / done phase) ── */}
+      {(cascadePhase === 'scores' || cascadePhase === 'done') && (
+        <div className="panel bevel reveal-score-sheet" style={{ width: 'min(560px, 100%)', padding: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {scoreRevealOrder.slice(0, revealedScoreCount).map((player) => {
+              const isNavigator = player.id === gameState.psychicId;
+              const rawVote     = allVotes[player.id];
+              const vote        = isNavigator ? null : votePosition(rawVote);
+              const diff        = vote !== null ? Math.abs(vote - result.target) : null;
+              const points      = isNavigator ? txScore : (roundScores[player.id] ?? 0);
+              const usedBoost   = rawVote?.boost;
+              const isMe        = player.id === myId;
+              const scoreTone   = points > 0 ? 'good' : points < 0 ? 'bad' : 'neutral';
+              return (
+                <div
+                  key={player.id}
+                  className={[
+                    'reveal-score-row',
+                    isNavigator ? 'reveal-score-row--navigator' : `reveal-score-row--${scoreTone}`,
+                    isMe ? 'is-me' : '',
+                  ].filter(Boolean).join(' ')}
+                  style={{
+                    '--player-color': player.color,
+                    animation: 'cascade-slide-in 0.28s ease-out, cascade-score-burst 0.38s cubic-bezier(0.34,1.56,0.64,1)',
+                  }}
+                >
+                  <div className="reveal-score-main">
+                    <div className={`reveal-score-name${isNavigator ? ' reveal-score-name--navigator' : ''}`}>
+                      {player.name}
                     </div>
-                  )}
+                    <div className="reveal-score-detail">
+                      {isNavigator
+                        ? `${lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR'} · ${navigatorSummary(txBreakdown, lang)}`
+                        : vote !== null
+                          ? `${lang === 'pt' ? 'palpite' : 'guess'} ${vote} · ±${diff}`
+                          : (lang === 'pt' ? 'sem voto' : 'no vote')}
+                    </div>
+                    {isNavigator && txBreakdown?.cleanSweep && (
+                      <div className="reveal-score-tag reveal-score-tag--sync">
+                        {lang === 'pt' ? 'SINCRONIA TOTAL' : 'FULL SYNC'}
+                      </div>
+                    )}
+                    {!isNavigator && usedBoost && (
+                      <div className={`reveal-score-tag${diff !== null && diff > 25 ? ' reveal-score-tag--danger' : ''}`}>
+                        {boostLabel(diff, lang)}
+                      </div>
+                    )}
+                  </div>
+                  <div className={`reveal-score-points${isNavigator ? ' reveal-score-points--navigator' : ''}`}>
+                    {signed(points)}
+                  </div>
                 </div>
-                <div className="reveal-score-points">
-                  {signed(points)}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="text-center flex-col items-center gap-8">
-        {!unlocked ? (
-          <>
-            <div style={{ width: '100%', maxWidth: 280, height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden' }}>
-              <div
-                style={{
+      {/* ── Lock timer / Next button ── */}
+      {cascadePhase === 'done' && (
+        <div className="text-center flex-col items-center gap-8">
+          {!unlocked ? (
+            <>
+              <div style={{ width: '100%', maxWidth: 280, height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{
                   height: '100%',
                   width: `${(lockLeft / LOCK_SECONDS) * 100}%`,
                   background: 'var(--neon-cyan)',
                   borderRadius: 3,
                   transition: 'width 0.9s linear',
-                }}
-              />
-            </div>
-            <span className="t-read text-dim" style={{ fontSize: 24 }}>{lockLeft}</span>
-          </>
-        ) : (
-          <button
-            className="btn btn-primary btn-lg"
-            style={{ minWidth: 320, minHeight: 58, fontSize: 12, animation: 'theme-pop 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}
-            onClick={() => {
-              playClick();
-              send('advance_round');
-            }}
-          >
-            {lang === 'pt' ? 'PROXIMA' : 'NEXT'}
-          </button>
-        )}
-      </div>
+                }} />
+              </div>
+              <span className="t-read text-dim" style={{ fontSize: 24 }}>{lockLeft}</span>
+            </>
+          ) : (
+            <button
+              className="btn btn-primary btn-lg"
+              style={{ minWidth: 320, minHeight: 58, fontSize: 12, animation: 'theme-pop 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}
+              onClick={() => { playClick(); send('advance_round'); }}
+            >
+              {lang === 'pt' ? 'PROXIMA' : 'NEXT'}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

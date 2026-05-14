@@ -83,20 +83,22 @@ Pontuacao base por diferenca entre voto e alvo:
 
 | Diferenca | Pontos |
 | --- | ---: |
+| 0 exato | 8 |
 | 0-5 | 5 |
 | 6-15 | 4 |
 | 16-25 | 3 |
-| 26-40 | 2 |
-| 41-60 | 1 |
-| 61+ | -1 |
+| 26-40 | 1 |
+| 41-50 | 0 |
+| 51-60 | -1 |
+| 61+ | -2 |
 
 BOOST:
 
 | Resultado com BOOST | Bonus |
 | --- | ---: |
-| Diferenca ate 15 | +3 |
+| Diferenca ate 15 | +4 |
 | Diferenca ate 25 | +1 |
-| Diferenca acima de 25 | -2 |
+| Diferenca acima de 25 | -4 |
 
 O navegador tambem pontua quando a tripulacao chega perto do alvo. Se todo mundo acertar bem, recebe bonus de sincronia.
 
@@ -134,6 +136,6 @@ O host e o "servidor" da partida:
 
 - Fechar o segredo do alvo com backend/auth ou Cloud Function.
 - Adicionar testes unitarios da engine.
-- Criar limpeza de salas antigas.
+- Evoluir limpeza de salas antigas para rotina agendada/Admin. Hoje salas novas expiram por TTL e podem ser removidas quando vencidas.
 - Prototipar panes simples de comunicacao/sensor.
 - Fazer playtest real com 4 a 8 pessoas e cortar o que nao gerar diversao.

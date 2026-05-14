@@ -52,8 +52,9 @@ Esta lista corrige o descompasso entre o estado real do codigo, o README e os it
    - O alvo secreto ainda fica visivel para clientes comuns via sala inteira.
    - Sem backend/auth, segredo e validacao critica nao ficam realmente seguros.
 
-6. Adicionar testes unitarios da engine.
-   - Cobrir score, BOOST, streak, fim de jogo, pick card, desconexao e roundHistory.
+6. Adicionar testes unitarios da engine. (parcialmente feito)
+   - Coberto: score, BOOST, streak e payload de resolucao de rodada/roundHistory.
+   - Pendente: fluxo Firebase completo, pick card, desconexao e gameover.
 
 7. Prototipar panes somente depois dessa base.
    - Primeira pane recomendada: comunicacao limitada a 5 caracteres ou sensor sem numeros.
@@ -113,7 +114,7 @@ Tarefas tecnicas:
 - ~~Validar acoes no engine com mais rigor.~~ feito (whitelist nas regras e validacoes de fase/ator no engine)
 - ~~Tornar a finalizacao de voto idempotente.~~ feito (`finalizeLocks` por rodada)
 - ~~Melhorar reconexao e troca de host.~~ feito (skip automatico, votantes ignorados, heartbeat e host stale election)
-- Criar limpeza de salas antigas.
+- ~~Criar limpeza de salas antigas.~~ parcial (TTL `expiresAt`, delecao de sala expirada por regra e limpeza oportunista por codigo conhecido; limpeza agendada/Admin ainda fica para backend futuro)
 - Adicionar tela de erro clara quando Firebase nao estiver configurado.
 - ~~Criar testes unitarios para score, BOOST e pontuacao do navegador.~~ feito (cobertura inicial; testes de fluxo engine ainda pendentes)
 
@@ -210,7 +211,7 @@ Tarefas:
 - Criar modo cooperativo sobrevivencia.
 - Avaliar modo equipes se playtest pedir.
 - ~~Tela de resumo com destaques no fim de partida.~~ ✓ (GameOver com destaques e placar)
-- Rejoin de jogador que saiu durante partida em andamento. (pendente)
+- Rejoin de jogador que saiu durante partida em andamento. (base feita: jogador desconectado pode recuperar slot por mesmo nome; UX dedicada ainda pendente)
 
 Criterio de pronto:
 
@@ -256,10 +257,10 @@ Criterio de pronto:
 - ~~Pack de cartas abertas estilo Wavelength.~~ ✓
 - ~~Melhor feedback de turno e identidade de fase.~~ ✓ (round intro, card picker, transicoes)
 - ~~Melhor host migration.~~ feito (skip automatico, transferencia de host e heartbeat stale)
-- Testes automaticos de engine. (parcial: regras puras cobertas; fluxo engine ainda pendente)
+- Testes automaticos de engine. (parcial: regras puras e resolucao de rodada cobertas; fluxo Firebase completo ainda pendente)
 - ~~Melhor estado vazio e mensagens de erro.~~ ✓ (error handling no engine, telas de espera)
 - Panes de comunicacao (primeira iteracao).
-- Rejoin mid-game.
+- Rejoin mid-game. (base de engine feita; UX dedicada pendente)
 
 ## Prioridades P2
 
