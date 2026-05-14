@@ -192,6 +192,14 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
               <div className="lobby-mission-stats">
                 <MissionStat label={lang === 'pt' ? 'Tripulacao' : 'Crew'} value={players.length} />
                 <MissionStat label={t('rounds', lang)} value={settings.rounds} />
+                <MissionStat
+                  label={lang === 'pt' ? 'Modo' : 'Mode'}
+                  value={settings.cardMode === 'livre' ? (lang === 'pt' ? 'Livre' : 'Free') : (lang === 'pt' ? 'Tematico' : 'Themed')}
+                />
+                <MissionStat
+                  label={lang === 'pt' ? 'Barometro' : 'Barometer'}
+                  value={settings.targetMode === 'choose' ? (lang === 'pt' ? 'Livre' : 'Free') : (lang === 'pt' ? 'Aleatorio' : 'Random')}
+                />
                 <MissionStat label={lang === 'pt' ? 'Dica' : 'Clue'} value={`${settings.clueTimer}s`} />
                 <MissionStat label={lang === 'pt' ? 'Voto' : 'Vote'} value={`${settings.voteTimer}s`} />
               </div>
@@ -260,9 +268,9 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
                 }}
               />
               <SettingRow
-                label={lang === 'pt' ? 'POSICAO ALVO' : 'TARGET POSITION'}
+                label={lang === 'pt' ? 'BAROMETRO' : 'BAROMETER'}
                 options={['random', 'choose']}
-                labels={lang === 'pt' ? ['ALEATORIA', 'LIVRE'] : ['RANDOM', 'FREE']}
+                labels={lang === 'pt' ? ['ALEATORIO', 'LIVRE'] : ['RANDOM', 'FREE']}
                 value={settings.targetMode ?? 'random'}
                 onChange={(value) => {
                   playClick();
@@ -270,7 +278,7 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
                 }}
               />
               <SettingRow
-                label={lang === 'pt' ? 'MODO DE CARTA' : 'CARD MODE'}
+                label={lang === 'pt' ? 'MODO DE JOGO' : 'GAME MODE'}
                 options={['themed', 'livre']}
                 labels={lang === 'pt' ? ['TEMATICO', 'LIVRE'] : ['THEMED', 'FREE']}
                 value={settings.cardMode ?? 'themed'}
