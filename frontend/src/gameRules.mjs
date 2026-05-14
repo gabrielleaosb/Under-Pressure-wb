@@ -13,11 +13,17 @@ export function boostBonus(diff) {
   return -2;
 }
 
+export function clampPosition(value, fallback = 50, min = 0, max = 100) {
+  const numeric = Number(value);
+  const base = Number.isFinite(numeric) ? numeric : fallback;
+  return Math.max(min, Math.min(max, Math.round(base)));
+}
+
 export function normalizeVote(raw) {
   if (typeof raw === 'number') {
-    return { position: Math.max(0, Math.min(100, Math.round(raw))), boost: false };
+    return { position: clampPosition(raw), boost: false };
   }
-  const position = Math.max(0, Math.min(100, Math.round(Number(raw?.position) || 50)));
+  const position = clampPosition(raw?.position);
   return { position, boost: !!(raw?.boost ?? raw?.surge ?? raw?.overdrive) };
 }
 

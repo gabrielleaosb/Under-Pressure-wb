@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { scoreFromDiff, boostBonus, normalizeVote, transmitterScore } from './gameRules.mjs';
+import { scoreFromDiff, boostBonus, clampPosition, normalizeVote, transmitterScore } from './gameRules.mjs';
 
 test('scoreFromDiff maps miss distance to base score', () => {
   assert.equal(scoreFromDiff(0), 5);
@@ -21,7 +21,16 @@ test('boostBonus rewards close guesses and punishes risky misses', () => {
 test('normalizeVote accepts legacy and current vote payloads', () => {
   assert.deepEqual(normalizeVote(101.8), { position: 100, boost: false });
   assert.deepEqual(normalizeVote({ position: -4, overdrive: true }), { position: 0, boost: true });
+  assert.deepEqual(normalizeVote({ position: 0, boost: true }), { position: 0, boost: true });
   assert.deepEqual(normalizeVote({ position: 37.6, boost: true }), { position: 38, boost: true });
+});
+
+test('clampPosition preserves zero and falls back only for invalid values', () => {
+  assert.equal(clampPosition(0), 0);
+  assert.equal(clampPosition('0'), 0);
+  assert.equal(clampPosition(undefined), 50);
+  assert.equal(clampPosition('abc', 42), 42);
+  assert.equal(clampPosition(3, 50, 5, 95), 5);
 });
 
 test('transmitterScore counts hits, strong hits and clean sweep bonus', () => {

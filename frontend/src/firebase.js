@@ -15,5 +15,5 @@ const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
 
 export {
-  ref, set, get, update, remove, push, onValue, onChildAdded, onDisconnect
+  ref, set, get, update, remove, push, onValue, onChildAdded, onDisconnect, runTransaction
 } from 'firebase/database';

@@ -14,12 +14,12 @@
         },
         "votes": {
           "$playerId": {
-            ".validate": "newData.hasChildren(['position']) && newData.child('position').isNumber() && newData.child('position').val() >= 0 && newData.child('position').val() <= 100"
+            ".validate": "root.child('rooms').child($code).child('players').child($playerId).exists() && newData.hasChildren(['position']) && newData.child('position').isNumber() && newData.child('position').val() >= 0 && newData.child('position').val() <= 100 && (!newData.child('boost').exists() || newData.child('boost').isBoolean())"
           }
         },
         "actions": {
           "$actionId": {
-            ".validate": "newData.hasChildren(['type', 'by', 'ts']) && newData.child('type').isString() && newData.child('by').isString() && newData.child('ts').isNumber()"
+            ".validate": "newData.hasChildren(['type', 'by', 'ts']) && newData.child('type').isString() && newData.child('type').val().length <= 32 && newData.child('by').isString() && root.child('rooms').child($code).child('players').child(newData.child('by').val()).exists() && newData.child('ts').isNumber()"
           }
         },
         "psychicSecret": {
