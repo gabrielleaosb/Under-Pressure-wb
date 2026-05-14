@@ -16,6 +16,8 @@ const GALAXY_DUST_LANE_COUNT = 175;
 const GALAXY_HALO_COUNT = 160;
 const ACCRETION_SPRITE_COUNT = 360;
 const LENSING_STAR_COUNT = 76;
+const GRAVITY_FILAMENT_COUNT = 54;
+const SOLAR_RAY_COUNT = 24;
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => Math.floor(rnd(a, b));
@@ -165,6 +167,7 @@ function StarField({ variant = 'menu' }) {
     const galaxy = { baseCx: 0.86, baseCy: 0.18, cx: 0.86, cy: 0.18, rot: 0, scale: 1 };
     const blackHole = { baseCx: 0.13, baseCy: 0.78, cx: 0.13, cy: 0.78, rot: 0, axis: 0, scale: 1 };
     const station = { baseCx: 0.12, baseCy: 0.22, cx: 0.12, cy: 0.22, scale: 1 };
+    const gravityWell = { pulse: 0, shear: 0 };
     const bhRadius = 7;
     const bhDisc = 14;
 
@@ -594,6 +597,27 @@ function StarField({ variant = 'menu' }) {
       };
     });
 
+    const gravityFilaments = Array.from({ length: GRAVITY_FILAMENT_COUNT }, () => ({
+      angle: rnd(0, Math.PI * 2),
+      radius: rnd(bhDisc + 16, bhDisc + 64),
+      length: rnd(10, 32),
+      spin: rnd(0.004, 0.014) * (Math.random() < 0.5 ? -1 : 1),
+      tilt: rnd(0.52, 0.92),
+      alpha: rnd(0.035, 0.14),
+      phase: rnd(0, Math.PI * 2),
+      tint: Math.random() < 0.58 ? 'cyan' : Math.random() < 0.76 ? 'amber' : 'violet',
+    }));
+
+    const solarRays = Array.from({ length: SOLAR_RAY_COUNT }, (_, index) => ({
+      angle: -0.34 + index * (0.92 / Math.max(1, SOLAR_RAY_COUNT - 1)) + rnd(-0.035, 0.035),
+      length: rnd(0.42, 1.18),
+      spread: rnd(0.16, 0.52),
+      phase: rnd(0, Math.PI * 2),
+      speed: rnd(0.006, 0.018),
+      alpha: rnd(0.018, 0.06),
+      warm: Math.random() < 0.72,
+    }));
+
     const resize = () => {
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
@@ -657,6 +681,59 @@ function StarField({ variant = 'menu' }) {
       ctx.globalAlpha = alpha;
       ctx.fillStyle = gradient;
       ctx.fillRect(left, top, right - left, bottom - top);
+      ctx.restore();
+    };
+
+    const distortByBlackHole = (x, y, bhX, bhY, strength = 1) => {
+      const dx = x - bhX;
+      const dy = y - bhY;
+      const dist = Math.sqrt(dx ** 2 + dy ** 2) || 1;
+      const radius = Math.min(width, height) * 0.34;
+      if (dist > radius) return { x, y, alpha: 1, stretch: 0 };
+      const pull = (1 - dist / radius) ** 2;
+      const tangent = pull * 18 * strength;
+      const radial = pull * 7 * strength;
+      const swirl = 0.65 + 0.35 * Math.sin(frame * 0.018 + dist * 0.024);
+      return {
+        x: x + (-dy / dist) * tangent * swirl - (dx / dist) * radial,
+        y: y + (dx / dist) * tangent * swirl - (dy / dist) * radial * 0.62,
+        alpha: clamp(1 + pull * 0.42, 0.6, 1.42),
+        stretch: pull,
+      };
+    };
+
+    const drawHomeSolarRays = (sun, bhX, bhY) => {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      for (const ray of solarRays) {
+        const breath = 0.62 + 0.38 * Math.sin(frame * ray.speed + ray.phase);
+        const maxLength = Math.max(width, height) * ray.length;
+        const step = Math.max(8, PX * 4);
+        const bendFromBh = Math.atan2(bhY - sun.y, bhX - sun.x) * 0.12;
+        const angle = ray.angle + bendFromBh + Math.sin(frame * 0.003 + ray.phase) * 0.025;
+        const normalX = -Math.sin(angle);
+        const normalY = Math.cos(angle);
+        for (let d = 0; d < maxLength; d += step) {
+          const fade = (1 - d / maxLength) ** 1.45;
+          const wave = Math.sin(d * 0.012 + frame * 0.02 + ray.phase);
+          const widthOffset = normalX * wave * ray.spread * d * 0.06;
+          const heightOffset = normalY * wave * ray.spread * d * 0.035;
+          const x = sun.x + Math.cos(angle) * d + widthOffset;
+          const y = sun.y + Math.sin(angle) * d + heightOffset;
+          const inUiLane = x > width * 0.29 && x < width * 0.71 && y > height * 0.2 && y < height * 0.86;
+          const alpha = ray.alpha * breath * fade * (inUiLane ? 0.18 : 1);
+          const warm = ray.warm;
+          canvasPx(
+            x,
+            y,
+            warm ? 255 : 170,
+            warm ? 194 : 230,
+            warm ? 86 : 255,
+            alpha,
+            Math.max(1, Math.round(PX * (d < maxLength * 0.18 ? 2 : 1))),
+          );
+        }
+      }
       ctx.restore();
     };
 
@@ -769,6 +846,32 @@ function StarField({ variant = 'menu' }) {
         [0.35, 'rgba(0,255,255,.045)'],
         [1, 'rgba(0,0,0,0)'],
       ], 0.72);
+
+      const shadowDx = cx - sun.x;
+      const shadowDy = cy - sun.y;
+      const shadowDist = Math.sqrt(shadowDx ** 2 + shadowDy ** 2) || 1;
+      const shadowX = shadowDx / shadowDist;
+      const shadowY = shadowDy / shadowDist;
+      const shadowLength = unit * radius * (planet.depth > 0.7 ? 5.2 : 3.4);
+      for (let d = unit * radius * 0.8; d < shadowLength; d += unit * 1.2) {
+        const fade = (1 - d / shadowLength) ** 1.7;
+        const widthFade = Math.max(1, radius * unit * 0.58 * fade);
+        for (let side = -1; side <= 1; side += 1) {
+          const lateral = side * widthFade * (0.25 + d / shadowLength * 0.42);
+          const sx = cx + shadowX * d - shadowY * lateral;
+          const sy = cy + shadowY * d + shadowX * lateral;
+          const inUiLane = sx > width * 0.29 && sx < width * 0.71 && sy > height * 0.2 && sy < height * 0.86;
+          canvasPx(
+            sx,
+            sy,
+            0,
+            planet.kind === 'volcanic' ? 5 : 8,
+            planet.kind === 'gas' ? 20 : 34,
+            0.12 * fade * (inUiLane ? 0.2 : 1),
+            Math.max(2, unit * (side === 0 ? 2 : 1)),
+          );
+        }
+      }
 
       if (planet.ring) {
         for (let a = Math.PI; a < Math.PI * 2; a += 0.05) {
@@ -920,6 +1023,8 @@ function StarField({ variant = 'menu' }) {
       galaxy.rot += 0.0048 * activeSpeed * frameStep;
       blackHole.rot += 0.00125 * activeSpeed * frameStep;
       blackHole.axis += 0.00045 * activeSpeed * frameStep;
+      gravityWell.pulse = 0.62 + 0.38 * Math.sin(frame * 0.014);
+      gravityWell.shear = Math.sin(frame * 0.006 + blackHole.axis) * 0.18;
 
       const galaxyX = galaxy.cx * width;
       const galaxyY = galaxy.cy * height;
@@ -1132,6 +1237,7 @@ function StarField({ variant = 'menu' }) {
 
       if (isHome) {
         const homeSun = drawHomeSun();
+        drawHomeSolarRays(homeSun, bhX, bhY);
         const planetOrder = HOME_PLANETS
           .map((planet, index) => ({ planet, index }))
           .sort((a, b) => a.planet.depth - b.planet.depth);
@@ -1142,11 +1248,17 @@ function StarField({ variant = 'menu' }) {
         const tw = 0.4 + 0.6 * Math.sin(frame * item.spd + item.off);
         const driftX = Math.sin(frame * item.drift + item.off) * item.depth * 1.45;
         const driftY = Math.cos(frame * item.drift * 0.72 + item.off) * item.depth * 0.82;
-        const x = ((((item.x + driftX) % 100 + 100) % 100) / 100) * width;
-        const y = ((((item.y + driftY) % 100 + 100) % 100) / 100) * height;
+        let x = ((((item.x + driftX) % 100 + 100) % 100) / 100) * width;
+        let y = ((((item.y + driftY) % 100 + 100) % 100) / 100) * height;
+        const warped = !isGame ? distortByBlackHole(x, y, bhX, bhY, 0.44) : null;
+        if (warped) {
+          x = warped.x;
+          y = warped.y;
+        }
         const br = item.br * tw * (isGame ? 0.42 : 1);
-        if (item.hue === 'purple') canvasPx(x, y, 60 * br, 10 * br, 120 * br, 1, PX);
-        else canvasPx(x, y, 0, 80 * br, 100 * br, 1, PX);
+        const warpLift = warped ? warped.alpha : 1;
+        if (item.hue === 'purple') canvasPx(x, y, 60 * br, 10 * br, 120 * br, clamp(warpLift, 0, 1.18), PX);
+        else canvasPx(x, y, 0, 80 * br, 100 * br, clamp(warpLift, 0, 1.18), PX);
       }
 
       for (const star of stars) {
@@ -1156,17 +1268,31 @@ function StarField({ variant = 'menu' }) {
         const v = clamp((25 + blink * 245) * star.br * flare * (isGame ? 0.52 : 1), 0, 255);
         const driftX = Math.sin(frame * star.drift + star.off) * star.depth * 1.18;
         const driftY = Math.cos(frame * star.drift * 0.8 + star.off) * star.depth * 0.64;
-        const x = ((((star.x + driftX) % 100 + 100) % 100) / 100) * width;
-        const y = ((((star.y + driftY) % 100 + 100) % 100) / 100) * height;
+        let x = ((((star.x + driftX) % 100 + 100) % 100) / 100) * width;
+        let y = ((((star.y + driftY) % 100 + 100) % 100) / 100) * height;
+        const warped = !isGame ? distortByBlackHole(x, y, bhX, bhY, 0.82) : null;
+        if (warped) {
+          x = warped.x;
+          y = warped.y;
+        }
         let r = v;
         let g = v;
         let b = v;
         if (star.type === 1) b = Math.min(255, v + 60);
         else if (star.type === 2) { g = Math.min(255, v + 30); b = Math.max(0, v - 40); }
-        canvasPx(x, y, r, g, b, isGame ? 0.72 : 1, PX * (isGame ? 1 : star.size));
+        const size = PX * (isGame ? 1 : star.size);
+        const alpha = isGame ? 0.72 : clamp(warped?.alpha ?? 1, 0.78, 1.32);
+        canvasPx(x, y, r, g, b, alpha, size);
+        if (warped?.stretch > 0.18) {
+          const dx = x - bhX;
+          const dy = y - bhY;
+          const dist = Math.sqrt(dx ** 2 + dy ** 2) || 1;
+          const tail = Math.min(4, 1 + warped.stretch * 5);
+          canvasPx(x - (dy / dist) * tail * PX, y + (dx / dist) * tail * PX, r, g, b, 0.36 * warped.stretch, Math.max(1, size * 0.75));
+        }
       }
 
-      if (!isGame) {
+      if (!isGame && !isHome) {
       for (const [dx, dy] of stationShadow) {
         drawSpritePx(stationX, stationY, station.scale, dx, dy, 6, 7, 20, 0.58);
       }
@@ -1201,6 +1327,36 @@ function StarField({ variant = 'menu' }) {
       }
 
       if (!isGame) {
+      for (const filament of gravityFilaments) {
+        const orbit = filament.angle + blackHole.rot * filament.spin * 42 + frame * filament.spin;
+        const pulse = 0.56 + 0.44 * Math.sin(frame * 0.026 + filament.phase);
+        const radius = filament.radius + Math.sin(frame * 0.011 + filament.phase) * 6;
+        const stretch = filament.length * (0.68 + gravityWell.pulse * 0.42);
+        const warm = filament.tint === 'amber';
+        const violet = filament.tint === 'violet';
+        const r = warm ? 255 : violet ? 154 : 112;
+        const g = warm ? 196 : violet ? 82 : 255;
+        const b = warm ? 92 : violet ? 255 : 218;
+        const tangentX = -Math.sin(orbit);
+        const tangentY = Math.cos(orbit) * filament.tilt;
+        for (let i = 0; i < stretch; i += 2.4) {
+          const fade = (1 - i / stretch) ** 1.3;
+          const ripple = Math.sin(i * 0.28 + frame * 0.06 + filament.phase) * 1.4;
+          const baseX = Math.cos(orbit + gravityWell.shear) * (radius - i * 0.34) * 2.08;
+          const baseY = Math.sin(orbit) * (radius - i * 0.22) * filament.tilt;
+          drawBhPx(
+            ringX(baseX + tangentX * i * 0.44, 0.54),
+            ringY(baseY + tangentY * i * 0.24 + ripple, 0.54),
+            r * pulse,
+            g * pulse,
+            b * pulse,
+            filament.alpha * fade * (0.62 + gravityWell.pulse * 0.38),
+            i < 2.6 ? 1.2 : 0.85,
+            blackHole.scale * 0.95,
+          );
+        }
+      }
+
       for (const point of nebulaRing) {
         const tw = 0.3 + 0.7 * Math.sin(frame * point.tSpd + point.tOff);
         const br = point.br * tw;
