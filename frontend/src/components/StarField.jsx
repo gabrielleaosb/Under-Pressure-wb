@@ -130,20 +130,6 @@ function StarField({ variant = 'menu' }) {
         palette: [[255, 226, 166], [184, 136, 255], [110, 120, 205]],
       },
       {
-        kind: 'barred',
-        cx: 0.94,
-        cy: 0.56,
-        scale: 0.72,
-        brightness: 0.9,
-        glow: 0.12,
-        radiusScale: 1.08,
-        count: 190,
-        spin: -0.00185,
-        twist: 1.18,
-        drift: 0.0015,
-        palette: [[126, 242, 255], [80, 150, 230], [255, 170, 80]],
-      },
-      {
         kind: 'irregular',
         cx: 0.08,
         cy: 0.48,
@@ -156,20 +142,6 @@ function StarField({ variant = 'menu' }) {
         twist: 0.78,
         drift: 0.00105,
         palette: [[255, 110, 150], [145, 88, 255], [90, 210, 220]],
-      },
-      {
-        kind: 'spiral',
-        cx: 0.76,
-        cy: 0.91,
-        scale: 0.92,
-        brightness: 1.02,
-        glow: 0.14,
-        radiusScale: 1.24,
-        count: 255,
-        spin: 0.0022,
-        twist: 1.36,
-        drift: 0.00185,
-        palette: [[180, 230, 255], [92, 120, 255], [255, 210, 120]],
       },
     ];
 
@@ -185,23 +157,23 @@ function StarField({ variant = 'menu' }) {
           dx = Math.cos(angle) * radius * rnd(1.4, 2.2);
           dy = Math.sin(angle) * radius * rnd(0.42, 0.74);
         } else if (config.kind === 'barred') {
-          radius = (Math.random() ** 0.7) * 23 * config.radiusScale;
+          radius = (Math.random() ** 0.78) * 22 * config.radiusScale;
           const arm = Math.random() < 0.5 ? 0 : Math.PI;
-          const angle = arm + radius * 0.31 + rnd(-0.32, 0.32);
-          const bar = Math.random() < 0.24;
-          dx = bar ? rnd(-16, 16) : Math.cos(angle) * radius * 1.65;
-          dy = bar ? rnd(-2.2, 2.2) : Math.sin(angle) * radius * 0.56;
+          const angle = arm + radius * 0.24 + rnd(-0.12, 0.12);
+          const bar = Math.random() < 0.42;
+          dx = bar ? rnd(-15, 15) : Math.cos(angle) * radius * 1.55;
+          dy = bar ? rnd(-1.35, 1.35) : Math.sin(angle) * radius * 0.5;
         } else if (config.kind === 'irregular') {
           radius = (Math.random() ** 0.48) * 18 * config.radiusScale;
           const angle = rnd(0, Math.PI * 2);
           dx = Math.cos(angle) * radius * rnd(0.65, 1.9) + rnd(-4, 4);
           dy = Math.sin(angle) * radius * rnd(0.48, 1.1) + rnd(-3, 3);
         } else {
-          radius = (Math.random() ** 0.65) * 22 * config.radiusScale;
-          const arm = irnd(0, 3) * ((Math.PI * 2) / 3);
-          const angle = arm + radius * 0.34 + rnd(-0.28, 0.28);
-          dx = Math.cos(angle) * radius * 1.8;
-          dy = Math.sin(angle) * radius * 0.62;
+          radius = (Math.random() ** 0.74) * 22 * config.radiusScale;
+          const arm = irnd(0, 2) * Math.PI;
+          const angle = arm + radius * 0.29 + rnd(-0.13, 0.13);
+          dx = Math.cos(angle) * radius * 1.72;
+          dy = Math.sin(angle) * radius * 0.52;
         }
 
         const core = radius < 5.2;
@@ -214,27 +186,34 @@ function StarField({ variant = 'menu' }) {
           r: palette[0] * br,
           g: palette[1] * br,
           b: palette[2] * br,
-          alpha: core ? rnd(0.62, 0.92) : rnd(0.14, 0.46),
+          alpha: core
+            ? rnd(0.72, 0.96)
+            : ['barred', 'spiral'].includes(config.kind)
+              ? rnd(0.26, 0.64)
+              : rnd(0.14, 0.46),
           size: 1,
           off: rnd(0, Math.PI * 2),
           twinkle: rnd(0.008, 0.026),
-          orbitSpeed: rnd(0.00022, 0.00175) * (core ? 0.28 : 1) * config.twist * (Math.random() < 0.5 ? -1 : 1),
+          orbitSpeed: ['barred', 'spiral'].includes(config.kind)
+            ? rnd(0.00002, 0.00018) * (core ? 0.18 : 1) * config.twist
+            : rnd(0.00022, 0.00175) * (core ? 0.28 : 1) * config.twist * (Math.random() < 0.5 ? -1 : 1),
           orbitPhase: rnd(0, Math.PI * 2),
         };
       });
 
       const dustLanes = Array.from({ length: Math.round(config.count * 0.2) }, () => {
+        const isCoherentGalaxy = config.kind === 'barred' || config.kind === 'spiral';
         const radius = rnd(5.5, 22 * config.radiusScale);
         const arm = config.kind === 'spiral'
-          ? irnd(0, 3) * ((Math.PI * 2) / 3)
+          ? irnd(0, 2) * Math.PI
           : Math.random() < 0.5 ? 0 : Math.PI;
-        const angle = arm + radius * (config.kind === 'barred' ? 0.27 : 0.34) + rnd(-0.18, 0.18);
+        const angle = arm + radius * (config.kind === 'barred' ? 0.23 : 0.29) + rnd(-0.08, 0.08);
         const lane = Math.random() < 0.5 ? 1 : -1;
         return {
-          dx: Math.cos(angle) * radius * rnd(1.45, 1.95),
-          dy: Math.sin(angle) * radius * rnd(0.48, 0.68) + lane * rnd(0.6, 1.8),
+          dx: Math.cos(angle) * radius * rnd(1.46, isCoherentGalaxy ? 1.72 : 2.02),
+          dy: Math.sin(angle) * radius * rnd(0.38, isCoherentGalaxy ? 0.5 : 0.62) + lane * rnd(0.55, 1.45),
           radius,
-          alpha: rnd(0.08, 0.2) * config.brightness,
+          alpha: rnd(0.08, isCoherentGalaxy ? 0.17 : 0.24) * config.brightness,
           off: rnd(0, Math.PI * 2),
         };
       });
@@ -249,44 +228,67 @@ function StarField({ variant = 'menu' }) {
     });
 
     const galaxySprite = Array.from({ length: GALAXY_SPRITE_COUNT }, () => {
-      const arm = Math.random() < 0.62 ? irnd(0, 2) * 2 : irnd(0, 4);
-      const radius = Math.random() < 0.18
-        ? rnd(0, 6.2)
-        : 5 + (Math.random() ** 0.6) * 32;
-      const spread = 1 - Math.min(radius / 36, 0.95);
-      const angle = arm * (Math.PI / 2) + radius * 0.285 + rnd(-0.34, 0.34) * (0.7 + spread);
-      const haze = rnd(-1.9, 1.9) * (0.4 + spread);
-      const barredCore = radius < 10.5 && Math.random() < 0.42;
+      const roll = Math.random();
+      let radius;
+      let angle;
       let dx;
       let dy;
-      if (barredCore) {
-        const barAngle = -0.38;
-        const barLen = rnd(-11, 11) * (1 - radius / 34);
-        const barThick = rnd(-2.1, 2.1) * (1 - radius / 18);
-        dx = Math.cos(barAngle) * barLen - Math.sin(barAngle) * barThick + haze * 0.5;
-        dy = Math.sin(barAngle) * barLen + Math.cos(barAngle) * barThick + rnd(-0.7, 0.7);
-      } else {
-        dx = Math.cos(angle) * radius * 1.86 + haze;
-        dy = Math.sin(angle) * radius * 0.55 + rnd(-1.05, 1.05);
-      }
-      const hotCore = radius < 6.2;
-      const youngStar = !hotCore && Math.random() < 0.4;
-      const amber = !hotCore && !youngStar && Math.random() < 0.24;
-      const br = rnd(0.5, 1.18) * Math.max(0.14, 1 - radius / 58);
+      let r;
+      let g;
+      let b;
+      let alpha = 0.72;
+      let size = 1;
 
-      let r = 116;
-      let g = 128;
-      let b = 255;
-      if (hotCore) {
-        r = 255; g = rnd(226, 255); b = rnd(176, 226);
-      } else if (youngStar) {
-        r = rnd(142, 205); g = rnd(188, 235); b = 255;
-      } else if (amber) {
-        r = rnd(220, 255); g = rnd(152, 210); b = rnd(92, 150);
+      if (roll < 0.24) {
+        radius = (Math.random() ** 0.72) * 7.4;
+        angle = rnd(0, Math.PI * 2);
+        dx = Math.cos(angle) * radius * 1.28 + rnd(-0.9, 0.9);
+        dy = Math.sin(angle) * radius * 0.5 + rnd(-0.55, 0.55);
+        const heat = 1 - radius / 8;
+        r = 255;
+        g = 218 + heat * 36;
+        b = 150 + heat * 92;
+        alpha = 0.9 + heat * 0.1;
+        size = Math.random() < 0.55 ? 2 : 1;
+      } else if (roll < 0.76) {
+        radius = 5.5 + (Math.random() ** 0.72) * 38;
+        const arm = irnd(0, 2) * Math.PI;
+        angle = arm + radius * 0.265 + rnd(-0.18, 0.18);
+        const normal = angle + Math.PI / 2;
+        const thickness = rnd(-2.2, 2.2) * (0.75 + radius / 46);
+        dx = Math.cos(angle) * radius * 1.66 + Math.cos(normal) * thickness;
+        dy = Math.sin(angle) * radius * 0.54 + Math.sin(normal) * thickness * 0.42;
+        const inner = Math.max(0, 1 - radius / 22);
+        const outer = Math.max(0, (radius - 20) / 24);
+        if (radius < 17) {
+          r = 255;
+          g = 176 + inner * 64;
+          b = 82 + inner * 86;
+        } else if (radius < 29) {
+          r = 190;
+          g = 128 + inner * 52;
+          b = 92 + outer * 72;
+        } else {
+          r = 72 + outer * 32;
+          g = 122 + outer * 58;
+          b = 205 + outer * 50;
+          alpha = 0.58;
+        }
+        size = Math.random() < (radius < 13 ? 0.22 : 0.06) ? 2 : 1;
       } else {
-        r = rnd(92, 168); g = rnd(88, 142); b = rnd(205, 255);
+        radius = (Math.random() ** 0.54) * 42;
+        angle = rnd(0, Math.PI * 2);
+        const fade = Math.max(0.12, 1 - radius / 48);
+        dx = Math.cos(angle) * radius * 1.62 + rnd(-1.8, 1.8) * fade;
+        dy = Math.sin(angle) * radius * 0.54 + rnd(-1.1, 1.1) * fade;
+        const rim = Math.max(0, (radius - 27) / 16);
+        r = 82 + rim * 46;
+        g = 92 + rim * 72;
+        b = 162 + rim * 90;
+        alpha = 0.2 + fade * 0.34;
       }
 
+      const br = rnd(0.76, 1.18) * Math.max(0.22, 1 - radius / 68);
       return {
         dx,
         dy,
@@ -294,23 +296,24 @@ function StarField({ variant = 'menu' }) {
         r: r * br,
         g: g * br,
         b: b * br,
-        size: hotCore || Math.random() > 0.92 ? 2 : 1,
-        twinkle: rnd(0.02, 0.076),
+        alpha,
+        size,
+        twinkle: rnd(0.012, 0.045),
         off: rnd(0, Math.PI * 2),
       };
     });
 
     const galaxyDustLanes = Array.from({ length: GALAXY_DUST_LANE_COUNT }, () => {
       const lane = Math.random() < 0.5 ? 1 : -1;
-      const radius = rnd(6, 34);
-      const arm = Math.random() < 0.58 ? 0 : Math.PI;
-      const angle = arm + radius * 0.28 + lane * 0.38 + rnd(-0.18, 0.18);
+      const radius = rnd(6, 38);
+      const arm = Math.random() < 0.56 ? 0 : Math.PI;
+      const angle = arm + radius * 0.265 + lane * 0.3 + rnd(-0.12, 0.12);
       return {
-        dx: Math.cos(angle) * radius * 1.8,
-        dy: Math.sin(angle) * radius * 0.52 + lane * rnd(1.2, 3),
+        dx: Math.cos(angle) * radius * 1.64,
+        dy: Math.sin(angle) * radius * 0.52 + lane * rnd(1.3, 3.6),
         radius,
         off: rnd(0, Math.PI * 2),
-        alpha: rnd(0.1, 0.3),
+        alpha: rnd(0.1, 0.28),
       };
     });
 
@@ -325,7 +328,7 @@ function StarField({ variant = 'menu' }) {
         r: rnd(70, 150),
         g: rnd(80, 150),
         b: rnd(150, 255),
-        alpha: rnd(0.045, 0.16),
+        alpha: rnd(0.035, 0.13),
         off: rnd(0, Math.PI * 2),
       };
     });
@@ -421,17 +424,19 @@ function StarField({ variant = 'menu' }) {
         const dist = Math.sqrt((dx / 1.55) ** 2 + dy ** 2);
         if (dist < bhRadius + 0.5 || dist > bhDisc + 4) continue;
         const ratio = (dist - bhRadius) / (bhDisc - bhRadius + 4);
-        if (Math.random() > (1 - ratio) * 0.5) continue;
+        const lane = 0.52 + 0.48 * Math.sin(Math.atan2(dy, dx) * 3 + dist * 0.72);
+        const density = (1 - ratio) * 0.58 + lane * 0.14;
+        if (Math.random() > density) continue;
 
         let r;
         let g;
         let b;
-        if (ratio < 0.3) {
-          r = 255; g = 158 + ratio * 170; b = 0;
-        } else if (ratio < 0.62) {
-          r = 245; g = 58; b = 18;
+        if (ratio < 0.24) {
+          r = 214; g = 255; b = 220 + ratio * 90;
+        } else if (ratio < 0.56) {
+          r = 46; g = 236; b = 184;
         } else {
-          r = 145; g = 18; b = 95;
+          r = 14; g = 118; b = 106;
         }
 
         discPixels.push({
@@ -489,7 +494,7 @@ function StarField({ variant = 'menu' }) {
       const compact = viewportWidth < 760;
       galaxy.baseCx = compact ? 0.9 : 0.86;
       galaxy.baseCy = compact ? 0.14 : 0.18;
-      galaxy.scale = compact ? 0.72 : 1.08;
+      galaxy.scale = compact ? 0.82 : 1.24;
       blackHole.baseCx = compact ? 0.1 : 0.13;
       blackHole.baseCy = compact ? 0.88 : 0.78;
       blackHole.scale = compact ? 0.72 : 1.08;
@@ -580,8 +585,8 @@ function StarField({ variant = 'menu' }) {
       station.cx = station.baseCx + Math.sin(frame * 0.0026 + 2.4) * 0.004;
       station.cy = station.baseCy + Math.cos(frame * 0.0032 + 0.8) * 0.004;
       galaxy.rot += 0.0048 * activeSpeed * frameStep;
-      blackHole.rot += 0.0022 * activeSpeed * frameStep;
-      blackHole.axis += 0.001 * activeSpeed * frameStep;
+      blackHole.rot += 0.00125 * activeSpeed * frameStep;
+      blackHole.axis += 0.00045 * activeSpeed * frameStep;
 
       const galaxyX = galaxy.cx * width;
       const galaxyY = galaxy.cy * height;
@@ -616,12 +621,13 @@ function StarField({ variant = 'menu' }) {
         [0.58, 'rgba(80,145,255,.052)'],
         [1, 'rgba(0,0,0,0)'],
       ], 0.86);
-      glow(bhX, bhY, Math.min(width, height) * 0.27, [
-        [0, 'rgba(0,0,0,.9)'],
-        [0.22, 'rgba(255,80,0,.13)'],
-        [0.48, 'rgba(176,40,255,.11)'],
+      glow(bhX, bhY, Math.min(width, height) * 0.25, [
+        [0, 'rgba(0,0,0,1)'],
+        [0.16, 'rgba(0,0,0,.78)'],
+        [0.31, 'rgba(66,255,205,.14)'],
+        [0.54, 'rgba(16,126,112,.105)'],
         [1, 'rgba(0,0,0,0)'],
-      ], 0.95);
+      ], 0.9);
 
       for (const cloud of nebulaStream) {
         const flow = (cloud.t + Math.sin(frame * 0.003 + cloud.off) * 0.018 + cloud.drift) % 1;
@@ -655,38 +661,103 @@ function StarField({ variant = 'menu' }) {
           [1, 'rgba(0,0,0,0)'],
         ], 0.72);
 
+        const coherentGalaxy = distant.kind === 'barred' || distant.kind === 'spiral';
+        if (coherentGalaxy) {
+          const bodySpin = distant.rot * (distant.kind === 'spiral' ? 0.72 : 0.58);
+          const bodyCos = Math.cos(bodySpin);
+          const bodySin = Math.sin(bodySpin);
+          const bodyRx = (distant.kind === 'spiral' ? 39 : 30) * distant.radiusScale;
+          const bodyRy = (distant.kind === 'spiral' ? 13 : 9) * distant.radiusScale;
+          for (let by = -bodyRy; by <= bodyRy; by += 2) {
+            for (let bx = -bodyRx; bx <= bodyRx; bx += 2) {
+              const ellipse = (bx / bodyRx) ** 2 + (by / bodyRy) ** 2;
+              if (ellipse > 1) continue;
+              const edge = 1 - ellipse;
+              const grain = 0.72 + 0.28 * Math.sin(bx * 1.7 + by * 2.9 + distant.off);
+              const laneShadow = 0.78 + 0.22 * Math.sin(bx * 0.28 - by * 0.65 + bodySpin * 2.6);
+              const rx = bx * bodyCos - by * bodySin;
+              const ry = bx * bodySin + by * bodyCos;
+              const warm = edge > 0.48;
+              canvasPx(
+                originX + rx * PX * depthScale,
+                originY + ry * PX * depthScale,
+                warm ? 210 * edge : 62 + 72 * edge,
+                warm ? 190 * edge : 112 + 92 * edge,
+                warm ? 132 + 80 * edge : 155 + 88 * edge,
+                clamp((0.035 + edge * 0.11) * grain * laneShadow * distant.brightness, 0, 0.18),
+                Math.max(1, Math.round(PX * 0.95 * depthScale)),
+              );
+            }
+          }
+
+          const armCount = distant.kind === 'spiral' ? 3 : 2;
+          const armSpin = distant.rot * (distant.kind === 'spiral' ? 0.92 : 0.72);
+          for (let arm = 0; arm < armCount; arm += 1) {
+            const base = arm * ((Math.PI * 2) / armCount);
+            for (let step = 5; step < 24 * distant.radiusScale; step += 2.4) {
+              const angle = base + armSpin + step * (distant.kind === 'spiral' ? 0.28 : 0.2);
+              const fade = 1 - step / (27 * distant.radiusScale);
+              const armX = Math.cos(angle) * step * (distant.kind === 'spiral' ? 1.7 : 1.5);
+              const armY = Math.sin(angle) * step * (distant.kind === 'spiral' ? 0.52 : 0.42);
+              const normalX = -Math.sin(angle);
+              const normalY = Math.cos(angle) * 0.42;
+              const warm = step < 11;
+              for (let band = -1; band <= 1; band += 1) {
+                const bandFade = band === 0 ? 1 : 0.58;
+                const rx = armX + normalX * band * 1.25;
+                const ry = armY + normalY * band * 1.25;
+                canvasPx(
+                  originX + rx * PX * depthScale,
+                  originY + ry * PX * depthScale,
+                  warm ? 255 * fade : 90 * fade,
+                  warm ? 212 * fade : 172 * fade,
+                  warm ? 142 * fade : 255 * fade,
+                  clamp(0.18 * fade * bandFade * distant.brightness, 0, 0.34),
+                  Math.max(1, Math.round(PX * 0.9 * depthScale)),
+                );
+              }
+            }
+          }
+        }
+
         for (const lane of distant.dustLanes) {
-          const localSpin = distant.rot * (distant.twist - lane.radius / 66)
-            + Math.sin(frame * 0.0024 + lane.off) * 0.035;
+          const localSpin = coherentGalaxy
+            ? distant.rot * (distant.kind === 'spiral' ? 0.82 : 0.64)
+            : distant.rot * (distant.twist - lane.radius / 66)
+              + Math.sin(frame * 0.0024 + lane.off) * 0.035;
           const cosR = Math.cos(localSpin);
           const sinR = Math.sin(localSpin);
           const rx = lane.dx * cosR - lane.dy * sinR;
           const ry = lane.dx * sinR + lane.dy * cosR;
-          const alpha = lane.alpha * (0.68 + 0.32 * Math.sin(frame * 0.012 + lane.off));
+          const alpha = lane.alpha * (0.72 + 0.28 * Math.sin(frame * 0.012 + lane.off));
           canvasPx(
             originX + rx * PX * depthScale,
             originY + ry * PX * depthScale,
-            5,
-            4,
-            18,
-            clamp(alpha, 0, 0.28),
-            Math.max(1, Math.round(PX * depthScale)),
+            3,
+            2,
+            12,
+            clamp(alpha, 0, 0.34),
+            Math.max(1, Math.round(PX * 1.15 * depthScale)),
           );
         }
 
         for (const point of distant.points) {
-          const localSpin = distant.rot * (distant.twist - point.radius / 68)
-            + frame * point.orbitSpeed
-            + Math.sin(frame * 0.003 + point.orbitPhase) * 0.035 * distant.twist;
+          const localSpin = coherentGalaxy
+            ? distant.rot * (distant.kind === 'spiral' ? 0.88 : 0.7)
+            : distant.rot * (distant.twist - point.radius / 68)
+              + frame * point.orbitSpeed
+              + Math.sin(frame * 0.003 + point.orbitPhase) * 0.035 * distant.twist;
           const cosR = Math.cos(localSpin);
           const sinR = Math.sin(localSpin);
-          const breath = 1 + Math.sin(frame * 0.008 + point.off + point.radius * 0.08) * 0.045 * distant.twist;
+          const breath = coherentGalaxy
+            ? 1 + Math.sin(frame * 0.004 + point.off) * 0.008
+            : 1 + Math.sin(frame * 0.008 + point.off + point.radius * 0.08) * 0.045 * distant.twist;
           const rx = point.dx * cosR - point.dy * sinR;
           const ry = point.dx * sinR + point.dy * cosR;
           const tw = 0.66 + 0.34 * Math.sin(frame * point.twinkle * 1.8 + point.off);
-          const edgeFade = distant.kind === 'irregular' ? 0.92 : 1 - Math.min(point.radius / 40, 0.62);
-          const light = point.core ? distant.brightness * 2.45 : distant.brightness;
-          const alphaBoost = point.core ? 1.55 : 0.88 + distant.brightness * 0.12;
+          const edgeFade = distant.kind === 'irregular' ? 0.92 : 1 - Math.min(point.radius / (coherentGalaxy ? 50 : 42), 0.66);
+          const light = point.core ? distant.brightness * 2.85 : distant.brightness;
+          const alphaBoost = point.core ? 1.72 : coherentGalaxy ? 1.08 + distant.brightness * 0.12 : 0.84 + distant.brightness * 0.1;
           canvasPx(
             originX + rx * breath * PX * depthScale,
             originY + ry * breath * PX * depthScale,
@@ -697,9 +768,33 @@ function StarField({ variant = 'menu' }) {
             Math.max(1, Math.round(PX * point.size * depthScale)),
           );
         }
-        const corePulse = 0.72 + 0.28 * Math.sin(frame * 0.028 + distant.off);
-        canvasPx(originX, originY, 255 * corePulse, 238 * corePulse, 185 * corePulse, clamp(0.28 + distant.brightness * 0.18, 0.32, 0.6), 1);
+        const corePulse = 0.78 + 0.22 * Math.sin(frame * 0.028 + distant.off);
+        canvasPx(originX, originY, 255 * corePulse, 242 * corePulse, 190 * corePulse, clamp(0.36 + distant.brightness * 0.22, 0.38, 0.72), Math.max(1, Math.round(PX * 0.75 * depthScale)));
+        if (coherentGalaxy) {
+          const coreSpin = distant.rot * 0.36;
+          const coreCos = Math.cos(coreSpin);
+          const coreSin = Math.sin(coreSpin);
+          for (let cy = -2; cy <= 2; cy += 1) {
+            for (let cx = -3; cx <= 3; cx += 1) {
+              const coreEllipse = (cx / 3.5) ** 2 + (cy / 2.15) ** 2;
+              if (coreEllipse > 1) continue;
+              const coreEdge = 1 - coreEllipse;
+              const rx = cx * coreCos - cy * coreSin;
+              const ry = cx * coreSin + cy * coreCos;
+              canvasPx(
+                originX + rx * PX * depthScale,
+                originY + ry * PX * depthScale,
+                255,
+                232 + coreEdge * 23,
+                176 + coreEdge * 58,
+                clamp((0.18 + coreEdge * 0.38) * distant.brightness, 0, 0.86),
+                Math.max(1, Math.round(PX * 0.92 * depthScale)),
+              );
+            }
+          }
+        }
       }
+
       }
 
       for (const item of dust) {
@@ -773,7 +868,7 @@ function StarField({ variant = 'menu' }) {
         const sinS = Math.sin(swirl);
         const dx = point.dx * cosS - point.dy * sinS;
         const dy = point.dx * sinS + point.dy * cosS;
-        drawBhScaledPx(ringX(dx, 0.72), ringY(dy, 0.72), (40 + 30 * tw) * br, (5 + 5 * tw) * br, (100 + 60 * tw) * br);
+        drawBhScaledPx(ringX(dx, 0.72), ringY(dy, 0.72), (18 + 24 * tw) * br, (92 + 80 * tw) * br, (74 + 74 * tw) * br);
       }
 
       for (let pulseIndex = 0; pulseIndex < 2; pulseIndex += 1) {
@@ -791,14 +886,14 @@ function StarField({ variant = 'menu' }) {
       for (const star of lensedStars) {
         const angle = star.angle + blackHole.rot * 0.1;
         const flicker = 0.42 + 0.58 * Math.sin(frame * 0.036 + star.phase);
-        const baseDx = Math.cos(angle) * star.radius * 2.1;
-        const baseDy = Math.sin(angle) * star.radius * 0.82;
+        const baseDx = Math.cos(angle) * star.radius * 2.18;
+        const baseDy = Math.sin(angle) * star.radius * 0.78;
         const tanX = -Math.sin(angle);
-        const tanY = Math.cos(angle) * 0.42;
+        const tanY = Math.cos(angle) * 0.36;
         const warm = star.tint === 'amber';
         for (let i = 0; i < star.length; i += 1) {
           const fade = (1 - i / star.length) * flicker;
-          drawBhPx(ringX(baseDx + tanX * i * 1.55, 0.58), ringY(baseDy + tanY * i * 1.55, 0.58), warm ? 255 * fade : 165 * fade, warm ? 180 * fade : 210 * fade, warm ? 90 * fade : 255 * fade, 0.54);
+          drawBhPx(ringX(baseDx + tanX * i * 1.75, 0.58), ringY(baseDy + tanY * i * 1.75, 0.58), warm ? 255 * fade : 176 * fade, warm ? 200 * fade : 226 * fade, warm ? 112 * fade : 255 * fade, 0.62);
         }
       }
 
@@ -809,10 +904,10 @@ function StarField({ variant = 'menu' }) {
         const dx = ringX(Math.cos(orbit) * radius * 2.15, 0.95);
         const dy = ringY(Math.sin(orbit) * radius * (point.tilt + bhTopView * 0.4) + Math.sin(frame * 0.035 + point.phase) * 0.8, 0.95);
         const heat = clamp(point.heat + Math.sin(frame * 0.028 + point.phase) * 0.12, 0, 1);
-        const br = (0.48 + heat * 0.72) * point.front * point.doppler;
-        const r = clamp(118 + heat * 176, 0, 255);
-        const g = clamp(28 + heat * 182, 0, 255);
-        const b = clamp(12 + (1 - heat) * 120 + Math.max(0, point.doppler - 1) * 80, 0, 255);
+        const br = (0.38 + heat * 0.78) * point.front * (point.doppler ** 1.12);
+        const r = clamp(28 + heat * 118, 0, 255);
+        const g = clamp(120 + heat * 132, 0, 255);
+        const b = clamp(92 + heat * 96 + Math.max(0, point.doppler - 1) * 76, 0, 255);
         drawBhPx(dx, dy, r * br, g * br, b * br, 0.88, point.width);
       }
 
@@ -822,27 +917,28 @@ function StarField({ variant = 'menu' }) {
         const sinO = Math.sin(orb);
         const rx = (point.dx * cosO - point.dy * sinO) | 0;
         const ry = (point.dx * sinO + point.dy * cosO) | 0;
-        const tw = 0.45 + 0.55 * Math.sin(frame * point.tSpd + point.tOff);
-        drawBhScaledPx(ringX(rx, 0.92), ringY(ry, 0.92), clamp(point.r * tw, 0, 255), clamp(point.g * tw, 0, 255), clamp(point.b * tw, 0, 255));
+        const tw = 0.48 + 0.52 * Math.sin(frame * point.tSpd + point.tOff);
+        const innerLift = Math.abs(point.dx) < bhRadius + 4 ? 1.22 : 0.92;
+        drawBhScaledPx(ringX(rx, 0.92), ringY(ry, 0.92), clamp(point.r * tw * innerLift, 0, 255), clamp(point.g * tw * innerLift, 0, 255), clamp(point.b * tw, 0, 255));
       }
 
       for (const arc of lensArcs) {
         const phase = 0.5 + 0.5 * Math.sin(frame * 0.04 + arc.a * 3);
         const pulse = 1 + Math.sin(frame * 0.025 + arc.a) * 0.08;
-        drawBhScaledPx(ringX(arc.dx, 0.82), ringY(arc.dy, 0.82), 160 * phase, 80 * phase, 255 * phase, 1, blackHole.scale * pulse);
+        drawBhScaledPx(ringX(arc.dx, 0.82), ringY(arc.dy, 0.82), 180 * phase, 255 * phase, 220 * phase, 0.86, blackHole.scale * pulse);
       }
 
       for (const point of photonRing) {
         const angle = point.angle + blackHole.rot * 0.22;
         const flicker = 0.48 + 0.52 * Math.sin(frame * 0.07 + point.off);
         const radius = bhRadius + 1.4 + point.wobble * flicker;
-        drawBhPx(ringX(Math.cos(angle) * radius * 2.25, 1), ringY(Math.sin(angle) * radius * 0.86, 1), 255 * flicker, 172 * flicker, 78 * flicker, 0.82);
+        drawBhPx(ringX(Math.cos(angle) * radius * 2.25, 1), ringY(Math.sin(angle) * radius * 0.86, 1), 210 * flicker, 255 * flicker, 224 * flicker, 0.86);
       }
 
       const orbitalBands = [
-        { radius: bhRadius + 4.2, spin: 0.08, tint: [255, 132, 42], alpha: 0.32, tilt: 0.92 },
-        { radius: bhRadius + 7.4, spin: -0.06, tint: [178, 84, 255], alpha: 0.24, tilt: 0.68 },
-        { radius: bhRadius + 10.8, spin: 0.035, tint: [88, 210, 255], alpha: 0.18, tilt: 0.5 },
+        { radius: bhRadius + 4.2, spin: 0.045, tint: [186, 255, 220], alpha: 0.32, tilt: 0.92 },
+        { radius: bhRadius + 7.4, spin: -0.034, tint: [42, 230, 184], alpha: 0.24, tilt: 0.68 },
+        { radius: bhRadius + 10.8, spin: 0.02, tint: [20, 120, 110], alpha: 0.18, tilt: 0.5 },
       ];
       for (const band of orbitalBands) {
         for (let a = 0; a < Math.PI * 2; a += 0.2) {
@@ -860,9 +956,11 @@ function StarField({ variant = 'menu' }) {
         }
       }
 
-      for (let dy = -bhRadius; dy <= bhRadius; dy += 1) {
-        for (let dx = -bhRadius; dx <= bhRadius; dx += 1) {
-          if (Math.sqrt(dx ** 2 + dy ** 2) <= bhRadius) {
+      const horizonRadius = bhRadius + 0.85;
+      for (let dy = -horizonRadius; dy <= horizonRadius; dy += 1) {
+        for (let dx = -horizonRadius; dx <= horizonRadius; dx += 1) {
+          const dist = Math.sqrt((dx * 0.96) ** 2 + (dy * 1.05) ** 2);
+          if (dist <= horizonRadius) {
             drawSpritePx(bhX, bhY, blackHole.scale, dx, dy, 0, 0, 0, 1);
           }
         }
@@ -871,16 +969,34 @@ function StarField({ variant = 'menu' }) {
       for (let a = 0; a < Math.PI * 2; a += 0.14) {
         const shim = 0.3 + 0.7 * Math.sin(frame * 0.06 + a * 5);
         drawBhScaledPx(
-          ringX(Math.round(Math.cos(a + blackHole.rot * 0.28) * (bhRadius * 2.15)), 0.72),
-          ringY(Math.round(Math.sin(a + blackHole.rot * 0.28) * bhRadius), 0.72),
-          90 * shim,
-          0,
-          200 * shim,
+          ringX(Math.round(Math.cos(a + blackHole.rot * 0.28) * (bhRadius * 2.05)), 0.72),
+          ringY(Math.round(Math.sin(a + blackHole.rot * 0.28) * (bhRadius * 0.94)), 0.72),
+          104 * shim,
+          255 * shim,
+          210 * shim,
         );
       }
       }
 
       if (!isGame) {
+      const galaxyView = 0.5 + 0.5 * Math.sin(frame * 0.0022 + 0.6);
+      const galaxySideView = galaxyView * galaxyView * (3 - 2 * galaxyView);
+      const galaxyTilt = 1 - galaxySideView * 0.52;
+      const galaxySkew = Math.sin(frame * 0.0024 + 1.1) * (0.04 + galaxySideView * 0.16);
+      const galaxyWidthLift = 1 + galaxySideView * 0.08;
+      const galaxyPerspective = (dx, dy) => ({
+        x: dx * galaxyWidthLift + dy * galaxySkew,
+        y: dy * galaxyTilt,
+      });
+      const drawGalaxySpritePx = (dx, dy, r, g, b, a = 1, size = 1) => {
+        const p = galaxyPerspective(dx, dy);
+        drawSpritePx(galaxyX, galaxyY, galaxy.scale, p.x, p.y, r, g, b, a, size);
+      };
+      const drawGalaxyScaledPx = (dx, dy, r, g, b, a = 1) => {
+        const p = galaxyPerspective(dx, dy);
+        drawScaledPx(galaxyX, galaxyY, galaxy.scale, p.x, p.y, r, g, b, a);
+      };
+
       for (const point of galaxyHalo) {
         const spin = galaxy.rot * (0.42 - point.radius / 180);
         const cosS = Math.cos(spin);
@@ -888,10 +1004,7 @@ function StarField({ variant = 'menu' }) {
         const rx = point.dx * cosS - point.dy * sinS;
         const ry = point.dx * sinS + point.dy * cosS;
         const tw = 0.7 + 0.3 * Math.sin(frame * 0.015 + point.off);
-        drawSpritePx(
-          galaxyX,
-          galaxyY,
-          galaxy.scale,
+        drawGalaxySpritePx(
           rx,
           ry,
           point.r * tw,
@@ -901,46 +1014,48 @@ function StarField({ variant = 'menu' }) {
         );
       }
 
-      for (let arm = 0; arm < 3; arm += 1) {
-        const armOffset = arm * ((Math.PI * 2) / 3);
-        for (let step = 4; step < 31; step += 2) {
-          const angle = galaxy.rot * 1.8 + armOffset + step * 0.29;
-          const sway = Math.sin(frame * 0.018 + step * 0.31 + arm) * 0.8;
-          const dx = Math.cos(angle) * step * 1.62;
-          const dy = Math.sin(angle) * (step * 0.72 + sway);
-          const fade = 1 - step / 34;
-          drawScaledPx(galaxyX, galaxyY, galaxy.scale, dx, dy, 90 * fade, 120 * fade, 255 * fade, 0.65);
+      for (let arm = 0; arm < 2; arm += 1) {
+        const armOffset = arm * Math.PI;
+        for (let step = 5; step < 42; step += 2.2) {
+          const angle = galaxy.rot * 0.2 + armOffset + step * 0.265;
+          const fade = 1 - step / 46;
+          const dx = Math.cos(angle) * step * 1.64;
+          const dy = Math.sin(angle) * step * 0.54;
+          if (step < 18) {
+            drawGalaxyScaledPx(dx, dy, 255 * fade, 190 * fade, 96 * fade, 0.34);
+          } else if (step < 31) {
+            drawGalaxyScaledPx(dx, dy, 172 * fade, 118 * fade, 88 * fade, 0.26);
+          } else {
+            drawGalaxyScaledPx(dx, dy, 70 * fade, 128 * fade, 235 * fade, 0.3);
+          }
         }
       }
 
       for (const lane of galaxyDustLanes) {
-        const spin = galaxy.rot * (1.05 - lane.radius / 38);
+        const spin = galaxy.rot * 0.2;
         const cosS = Math.cos(spin);
         const sinS = Math.sin(spin);
         const rx = lane.dx * cosS - lane.dy * sinS;
         const ry = lane.dx * sinS + lane.dy * cosS;
-        const alpha = lane.alpha * (0.72 + 0.28 * Math.sin(frame * 0.018 + lane.off));
-        drawSpritePx(galaxyX, galaxyY, galaxy.scale, rx, ry, 2, 1, 12, alpha, 2);
+        const alpha = lane.alpha * (0.76 + 0.24 * Math.sin(frame * 0.018 + lane.off));
+        drawGalaxySpritePx(rx, ry, 1, 1, 8, alpha, lane.radius < 15 ? 2 : 1.35);
       }
 
       for (const point of galaxySprite) {
-        const spin = galaxy.rot * (1.16 - point.radius / 42);
+        const spin = galaxy.rot * 0.2;
         const cosS = Math.cos(spin);
         const sinS = Math.sin(spin);
         const rx = point.dx * cosS - point.dy * sinS;
         const ry = point.dx * sinS + point.dy * cosS;
-        const tw = 0.62 + 0.38 * Math.sin(frame * point.twinkle + point.off);
-        const coreLift = point.radius < 5.4 ? 1.18 : 1;
-        drawSpritePx(
-          galaxyX,
-          galaxyY,
-          galaxy.scale,
+        const tw = 0.82 + 0.18 * Math.sin(frame * point.twinkle + point.off);
+        const coreLift = point.radius < 6 ? 1.28 : point.radius < 12 ? 1.08 : 1;
+        drawGalaxySpritePx(
           rx,
           ry,
           clamp(point.r * tw * coreLift, 0, 255),
           clamp(point.g * tw * coreLift, 0, 255),
           clamp(point.b * tw * coreLift, 0, 255),
-          point.radius < 8 ? 0.92 : 0.72,
+          clamp((point.alpha ?? 0.7) * (point.radius < 8 ? 1.08 : 1), 0, 1),
           point.size,
         );
       }
@@ -948,13 +1063,18 @@ function StarField({ variant = 'menu' }) {
       for (const point of galaxyPixels) {
         const tw = point.twinkle ? 0.55 + 0.45 * Math.sin(frame * point.tSpd + point.tOff) : 1;
         const dist = Math.sqrt(point.dx ** 2 + point.dy ** 2);
-        const spin = galaxy.rot * (1.1 - dist / 24);
+        const spin = galaxy.rot * 0.2;
         const cosS = Math.cos(spin);
         const sinS = Math.sin(spin);
         const rx = (point.dx * cosS - point.dy * sinS) | 0;
         const ry = (point.dx * sinS + point.dy * cosS) | 0;
-        drawScaledPx(galaxyX, galaxyY, galaxy.scale, rx, ry, clamp(point.r * tw, 0, 255), clamp(point.g * tw, 0, 255), clamp(point.b * tw, 0, 255));
+        drawGalaxyScaledPx(rx, ry, clamp(point.r * tw, 0, 255), clamp(point.g * tw, 0, 255), clamp(point.b * tw, 0, 255));
       }
+      const mainCorePulse = 0.82 + 0.18 * Math.sin(frame * 0.024 + 0.4);
+      drawGalaxySpritePx(0, 0, 255 * mainCorePulse, 250 * mainCorePulse, 218 * mainCorePulse, 1, 3);
+      drawGalaxySpritePx(1, 0, 255 * mainCorePulse, 224 * mainCorePulse, 154 * mainCorePulse, 0.72, 2);
+      drawGalaxySpritePx(-1, 0, 255 * mainCorePulse, 224 * mainCorePulse, 154 * mainCorePulse, 0.72, 2);
+      drawGalaxySpritePx(0, 1, 255 * mainCorePulse, 196 * mainCorePulse, 108 * mainCorePulse, 0.46, 1);
       }
 
       if (!isGame) {

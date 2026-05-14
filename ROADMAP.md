@@ -22,6 +22,37 @@ O projeto ja tem uma fatia vertical funcional:
 
 O projeto esta em alpha jogavel. Precisa consolidar seguranca, panes mecanicas e playtest real.
 
+## URGENTE - Roadmap Real Recomendado
+
+Esta lista corrige o descompasso entre o estado real do codigo, o README e os itens marcados como concluidos. Tratar como prioridade antes de adicionar mecanicas permanentes novas.
+
+1. Corrigir `GameOver` e `roundHistory`.
+   - `GameOver` espera campos que nao sao gravados hoje (`avgDiff` e `votes` no historico).
+   - Garantir que destaques finais funcionem com dados reais da engine.
+
+2. Atualizar `README.md` para o jogo atual.
+   - Documentar FFA real, navegador rotativo, voto individual, modo TEMATICO/LIVRE, BOOST e streak.
+   - Remover regras antigas de equipes, dano acumulado e nave explodindo.
+
+3. Limpar restos de equipe e dano do codigo ativo.
+   - Remover ou isolar `TEAM_NAME_PAIRS`, `computeResult`, textos de equipe/dano em `i18n`, CSS e componentes legados.
+   - Manter dano apenas como cosmetico de nave, se for intencional.
+
+4. Corrigir encoding/mojibake.
+   - Priorizar `README.md`, `gameData.js`, `i18n.js`, `CardPicker.jsx`, `RevealPhase.jsx`, `GameOver.jsx` e comentarios visiveis.
+
+5. Fechar o Firebase e decidir estrategia real para segredo.
+   - As regras atuais permitem leitura/escrita publicas.
+   - O alvo secreto ainda fica visivel para clientes comuns via sala inteira.
+   - Sem backend/auth, segredo e validacao critica nao ficam realmente seguros.
+
+6. Adicionar testes unitarios da engine.
+   - Cobrir score, BOOST, streak, fim de jogo, pick card, desconexao e roundHistory.
+
+7. Prototipar panes somente depois dessa base.
+   - Primeira pane recomendada: comunicacao limitada a 5 caracteres ou sensor sem numeros.
+   - Evitar adicionar sistemas permanentes enquanto seguranca, docs e fluxo final ainda estao desalinhados.
+
 ## Norte De Produto
 
 Prioridade maxima: transformar "painel Wavelength espacial" em "nave sob pressao".
