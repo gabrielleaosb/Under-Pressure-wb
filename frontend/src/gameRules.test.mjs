@@ -3,22 +3,25 @@ import assert from 'node:assert/strict';
 import { scoreFromDiff, boostBonus, clampPosition, normalizeVote, transmitterScore } from './gameRules.mjs';
 
 test('scoreFromDiff maps miss distance to base score', () => {
-  assert.equal(scoreFromDiff(0), 5);
+  assert.equal(scoreFromDiff(0), 8);
+  assert.equal(scoreFromDiff(1), 5);
   assert.equal(scoreFromDiff(5), 5);
   assert.equal(scoreFromDiff(15), 4);
   assert.equal(scoreFromDiff(25), 3);
-  assert.equal(scoreFromDiff(35), 2);
-  assert.equal(scoreFromDiff(49), 1);
+  assert.equal(scoreFromDiff(40), 1);
+  assert.equal(scoreFromDiff(41), 0);
   assert.equal(scoreFromDiff(50), 0);
-  assert.equal(scoreFromDiff(99), 0);
+  assert.equal(scoreFromDiff(51), -1);
+  assert.equal(scoreFromDiff(60), -1);
+  assert.equal(scoreFromDiff(61), -2);
+  assert.equal(scoreFromDiff(100), -2);
 });
 
 test('boostBonus rewards close guesses and punishes risky misses', () => {
-  assert.equal(boostBonus(15), 3);
+  assert.equal(boostBonus(15), 4);
   assert.equal(boostBonus(25), 1);
-  assert.equal(boostBonus(26), -2);
-  assert.equal(boostBonus(50), -2);
-  assert.equal(boostBonus(51), -3);
+  assert.equal(boostBonus(26), -4);
+  assert.equal(boostBonus(99), -4);
 });
 
 test('normalizeVote accepts legacy and current vote payloads', () => {
