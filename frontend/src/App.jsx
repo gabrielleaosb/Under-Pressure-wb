@@ -104,7 +104,11 @@ export default function App() {
         reveal: lang === 'pt' ? 'Resultado aberto' : 'Results open',
       }[currentPhase] || phaseLabel)
     : '';
-  const backgroundVariant = !SPECIAL_MODE && screen === 'game' ? 'game' : 'menu';
+  const backgroundVariant = !SPECIAL_MODE && screen === 'game'
+    ? 'game'
+    : !SPECIAL_MODE && screen === 'home'
+      ? 'home'
+      : 'menu';
 
   useEffect(() => {
     localStorage.setItem('up_lang', lang);

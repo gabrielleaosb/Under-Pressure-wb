@@ -21,6 +21,124 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => Math.floor(rnd(a, b));
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
+const HOME_SUN = {
+  cx: -0.055,
+  cy: 0.16,
+  compactCx: -0.18,
+  compactCy: 0.12,
+  radius: 38,
+};
+
+const HOME_PLANETS = [
+  {
+    kind: 'gas',
+    cx: 0.8,
+    cy: 0.6,
+    compactCx: 0.9,
+    compactCy: 0.48,
+    radius: 18,
+    scale: 1.24,
+    compactScale: 0.7,
+    depth: 0.78,
+    drift: 0.0042,
+    ampX: 18,
+    ampY: 10,
+    off: 0.3,
+    ring: true,
+    ringTilt: 0.32,
+    ringWidth: 2.55,
+    palette: {
+      light: [255, 236, 174],
+      mid: [192, 122, 68],
+      dark: [54, 34, 76],
+      band: [112, 230, 238],
+      storm: [255, 96, 78],
+      cloud: [255, 242, 204],
+      glow: 'rgba(255,190,80,.17)',
+    },
+    moons: [
+      { radius: 31, size: 2, speed: 0.019, off: 0.4, tint: [190, 238, 255] },
+      { radius: 45, size: 1, speed: -0.012, off: 2.5, tint: [255, 222, 142] },
+    ],
+  },
+  {
+    kind: 'ocean',
+    cx: 0.25,
+    cy: 0.52,
+    compactCx: 0.12,
+    compactCy: 0.34,
+    radius: 11,
+    scale: 1.02,
+    compactScale: 0.74,
+    depth: 0.52,
+    drift: 0.0054,
+    ampX: 12,
+    ampY: 7,
+    off: 1.9,
+    ring: false,
+    palette: {
+      light: [168, 245, 255],
+      mid: [22, 116, 190],
+      dark: [8, 24, 84],
+      land: [52, 198, 128],
+      cloud: [230, 255, 255],
+      glow: 'rgba(0,180,255,.12)',
+    },
+    moons: [
+      { radius: 22, size: 1, speed: 0.023, off: 1.7, tint: [220, 238, 255] },
+    ],
+  },
+  {
+    kind: 'volcanic',
+    cx: 0.2,
+    cy: 0.2,
+    compactCx: 0.2,
+    compactCy: 0.7,
+    radius: 8,
+    scale: 0.82,
+    compactScale: 0.58,
+    depth: 0.34,
+    drift: 0.0068,
+    ampX: 9,
+    ampY: 5,
+    off: 3.6,
+    ring: false,
+    palette: {
+      light: [255, 210, 116],
+      mid: [190, 64, 54],
+      dark: [58, 18, 44],
+      lava: [255, 176, 34],
+      glow: 'rgba(255,96,40,.14)',
+    },
+    moons: [],
+  },
+  {
+    kind: 'crystal',
+    cx: 0.9,
+    cy: 0.84,
+    compactCx: 0.82,
+    compactCy: 0.82,
+    radius: 8,
+    scale: 0.96,
+    compactScale: 0.62,
+    depth: 0.42,
+    drift: 0.0038,
+    ampX: 7,
+    ampY: 5,
+    off: 5.2,
+    ring: false,
+    palette: {
+      light: [216, 255, 248],
+      mid: [154, 66, 238],
+      dark: [28, 18, 108],
+      shard: [0, 255, 210],
+      cloud: [248, 236, 255],
+      glow: 'rgba(190,80,255,.16)',
+    },
+    moons: [],
+  },
+];
+
 function StarField({ variant = 'menu' }) {
   const canvasRef = useRef(null);
 
@@ -33,6 +151,7 @@ function StarField({ variant = 'menu' }) {
 
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
     const isGame = variant === 'game';
+    const isHome = variant === 'home';
 
     let width = 0;
     let height = 0;
@@ -541,6 +660,220 @@ function StarField({ variant = 'menu' }) {
       ctx.restore();
     };
 
+    const drawHomeSun = () => {
+      const compact = width < 760;
+      const sunX = (compact ? HOME_SUN.compactCx : HOME_SUN.cx) * width
+        + Math.sin(frame * 0.0028) * 8;
+      const sunY = (compact ? HOME_SUN.compactCy : HOME_SUN.cy) * height
+        + Math.cos(frame * 0.0036) * 7;
+      const sunScale = compact ? 0.72 : 1;
+      const unit = Math.max(2, Math.round(PX * sunScale));
+      const radius = HOME_SUN.radius;
+      const flare = 0.78 + 0.22 * Math.sin(frame * 0.026);
+
+      glow(sunX, sunY, unit * radius * 5.2, [
+        [0, 'rgba(255,244,174,.36)'],
+        [0.18, 'rgba(255,168,56,.18)'],
+        [0.48, 'rgba(255,96,40,.06)'],
+        [1, 'rgba(0,0,0,0)'],
+      ], 0.78);
+      glow(sunX, sunY, unit * radius * 2.1, [
+        [0, 'rgba(255,255,214,.62)'],
+        [0.38, 'rgba(255,206,70,.22)'],
+        [1, 'rgba(0,0,0,0)'],
+      ], 0.72);
+
+      for (let loop = 0; loop < 5; loop += 1) {
+        const base = loop * 1.19 + frame * 0.006;
+        const loopRadius = radius + 10 + loop * 2.6;
+        const lean = Math.sin(frame * 0.012 + loop) * 0.28;
+        for (let step = 0; step <= 1; step += 0.035) {
+          const a = base + step * Math.PI * 0.86;
+          const lift = Math.sin(step * Math.PI);
+          const x = Math.cos(a) * (loopRadius + lift * 9);
+          const y = Math.sin(a + lean) * (loopRadius * 0.72 + lift * 7);
+          const alpha = lift * (0.14 + 0.075 * Math.sin(frame * 0.035 + loop));
+          canvasPx(
+            sunX + x * unit,
+            sunY + y * unit,
+            255,
+            174 + 52 * lift,
+            58,
+            alpha,
+            unit,
+          );
+        }
+      }
+
+      for (let a = 0; a < Math.PI * 2; a += 0.12) {
+        const ray = radius + 7 + Math.sin(a * 7 + frame * 0.044) * 6;
+        const alpha = 0.1 + 0.16 * Math.max(0, Math.sin(a * 3 + frame * 0.031));
+        canvasPx(
+          sunX + Math.cos(a) * ray * unit,
+          sunY + Math.sin(a) * ray * unit,
+          255,
+          198 + 38 * flare,
+          72,
+          alpha,
+          unit * (Math.sin(a * 11 + frame * 0.05) > 0.62 ? 2 : 1),
+        );
+      }
+
+      for (let py = -radius; py <= radius; py += 1) {
+        for (let px2 = -radius; px2 <= radius; px2 += 1) {
+          const dist = Math.sqrt(px2 ** 2 + py ** 2);
+          if (dist > radius) continue;
+          const core = 1 - dist / radius;
+          const grain = 0.82 + 0.18 * Math.sin(px2 * 0.8 + py * 1.2 + frame * 0.045);
+          const ribbon = Math.sin(py * 0.34 + Math.sin(px2 * 0.18 + frame * 0.022) * 2.1) > 0.58;
+          const spot = Math.sin(px2 * 0.42 - py * 0.56 + frame * 0.018) > 0.72 && core < 0.72;
+          canvasPx(
+            sunX + px2 * unit,
+            sunY + py * unit,
+            255,
+            spot ? 132 : ribbon ? 172 + core * 52 : 208 + core * 42,
+            spot ? 42 : ribbon ? 46 + core * 86 : 72 + core * 118,
+            clamp((0.72 + core * 0.28) * grain, 0, 1),
+            unit,
+          );
+        }
+      }
+
+      return { x: sunX, y: sunY, unit, radius };
+    };
+
+    const drawHomePlanet = (planet, index, sun) => {
+      const compact = width < 760;
+      const scale = compact ? planet.compactScale : planet.scale;
+      const cx = (compact ? planet.compactCx : planet.cx) * width
+        + Math.sin(frame * planet.drift + planet.off) * planet.ampX * scale * (0.7 + planet.depth);
+      const cy = (compact ? planet.compactCy : planet.cy) * height
+        + Math.cos(frame * planet.drift * 0.82 + planet.off) * planet.ampY * scale * (0.7 + planet.depth);
+      const unit = Math.max(2, Math.round(PX * scale));
+      const radius = planet.radius;
+      const wobble = Math.sin(frame * 0.006 + planet.off) * 0.07;
+      const ringTilt = planet.ringTilt ?? 0.34;
+      const ringRx = radius * (2.05 + wobble);
+      const ringRy = radius * ringTilt;
+      const spin = frame * (0.007 + index * 0.0016) + planet.off;
+      const sunDx = (sun.x - cx) / Math.max(1, unit * radius);
+      const sunDy = (sun.y - cy) / Math.max(1, unit * radius);
+      const sunDist = Math.sqrt(sunDx ** 2 + sunDy ** 2 + 1.15 ** 2);
+      const lightX = sunDx / sunDist;
+      const lightY = sunDy / sunDist;
+      const lightZ = 1.15 / sunDist;
+      const nightTint = planet.kind === 'volcanic' ? [40, 10, 24] : [2, 6, 20];
+
+      glow(cx, cy, unit * radius * 3.6, [
+        [0, planet.palette.glow],
+        [0.35, 'rgba(0,255,255,.045)'],
+        [1, 'rgba(0,0,0,0)'],
+      ], 0.72);
+
+      if (planet.ring) {
+        for (let a = Math.PI; a < Math.PI * 2; a += 0.05) {
+          const grit = 0.58 + 0.42 * Math.sin(a * 19 + frame * 0.05 + planet.off);
+          const x = Math.cos(a + wobble) * ringRx;
+          const y = Math.sin(a) * ringRy;
+          const shade = clamp(0.5 + ((x / ringRx) * lightX + (y / Math.max(1, ringRy)) * lightY) * 0.4, 0.22, 1);
+          drawSpritePx(cx, cy, scale, x, y, planet.palette.band[0] * grit * shade, planet.palette.band[1] * grit * shade, planet.palette.band[2] * grit * shade, 0.28 * grit, planet.ringWidth);
+        }
+      }
+
+      for (let py = -radius; py <= radius; py += 1) {
+        for (let px2 = -radius; px2 <= radius; px2 += 1) {
+          const ellipse = (px2 / radius) ** 2 + (py / (radius * 0.96)) ** 2;
+          if (ellipse > 1) continue;
+          const edge = 1 - ellipse;
+          const nx = px2 / radius;
+          const ny = py / (radius * 0.96);
+          const nz = Math.sqrt(Math.max(0, 1 - nx ** 2 - ny ** 2));
+          const lambert = clamp(nx * lightX + ny * lightY + nz * lightZ, 0, 1);
+          const terminator = lambert ** 0.72;
+          const rim = clamp((1 - nz) * 0.68, 0, 0.55);
+          let base = planet.palette.mid;
+          let detail = 1;
+
+          if (planet.kind === 'gas') {
+            const bandWave = Math.sin(py * 0.78 + Math.sin(px2 * 0.24 + spin) * 2.2 + spin);
+            const storm = ((px2 + radius * 0.25) / 4.8) ** 2 + ((py - radius * 0.08) / 2.2) ** 2 < 1;
+            base = storm ? planet.palette.storm : bandWave > 0.54 ? planet.palette.band : bandWave < -0.42 ? planet.palette.dark : planet.palette.mid;
+            detail = 0.82 + 0.18 * Math.sin(px2 * 0.8 + py * 1.6 + spin * 1.8);
+          } else if (planet.kind === 'ocean') {
+            const continent = Math.sin(px2 * 0.62 + Math.sin(py * 0.55 + spin) * 1.8) + Math.cos(py * 0.7 - spin * 0.8) > 0.74;
+            const cloud = Math.sin(px2 * 0.46 - py * 0.38 + spin * 1.7) > 0.82 && edge > 0.18;
+            base = cloud ? planet.palette.cloud : continent ? planet.palette.land : planet.palette.mid;
+            detail = cloud ? 1.12 : 0.86 + 0.14 * Math.sin(px2 * 1.4 + py * 0.6);
+          } else if (planet.kind === 'volcanic') {
+            const crack = Math.abs(Math.sin(px2 * 0.9 + py * 1.25 + spin * 0.5)) > 0.94;
+            const ember = crack && Math.sin(px2 * 2.1 - py * 1.2 + frame * 0.07) > 0;
+            base = ember ? planet.palette.lava : crack ? planet.palette.light : planet.palette.mid;
+            detail = ember ? 1.28 : 0.74 + 0.26 * Math.sin(px2 * 0.74 + py * 1.9);
+          } else if (planet.kind === 'crystal') {
+            const facet = Math.sin((px2 + py) * 0.82 + spin) > 0.35;
+            const seam = Math.abs(Math.sin(px2 * 1.35 - py * 0.65 + spin * 0.7)) > 0.9;
+            base = seam ? planet.palette.shard : facet ? planet.palette.light : planet.palette.mid;
+            detail = seam ? 1.24 : 0.74 + 0.26 * Math.sin(px2 * 1.6 + py * 1.1 + spin);
+          } else {
+            const iceLine = Math.abs(Math.sin(px2 * 0.5 + py * 1.05 + spin)) > 0.76;
+            base = iceLine ? planet.palette.cloud : Math.sin(py * 0.9 + spin) > 0.42 ? planet.palette.band : planet.palette.mid;
+            detail = 0.82 + 0.18 * Math.sin(px2 * 1.2 - py * 0.8);
+          }
+
+          const day = clamp(0.2 + terminator * 0.94 + rim * 0.2, 0, 1.18);
+          const night = 1 - terminator;
+          const edgeShade = edge < 0.14 ? 0.42 + edge * 3.3 : 1;
+          drawSpritePx(
+            cx,
+            cy,
+            scale,
+            px2,
+            py,
+            clamp((base[0] * day * detail + nightTint[0] * night * 0.8 + planet.palette.light[0] * rim * 0.35) * edgeShade, 0, 255),
+            clamp((base[1] * day * detail + nightTint[1] * night * 0.8 + planet.palette.light[1] * rim * 0.28) * edgeShade, 0, 255),
+            clamp((base[2] * day * detail + nightTint[2] * night * 0.8 + planet.palette.light[2] * rim * 0.25) * edgeShade, 0, 255),
+            clamp(0.78 + edge * 0.22, 0, 1),
+          );
+        }
+      }
+
+      for (let a = -1.25; a <= 1.25; a += 0.12) {
+        const x = Math.cos(a) * radius * 0.86 - lightX * radius * 0.18;
+        const y = Math.sin(a) * radius * 0.5 - radius * 0.2 - lightY * radius * 0.14;
+        const highlight = clamp(0.08 + lightZ * 0.08, 0, 0.16);
+        drawSpritePx(cx, cy, scale, x, y, 255, 255, 255, highlight, 0.75);
+      }
+
+      if (planet.kind === 'crystal') {
+        for (let a = 0; a < Math.PI * 2; a += 0.28) {
+          const pulse = 0.45 + 0.55 * Math.sin(frame * 0.045 + a * 3 + planet.off);
+          const x = Math.cos(a) * radius * (1.45 + pulse * 0.12);
+          const y = Math.sin(a) * radius * (0.62 + pulse * 0.1);
+          drawSpritePx(cx, cy, scale, x, y, planet.palette.shard[0], planet.palette.shard[1], planet.palette.shard[2], 0.22 * pulse, 0.8);
+        }
+      }
+
+      if (planet.ring) {
+        for (let a = 0; a < Math.PI; a += 0.045) {
+          const grit = 0.68 + 0.32 * Math.sin(a * 23 + frame * 0.055 + planet.off);
+          const x = Math.cos(a + wobble) * ringRx;
+          const y = Math.sin(a) * ringRy;
+          const shade = clamp(0.58 + ((x / ringRx) * lightX + (y / Math.max(1, ringRy)) * lightY) * 0.34, 0.28, 1.1);
+          drawSpritePx(cx, cy, scale, x, y, planet.palette.band[0] * grit * shade, planet.palette.band[1] * grit * shade, planet.palette.band[2] * grit * shade, 0.44 * grit, planet.ringWidth);
+        }
+      }
+
+      for (const moon of planet.moons) {
+        const orbit = frame * moon.speed + moon.off;
+        const mx = cx + Math.cos(orbit) * moon.radius * unit * 0.62;
+        const my = cy + Math.sin(orbit) * moon.radius * unit * 0.22;
+        const front = Math.sin(orbit) > 0;
+        const moonLight = clamp(((sun.x - mx) / Math.max(1, unit * moon.radius)) * 0.15 + 0.74, 0.36, 1);
+        canvasPx(mx, my, moon.tint[0] * moonLight, moon.tint[1] * moonLight, moon.tint[2] * moonLight, front ? 0.86 : 0.42, unit * moon.size);
+        canvasPx(mx + unit, my, moon.tint[0] * 0.34, moon.tint[1] * 0.34, moon.tint[2] * 0.38, front ? 0.62 : 0.3, unit);
+      }
+    };
+
     const spawnShot = () => {
       const fromLeft = Math.random() < 0.5;
       shots.push({
@@ -795,6 +1128,14 @@ function StarField({ variant = 'menu' }) {
         }
       }
 
+      }
+
+      if (isHome) {
+        const homeSun = drawHomeSun();
+        const planetOrder = HOME_PLANETS
+          .map((planet, index) => ({ planet, index }))
+          .sort((a, b) => a.planet.depth - b.planet.depth);
+        for (const item of planetOrder) drawHomePlanet(item.planet, item.index, homeSun);
       }
 
       for (const item of dust) {
