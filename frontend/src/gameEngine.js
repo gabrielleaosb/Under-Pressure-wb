@@ -721,7 +721,7 @@ export class GameEngine {
         const tx = Object.values(room.players || {}).find(p => p.id === room.psychicId);
         const canClue = room.psychicId === by || (by === this.hostId && tx?.isBot);
         if (room.phase !== 'psychic' || !canClue) return;
-        const clue = String(data.clue || '').trim().slice(0, 20);
+        const clue = String(data.clue || '').trim().slice(0, 40);
         if (!clue) return;
         if (room.settings?.targetMode === 'choose' && data.position !== undefined) {
           const pos = clampPosition(data.position, 50, 5, 95);

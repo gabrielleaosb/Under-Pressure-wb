@@ -140,7 +140,7 @@ function ClueEntry({ lang, clue, setClue, onSubmit }) {
           value={clue}
           onChange={e => setClue(e.target.value)}
           placeholder={t('clue_ph', lang)}
-          maxLength={20}
+          maxLength={40}
           onKeyDown={e => e.key === 'Enter' && onSubmit()}
           autoFocus
         />
