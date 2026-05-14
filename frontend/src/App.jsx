@@ -427,7 +427,7 @@ export default function App() {
                   </div>
 
                   <div className="game-rail-card game-rail-card--signal panel bevel glow-amber">
-                    <div className="t-title text-dim" style={{ fontSize: 7 }}>
+                    <div className="t-title text-dim" style={{ fontSize: 9 }}>
                       {lang === 'pt' ? 'COMANDO' : 'COMMAND'}
                     </div>
                     <div className="game-rail-transmitter">{activeTransmitter?.name || '?'}</div>
@@ -435,7 +435,7 @@ export default function App() {
                   </div>
 
                   <div className={`game-rail-card game-rail-card--intel panel bevel${publicTheme ? ' glow-cyan' : ''}`}>
-                    <div className="t-title text-dim" style={{ fontSize: 7 }}>
+                    <div className="t-title text-dim" style={{ fontSize: 9 }}>
                       {lang === 'pt' ? 'DADOS DA RODADA' : 'ROUND DATA'}
                     </div>
                     {publicTheme ? (
@@ -457,7 +457,7 @@ export default function App() {
 
                   {publicCard && (
                     <div className="game-rail-card game-rail-card--spectrum panel bevel">
-                      <div className="t-title text-dim" style={{ fontSize: 7 }}>
+                      <div className="t-title text-dim" style={{ fontSize: 9 }}>
                         {lang === 'pt' ? 'ESPECTRO' : 'SPECTRUM'}
                       </div>
                       <div className="game-rail-spectrum">
@@ -470,7 +470,7 @@ export default function App() {
 
                   {publicClue && (
                     <div className="game-rail-card game-rail-card--clue panel bevel glow-mint">
-                      <div className="t-title text-dim" style={{ fontSize: 7 }}>
+                      <div className="t-title text-dim" style={{ fontSize: 9 }}>
                         {lang === 'pt' ? 'DICA TRANSMITIDA' : 'TRANSMITTED CLUE'}
                       </div>
                       <div className="game-rail-clue">{publicClue}</div>

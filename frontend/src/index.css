@@ -1601,7 +1601,7 @@ body::before {
   flex-direction:row;
   justify-content:space-between;
   gap:10px;
-  font-size:12px;
+  font-size:14px;
 }
 
 .game-rail-transmitter {
@@ -1618,14 +1618,14 @@ body::before {
   margin-top:10px;
   color:var(--ink);
   font-family:var(--f-body);
-  font-size:13px;
+  font-size:15px;
   font-weight:800;
 }
 
 .game-rail-theme {
   margin-top:11px;
   font-family:var(--f-body);
-  font-size:15px;
+  font-size:18px;
   font-weight:900;
   line-height:1.15;
   text-transform:uppercase;
@@ -1635,7 +1635,7 @@ body::before {
   margin-top:8px;
   color:var(--ink);
   font-family:var(--f-title);
-  font-size:8px;
+  font-size:11px;
   line-height:1.45;
 }
 
@@ -1661,6 +1661,7 @@ body::before {
   display:grid;
   grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);
   gap:8px;
+  font-size:14px;
   align-items:center;
   color:var(--ink);
   font-family:var(--f-body);
@@ -2102,7 +2103,7 @@ body::before {
   background:linear-gradient(180deg, rgba(4,12,34,.78), rgba(1,5,18,.9));
   color:#5082ff;
   font-family:var(--f-body);
-  font-size:12px;
+  font-size:15px;
   font-weight:800;
   letter-spacing:0;
   line-height:1.15;
@@ -2814,11 +2815,11 @@ body::before {
   .game-rail-action,
   .game-rail-sealed {
     margin-top: 7px;
-    font-size: 11px;
+    font-size: 13px;
   }
   .game-rail-theme {
     margin-top: 7px;
-    font-size: 13px;
+    font-size: 15px;
   }
   .game-rail-theme-name,
   .game-rail-sealed span {
@@ -2826,7 +2827,7 @@ body::before {
   }
   .game-rail-spectrum {
     margin-top: 8px;
-    font-size: 11px;
+    font-size: 13px;
   }
   .game-rail-clue {
     font-size: 24px;

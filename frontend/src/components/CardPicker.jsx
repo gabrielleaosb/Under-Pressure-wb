@@ -64,16 +64,15 @@ export default function CardPicker({ gameState, myId, lang, send, isHost }) {
                   className="panel bevel"
                   style={{
                     padding: '16px 20px',
-                    display: 'flex',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto 1fr',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
                     gap: 12,
                     cursor: selected ? 'default' : 'pointer',
                     border: `1px solid ${isChosen ? 'var(--neon-amber)' : 'rgba(255,255,255,0.1)'}`,
                     background: isChosen ? 'rgba(255,224,0,0.08)' : 'rgba(255,255,255,0.02)',
                     boxShadow: isChosen ? '0 0 20px rgba(255,224,0,0.3)' : 'none',
                     transition: 'all 0.15s ease',
-                    textAlign: 'left',
                     width: '100%',
                   }}
                 >
@@ -82,7 +81,10 @@ export default function CardPicker({ gameState, myId, lang, send, isHost }) {
                     fontWeight: 800,
                     fontSize: 14,
                     color: 'rgba(0,170,255,0.9)',
-                    maxWidth: '40%',
+                    textAlign: 'left',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
                   }}>
                     ◀ {tCard(card, 'left', lang)}
                   </span>
@@ -94,8 +96,10 @@ export default function CardPicker({ gameState, myId, lang, send, isHost }) {
                     fontWeight: 800,
                     fontSize: 14,
                     color: 'rgba(255,51,85,0.9)',
-                    maxWidth: '40%',
                     textAlign: 'right',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
                   }}>
                     {tCard(card, 'right', lang)} ▶
                   </span>

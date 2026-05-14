@@ -90,7 +90,7 @@ export async function createRoom(code, hostId, playerName, loadout = {}) {
     currentTheme: null,
     currentCard: null,
     revealResult: null,
-    settings: { rounds: 7, clueTimer: 30, voteTimer: 30, targetMode: 'random', cardMode: 'themed', cardOptions: 3 },
+    settings: { rounds: 7, clueTimer: 30, voteTimer: 30, targetMode: 'random', cardMode: 'livre', cardOptions: 3 },
     players: {
       [hostId]: {
         id: hostId, name: safeName,
