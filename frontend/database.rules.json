@@ -14,12 +14,21 @@
         },
         "votes": {
           "$playerId": {
-            ".validate": "root.child('rooms').child($code).child('players').child($playerId).exists() && newData.hasChildren(['position']) && newData.child('position').isNumber() && newData.child('position').val() >= 0 && newData.child('position').val() <= 100 && (!newData.child('boost').exists() || newData.child('boost').isBoolean())"
+            ".validate": "root.child('rooms').child($code).child('players').child($playerId).exists() && newData.hasChildren(['position']) && (!newData.child('boost').exists() || newData.child('boost').isBoolean())",
+            "position": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+            },
+            "boost": {
+              ".validate": "newData.isBoolean()"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
         "actions": {
           "$actionId": {
-            ".validate": "newData.hasChildren(['type', 'by', 'ts']) && newData.child('type').isString() && newData.child('type').val().length <= 32 && newData.child('by').isString() && root.child('rooms').child($code).child('players').child(newData.child('by').val()).exists() && newData.child('ts').isNumber()"
+            ".validate": "newData.hasChildren(['type', 'by', 'ts']) && newData.child('type').isString() && newData.child('type').val().matches(/^(set_ship|set_transmitter|update_settings|start_game|spin_roulette|pick_card|submit_clue|submit_vote|advance_round|emoji_reaction|new_game|back_to_lobby|dev_add_bots|dev_setup_transmitter_test|dev_setup_voter_test|dev_skip_phase|dev_next_psychic)$/) && newData.child('by').isString() && root.child('rooms').child($code).child('players').child(newData.child('by').val()).exists() && newData.child('ts').isNumber() && newData.child('ts').val() >= now - 3600000 && newData.child('ts').val() <= now + 300000"
           }
         },
         "psychicSecret": {

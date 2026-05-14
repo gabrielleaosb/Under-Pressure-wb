@@ -366,7 +366,7 @@ export class GameEngine {
     if (botVoters.length > 0) {
       const autoVotes = {};
       botVoters.forEach(b => {
-        autoVotes[b.id] = { position: Math.round(15 + Math.random() * 70), overdrive: Math.random() > 0.8 };
+        autoVotes[b.id] = { position: Math.round(15 + Math.random() * 70), boost: Math.random() > 0.8 };
       });
       await update(rref(this.roomCode, 'votes'), autoVotes);
     }
@@ -835,7 +835,7 @@ export class GameEngine {
       const existing = vSnap.val() || {};
       const upd = {};
       voters.filter(p => existing[p.id] === undefined).forEach(p => {
-        upd[p.id] = { position: Math.round(20+Math.random()*60), overdrive: false };
+        upd[p.id] = { position: Math.round(20+Math.random()*60), boost: false };
       });
       if (Object.keys(upd).length) await update(rref(this.roomCode,'votes'), upd);
       await this._finalizeVoting();
