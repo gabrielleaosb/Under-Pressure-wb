@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { t } from '../i18n.js';
 import { playClick } from '../sounds.js';
 import { ShipIcon, ShipPicker } from './ShipRoster.jsx';
@@ -55,7 +55,18 @@ function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send 
   );
 }
 
-function SettingRow({ label, options, labels, value, onChange, suffix = '' }) {
+function SettingRow({ label, options, labels, value, onChange, suffix = '', custom }) {
+  const inputRef = useRef(null);
+
+  const commitCustom = (e) => {
+    const raw = e.target.value;
+    const num = parseInt(raw, 10);
+    if (!Number.isFinite(num)) { e.target.value = value; return; }
+    const clamped = Math.max(custom.min, Math.min(custom.max, num));
+    e.target.value = clamped;
+    onChange(clamped);
+  };
+
   return (
     <div className="lobby-setting-row">
       <div className="t-title text-dim lobby-setting-row__label">{label}</div>
@@ -64,11 +75,25 @@ function SettingRow({ label, options, labels, value, onChange, suffix = '' }) {
           <button
             key={option}
             className={`btn btn-sm ${value === option ? 'btn-cyan' : 'btn-ghost'}`}
-            onClick={() => onChange(option)}
+            onClick={() => { onChange(option); if (inputRef.current) inputRef.current.value = option; }}
           >
             {labels ? labels[i] : `${option}${suffix}`}
           </button>
         ))}
+        {custom && (
+          <input
+            ref={inputRef}
+            type="number"
+            min={custom.min}
+            max={custom.max}
+            defaultValue={value}
+            key={value}
+            onBlur={commitCustom}
+            onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+            className="input lobby-custom-input"
+            title={`${custom.min}–${custom.max}${suffix}`}
+          />
+        )}
       </div>
     </div>
   );
@@ -248,8 +273,9 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
             <section className="lobby-settings panel bevel">
               <SettingRow
                 label={t('rounds', lang)}
-                options={[5, 7, 10, 15]}
+                options={[5, 7, 10]}
                 value={settings.rounds}
+                custom={{ min: 3, max: 30 }}
                 onChange={(value) => {
                   playClick();
                   send('update_settings', { ...settings, rounds: value });
@@ -260,6 +286,7 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
                 options={[30, 60, 90]}
                 value={settings.clueTimer}
                 suffix="s"
+                custom={{ min: 15, max: 120 }}
                 onChange={(value) => {
                   playClick();
                   send('update_settings', { ...settings, clueTimer: value });
@@ -270,6 +297,7 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
                 options={[30, 60, 90]}
                 value={settings.voteTimer}
                 suffix="s"
+                custom={{ min: 15, max: 120 }}
                 onChange={(value) => {
                   playClick();
                   send('update_settings', { ...settings, voteTimer: value });

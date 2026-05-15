@@ -1232,6 +1232,31 @@ body::before {
   font-size: 9px;
 }
 
+.lobby-custom-input {
+  width: 72px;
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 16px;
+  font-family: var(--f-read);
+  text-align: center;
+  background: rgba(255,224,0,0.06);
+  border: 1px solid rgba(255,224,0,0.35);
+  color: var(--neon-amber);
+  border-radius: 4px;
+  flex-shrink: 0;
+  -moz-appearance: textfield;
+}
+.lobby-custom-input::-webkit-inner-spin-button,
+.lobby-custom-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.lobby-custom-input:focus {
+  outline: none;
+  border-color: var(--neon-amber);
+  box-shadow: 0 0 8px rgba(255,224,0,0.3);
+}
+
 .lobby-launch-dock {
   position: sticky;
   bottom: 0;

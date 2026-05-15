@@ -631,9 +631,10 @@ export class GameEngine {
       case 'update_settings': {
         if (!isHost || room.phase !== 'lobby') return;
         const s = {};
-        if ([5,7,10,15,20].includes(data.rounds)) s.rounds = data.rounds;
-        if ([30,60,90].includes(data.clueTimer))   s.clueTimer = data.clueTimer;
-        if ([30,60,90].includes(data.voteTimer))   s.voteTimer = data.voteTimer;
+        const inRange = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
+        if (inRange(data.rounds, 3, 30))      s.rounds = data.rounds;
+        if (inRange(data.clueTimer, 15, 120)) s.clueTimer = data.clueTimer;
+        if (inRange(data.voteTimer, 15, 120)) s.voteTimer = data.voteTimer;
         if (['random','choose'].includes(data.targetMode)) s.targetMode = data.targetMode;
         if (['themed','livre'].includes(data.cardMode)) s.cardMode = data.cardMode;
         if ([1,3,5].includes(data.cardOptions)) s.cardOptions = data.cardOptions;
