@@ -107,9 +107,7 @@ export function resolveRound({
       .map((player) => [player.id, normalizeVote(rawVotes[player.id])]),
   );
 
-  const previousStreaks = room.playerStreaks || {};
   const roundScores = {};
-  const roundStreaks = {};
   const highlights = [];
 
   eligibleVoters.forEach((player) => {
@@ -118,17 +116,13 @@ export function resolveRound({
     const diff = Math.abs(vote.position - safeTarget);
     const baseScore = scoreFromDiff(diff);
     const bonus = vote.boost ? boostBonus(diff) : 0;
-    const streak = diff <= 15 ? (previousStreaks[player.id] || 0) + 1 : 0;
-    const streakBonus = streak >= 3 ? 1 : 0;
-    const points = baseScore + bonus + streakBonus;
+    const points = baseScore + bonus;
 
     roundScores[player.id] = points;
-    roundStreaks[player.id] = streak;
 
     if (diff <= 5) highlights.push(buildHighlight('perfect', player.id, player.name, diff));
     else if (vote.boost && diff <= 25) highlights.push(buildHighlight('boost_hit', player.id, player.name, points));
     else if (vote.boost && diff > 25) highlights.push(buildHighlight('boost_miss', player.id, player.name, bonus));
-    else if (streak >= 3) highlights.push(buildHighlight('streak', player.id, player.name, streak));
   });
 
   const numericVotes = Object.values(votes).map((vote) => vote.position).filter((position) => Number.isFinite(position));
@@ -140,9 +134,7 @@ export function resolveRound({
   const txPoints = txScore.points;
 
   if (room.psychicId) {
-    const txStreak = txScore.cleanSweep ? (previousStreaks[room.psychicId] || 0) + 1 : 0;
-    roundScores[room.psychicId] = txPoints + (txStreak >= 3 ? 1 : 0);
-    roundStreaks[room.psychicId] = txStreak;
+    roundScores[room.psychicId] = txPoints;
     const tx = players.find((player) => player.id === room.psychicId);
     if (txScore.cleanSweep && eligibleVoters.length >= 2) {
       highlights.push(buildHighlight('clean_tx', room.psychicId, tx?.name || '?', txPoints));
@@ -150,11 +142,9 @@ export function resolveRound({
   }
 
   const scoreUpdates = {};
-  const streakUpdates = {};
   const existingScores = room.playerScores || {};
   players.forEach((player) => {
     scoreUpdates[player.id] = (existingScores[player.id] || 0) + (roundScores[player.id] || 0);
-    streakUpdates[player.id] = roundStreaks[player.id] || 0;
   });
 
   const txName = players.find((player) => player.id === room.psychicId)?.name;
@@ -166,7 +156,6 @@ export function resolveRound({
     averageVote,
     avgDiff,
     roundScores,
-    streaks: streakUpdates,
     highlights: visibleHighlights,
     transmitterScore: txPoints,
     transmitterScoreBreakdown: txScore,
@@ -184,7 +173,6 @@ export function resolveRound({
     avgDiff,
     votes,
     roundScores,
-    streaks: streakUpdates,
     highlights: visibleHighlights,
     transmitterScore: txPoints,
   };
@@ -196,7 +184,6 @@ export function resolveRound({
     averageVote,
     avgDiff,
     roundScores,
-    streakUpdates,
     scoreUpdates,
     revealResult,
     historyEntry,

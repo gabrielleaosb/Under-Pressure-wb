@@ -115,7 +115,6 @@ export async function createRoom(code, hostId, playerName, loadout = {}) {
       },
     },
     playerScores: {},
-    playerStreaks: {},
     startingTransmitterId: hostId,
     createdAt,
     expiresAt: roomExpiresAt(createdAt, DEFAULT_ROOM_TTL_MS),
@@ -454,11 +453,10 @@ export class GameEngine {
         target: secretSnap.val()?.targetPosition,
         now: Date.now(),
       });
-      const { scoreUpdates, streakUpdates, revealResult, historyEntry } = resolved;
+      const { scoreUpdates, revealResult, historyEntry } = resolved;
       const historyKey = push(rref(this.roomCode, 'roundHistory')).key || genId();
       await update(ref(db), {
         [`rooms/${this.roomCode}/playerScores`]: scoreUpdates,
-        [`rooms/${this.roomCode}/playerStreaks`]: streakUpdates,
         [`rooms/${this.roomCode}/roundHistory/${historyKey}`]: historyEntry,
         [`rooms/${this.roomCode}/phase`]: 'reveal',
         [`rooms/${this.roomCode}/revealResult`]: revealResult,
@@ -528,6 +526,11 @@ export class GameEngine {
 
   async _resetToLobby() {
     this._clearTimer();
+    const room = await getRoom(this.roomCode);
+    const playerRemovals = {};
+    allPlayers(room || {}).forEach(p => {
+      if (!p.isBot && p.connected === false) playerRemovals[`rooms/${this.roomCode}/players/${p.id}`] = null;
+    });
     await Promise.all([
       roomUpdate(this.roomCode, {
         phase: 'lobby', round: 0,
@@ -542,8 +545,8 @@ export class GameEngine {
       remove(rref(this.roomCode, 'emojiReactions')),
       remove(rref(this.roomCode, 'actions')),
       remove(rref(this.roomCode, 'playerScores')),
-      remove(rref(this.roomCode, 'playerStreaks')),
       remove(rref(this.roomCode, 'finalizeLocks')),
+      ...(Object.keys(playerRemovals).length ? [update(ref(db), playerRemovals)] : []),
     ]);
   }
 
@@ -579,6 +582,10 @@ export class GameEngine {
   async _prepareFreshGame() {
     const room = await getRoom(this.roomCode);
     const activePlayers = allPlayers(room || {}).filter(p => p.isBot || p.connected !== false);
+    const playerRemovals = {};
+    allPlayers(room || {}).forEach(p => {
+      if (!p.isBot && p.connected === false) playerRemovals[`rooms/${this.roomCode}/players/${p.id}`] = null;
+    });
     await roomUpdate(this.roomCode, {
       round: 0,
       winner: null,
@@ -594,7 +601,7 @@ export class GameEngine {
       remove(rref(this.roomCode, 'emojiReactions')),
       remove(rref(this.roomCode, 'finalizeLocks')),
       set(rref(this.roomCode, 'playerScores'), {}),
-      set(rref(this.roomCode, 'playerStreaks'), {}),
+      ...(Object.keys(playerRemovals).length ? [update(ref(db), playerRemovals)] : []),
     ]);
   }
 

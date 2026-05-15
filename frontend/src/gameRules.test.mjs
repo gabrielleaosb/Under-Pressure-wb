@@ -98,13 +98,13 @@ test('resolveRound scores voters, transmitter, streaks and round history payload
 
   assert.deepEqual(resolved.roundScores, {
     tx: 6,
-    a: 13,
+    a: 12,
     b: -3,
     c: 5,
   });
   assert.deepEqual(resolved.scoreUpdates, {
     tx: 9,
-    a: 14,
+    a: 13,
     b: -1,
     c: 14,
   });
