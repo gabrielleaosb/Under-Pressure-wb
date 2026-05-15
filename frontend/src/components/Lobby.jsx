@@ -27,12 +27,12 @@ function PlayerCard({ player, me, transmitterId, lang, onPickShip, isHost, send 
       </button>
 
       <div className="lobby-crew-card__body">
-        <div className="lobby-crew-card__name t-title">{player.name}</div>
-        <div className="lobby-crew-card__meta t-mono">
-          {isNavigator
-            ? (lang === 'pt' ? 'Navegador inicial' : 'Starting navigator')
-            : (lang === 'pt' ? 'Tripulacao conectada' : 'Crew connected')}
-        </div>
+        <div className="lobby-crew-card__name">{player.name}</div>
+        {isNavigator && (
+          <div className="lobby-crew-card__nav-tag">
+            {lang === 'pt' ? 'Navegador inicial' : 'Starting navigator'}
+          </div>
+        )}
       </div>
 
       <div className="lobby-crew-card__badges">
@@ -129,10 +129,18 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
       <div className="screen lobby-shell">
         <main className="lobby-hangar">
           <section className="lobby-command-bar panel bevel glow-cyan">
-            <div className="lobby-room-readout">
+            <button
+              type="button"
+              className={`lobby-room-readout lobby-room-readout--btn${copied ? ' is-copied' : ''}`}
+              onClick={copyLink}
+              title={lang === 'pt' ? 'Copiar código' : 'Copy code'}
+            >
               <span className="t-title text-dim">{lang === 'pt' ? 'SALA' : 'ROOM'}</span>
               <strong className="t-read glow-text-amber">{code}</strong>
-            </div>
+              <span className="lobby-room-copy-hint">
+                {copied ? (lang === 'pt' ? 'COPIADO!' : 'COPIED!') : (lang === 'pt' ? 'COPIAR' : 'COPY')}
+              </span>
+            </button>
 
             <div className="lobby-command-actions">
               <div className="lobby-lang-switch panel">

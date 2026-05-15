@@ -270,6 +270,12 @@ export default function PressurePanel({
     <div className="pressure-panel pressure-panel--combat"
       style={{ position:'relative', width:'100%', maxWidth:size, margin:'0 auto' }}>
 
+      {/* ── Spectrum endpoint labels (above gauge, clear of the readout) ── */}
+      <div className="pressure-axis-labels">
+        <span title={leftLabel}>◀ {leftLabel}</span>
+        <span title={rightLabel}>{rightLabel} ▶</span>
+      </div>
+
       {/* CRT readout overlay (HTML, absolute-positioned over SVG) */}
       <div className="pressure-gauge-wrap"
         style={{ '--pressure-readout-top': `${(R / (svgH + 10)) * 100}%` }}>
@@ -362,14 +368,14 @@ export default function PressurePanel({
               stroke="rgba(80,120,255,.22)" strokeWidth={1.5} />;
           })}
 
-          {/* ── Arc endpoint caps (bezel accent, no overlap with labels) ── */}
+          {/* Arc endpoint terminator lines (thin, well inside bezel zone) */}
           {[arcStart, arcEnd].map((a, i) => {
-            const pt = polar(a, trackR + 30);
+            const inner = polar(a, trackR - 14);
+            const outer = polar(a, trackR + 12);
             return (
-              <g key={i}>
-                <circle cx={pt.x} cy={pt.y} r={4} fill="#06080f" stroke="rgba(55,90,200,.38)" strokeWidth={1.4} />
-                <circle cx={pt.x} cy={pt.y} r={1.5} fill="rgba(60,100,200,.5)" />
-              </g>
+              <line key={i}
+                x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y}
+                stroke="rgba(60,100,200,.28)" strokeWidth={1.5} strokeLinecap="round" />
             );
           })}
 
@@ -434,12 +440,6 @@ export default function PressurePanel({
             );
           })()}
         </svg>
-      </div>
-
-      {/* ── Spectrum endpoint labels (HTML, below SVG, no SVG overlap) ── */}
-      <div className="pressure-axis-labels">
-        <span title={leftLabel}>◀ {leftLabel}</span>
-        <span title={rightLabel}>{rightLabel} ▶</span>
       </div>
     </div>
   );
