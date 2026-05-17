@@ -21,6 +21,7 @@ function PixelLogo() {
 
 export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode = '' }) {
   const [mode, setMode] = useState(() => (inviteCode ? 'join' : null));
+  const [gameMode, setGameMode] = useState('ffa');
   const [name, setName] = useState('');
   const [code, setCode] = useState(inviteCode);
   const [ship, setShip] = useState(() => localStorage.getItem('up_ship') || 'nova_01');
@@ -48,7 +49,7 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
     try {
       if (mode === 'create') {
         playJoin();
-        await onCreate(name.trim(), { ship, shipColor, shipAccent });
+        await onCreate(name.trim(), { ship, shipColor, shipAccent, gameMode });
       } else {
         if (code.length < 4) {
           setErr(lang === 'pt' ? 'Codigo invalido.' : 'Invalid code.');
@@ -161,6 +162,41 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
 
             {mode === 'create' && (
               <div className="home-action-stack">
+                <div className="home-mode-picker">
+                  <div className="home-field-label t-title text-dim">
+                    {lang === 'pt' ? 'MODO' : 'MODE'}
+                  </div>
+                  <div className="home-mode-grid">
+                    <button
+                      className={`home-mode-card${gameMode === 'ffa' ? ' home-mode-card--active' : ''}`}
+                      data-mode="ffa"
+                      onClick={() => { playClick(); setGameMode('ffa'); }}
+                    >
+                      <div className="home-mode-card__accent" />
+                      <div className="home-mode-card__content">
+                        <span className="home-mode-card__name t-title">FFA</span>
+                        <span className="home-mode-card__sub t-mono">
+                          {lang === 'pt' ? 'Individual · pontos' : 'Individual · points'}
+                        </span>
+                      </div>
+                      {gameMode === 'ffa' && <div className="home-mode-card__check" />}
+                    </button>
+                    <button
+                      className={`home-mode-card${gameMode === 'survival' ? ' home-mode-card--active' : ''}`}
+                      data-mode="survival"
+                      onClick={() => { playClick(); setGameMode('survival'); }}
+                    >
+                      <div className="home-mode-card__accent" />
+                      <div className="home-mode-card__content">
+                        <span className="home-mode-card__name t-title">{lang === 'pt' ? 'NAVES' : 'SHIPS'}</span>
+                        <span className="home-mode-card__sub t-mono">
+                          {lang === 'pt' ? 'Equipes · última nave' : 'Teams · last ship'}
+                        </span>
+                      </div>
+                      {gameMode === 'survival' && <div className="home-mode-card__check" />}
+                    </button>
+                  </div>
+                </div>
                 <button className="btn btn-primary" onClick={go} disabled={!name.trim() || busy}>
                   {busy ? '...' : lang === 'pt' ? 'CRIAR SALA' : 'CREATE ROOM'}
                 </button>

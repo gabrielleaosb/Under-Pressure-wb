@@ -9,11 +9,15 @@ import { db, ref, get, set, update, remove, push, onValue, onChildAdded, runTran
 import { PLAYER_COLORS, selectCard, selectOpenCards, genId } from './gameData.js';
 import {
   DEFAULT_ROOM_TTL_MS,
+  TEAM_COLORS,
+  TEAM_INITIAL_HP,
+  TEAM_NAMES,
   clampPosition,
   findRejoinPlayer,
   isRoomExpired,
   resolveRound,
   roomExpiresAt,
+  teamHullChange,
 } from './gameRules.mjs';
 import { SHIP_IDS, SHIP_COLORS } from './components/ShipRoster.jsx';
 
@@ -89,7 +93,7 @@ export async function generateRoomCode() {
 
 // ── Create room ───────────────────────────────────────────────────────────────
 
-export async function createRoom(code, hostId, playerName, loadout = {}) {
+export async function createRoom(code, hostId, playerName, loadout = {}, initialGameMode = 'ffa') {
   const safeName = sanitizePlayerName(playerName);
   const createdAt = Date.now();
   const roomData = {
@@ -105,7 +109,8 @@ export async function createRoom(code, hostId, playerName, loadout = {}) {
     currentTheme: null,
     currentCard: null,
     revealResult: null,
-    settings: { rounds: 7, clueTimer: 30, voteTimer: 30, targetMode: 'random', cardMode: 'livre', cardOptions: 3 },
+    settings: { rounds: 7, clueTimer: 30, voteTimer: 30, targetMode: 'random', cardMode: 'livre', cardOptions: 3, gameMode: initialGameMode, numTeams: 2, navigatorMode: 'fixed' },
+    teams: initialGameMode === 'survival' ? { t0: { id:'t0', name:'Alpha', color: TEAM_COLORS[0], hp: TEAM_INITIAL_HP, eliminated: false }, t1: { id:'t1', name:'Beta', color: TEAM_COLORS[1], hp: TEAM_INITIAL_HP, eliminated: false } } : null,
     players: {
       [hostId]: {
         id: hostId, name: safeName,
@@ -191,20 +196,24 @@ export class GameEngine {
   }
 
   start() {
-    // onChildAdded: fires only on NEW actions, not deletions
     const unsub = onChildAdded(rref(this.roomCode, 'actions'), snap => {
       const key = snap.key, action = snap.val();
       if (key && action) this._enqueue(key, action);
     });
     this._unsubs.push(unsub);
 
-    // Watch votes to auto-finalize
+    // FFA votes
     const unsub2 = onValue(rref(this.roomCode, 'votes'), snap => {
       this._checkVoteCompletion(snap.val() || {}).catch(e => console.error('[Engine] checkVoteCompletion:', e));
     });
     this._unsubs.push(unsub2);
 
-    // Watch player connections to skip rounds when transmitter drops
+    // Survival team votes
+    const unsub4 = onValue(rref(this.roomCode, 'teamVotes'), snap => {
+      this._checkTeamVoteCompletion(snap.val() || {}).catch(e => console.error('[Engine] checkTeamVoteCompletion:', e));
+    });
+    this._unsubs.push(unsub4);
+
     const unsub3 = onValue(rref(this.roomCode, 'players'), snap => {
       this._onPlayersChanged(snap.val() || {}).catch(e => console.error('[Engine] onPlayersChanged:', e));
     });
@@ -240,11 +249,43 @@ export class GameEngine {
     if (clearRemote) roomUpdate(this.roomCode, { timerEnd: null }).catch(() => {});
   }
 
+  // ── Team helpers ────────────────────────────────────────────────────────────
+
+  _buildTeams(count) {
+    const teams = {};
+    for (let i = 0; i < count; i++) {
+      const id = `t${i}`;
+      teams[id] = { id, name: TEAM_NAMES[i], color: TEAM_COLORS[i], hp: TEAM_INITIAL_HP, eliminated: false };
+    }
+    return teams;
+  }
+
+  _activeTeamIds(room) {
+    return Object.values(room.teams || {})
+      .filter(t => !t.eliminated)
+      .map(t => t.id);
+  }
+
+  _teamNavigatorId(room, teamId) {
+    const players = allPlayers(room).filter(p => p.teamId === teamId && (p.isBot || p.connected !== false));
+    if (room.settings?.navigatorMode === 'rotating') {
+      const lastNav = room.teams?.[teamId]?.lastNavigatorId;
+      const idx = players.findIndex(p => p.id === lastNav);
+      return players[(idx + 1) % Math.max(1, players.length)]?.id || players[0]?.id;
+    }
+    return players.find(p => p.teamRole === 'navigator')?.id || players[0]?.id;
+  }
+
   // ── Game phases ─────────────────────────────────────────────────────────────
 
   async _startRound() {
     const room = await getRoom(this.roomCode);
     if (!room) return;
+
+    if (room.settings?.gameMode === 'survival') {
+      await this._startTeamRound(room);
+      return;
+    }
 
     const players = allPlayers(room).filter(p => p.isBot || p.connected !== false);
     if (players.length < 2) return;
@@ -294,6 +335,62 @@ export class GameEngine {
       ]);
       if (tx.isBot) setTimeout(() => this._autoSpinForBot(), ROUND_INTRO_DURATION_MS + 450);
       else this._setTimer(20000, async () => {
+        const r = await getRoom(this.roomCode);
+        if (!r || r.phase !== 'roulette') return;
+        await this._spinRoulette(this.hostId, true);
+      });
+    }
+  }
+
+  async _startTeamRound(room) {
+    const activeTeamIds = this._activeTeamIds(room);
+    if (activeTeamIds.length < 1) return;
+
+    const roundIntroUntil = Date.now() + ROUND_INTRO_DURATION_MS;
+    const cardMode = room.settings?.cardMode ?? 'themed';
+    const cardOptions = room.settings?.cardOptions ?? 3;
+
+    // Assign navigators
+    const teamStateInit = {};
+    const teamUpdates = {};
+    activeTeamIds.forEach(teamId => {
+      const navId = this._teamNavigatorId(room, teamId);
+      teamStateInit[teamId] = { navigatorId: navId, clue: null, clueReady: false, timedOut: false };
+      teamUpdates[teamId] = { ...room.teams[teamId], lastNavigatorId: navId };
+    });
+
+    const baseUpdate = {
+      clue: null, revealResult: null, currentTheme: null, currentCard: null,
+      timerEnd: null, cardPickOptions: null, roundIntroUntil, revealUnlockAt: null,
+      psychicId: null, teamState: teamStateInit, teams: teamUpdates,
+    };
+
+    if (cardMode === 'livre') {
+      const usedIds = Object.keys(room.usedCardIds || {}).map(Number);
+      const options = selectOpenCards(cardOptions, usedIds);
+      await Promise.all([
+        roomUpdate(this.roomCode, { ...baseUpdate, phase: 'pick_card', cardPickOptions: options }),
+        remove(rref(this.roomCode, 'teamVotes')),
+        remove(rref(this.roomCode, 'teamSecrets')),
+        remove(rref(this.roomCode, 'votes')),
+        remove(rref(this.roomCode, 'psychicSecret')),
+        remove(rref(this.roomCode, 'emojiReactions')),
+      ]);
+      this._setTimer(20000, async () => {
+        const r = await getRoom(this.roomCode);
+        if (!r || r.phase !== 'pick_card') return;
+        await this._applyCardPick(Object.values(r.cardPickOptions || {})[0]);
+      });
+    } else {
+      await Promise.all([
+        roomUpdate(this.roomCode, { ...baseUpdate, phase: 'roulette' }),
+        remove(rref(this.roomCode, 'teamVotes')),
+        remove(rref(this.roomCode, 'teamSecrets')),
+        remove(rref(this.roomCode, 'votes')),
+        remove(rref(this.roomCode, 'psychicSecret')),
+        remove(rref(this.roomCode, 'emojiReactions')),
+      ]);
+      this._setTimer(20000, async () => {
         const r = await getRoom(this.roomCode);
         if (!r || r.phase !== 'roulette') return;
         await this._spinRoulette(this.hostId, true);
@@ -352,11 +449,26 @@ export class GameEngine {
   async _activatePsychic(txId) {
     const room = await getRoom(this.roomCode);
     if (!room || !['spinning', 'pick_card'].includes(room.phase)) return;
+
+    if (room.settings?.gameMode === 'survival') {
+      // Generate a random secret per active team (targetMode='choose' deferred to clue phase)
+      const activeTeamIds = this._activeTeamIds(room);
+      const targetMode = room.settings?.targetMode ?? 'random';
+      if (targetMode !== 'choose') {
+        const secretUpdates = {};
+        activeTeamIds.forEach(teamId => {
+          secretUpdates[teamId] = { targetPosition: Math.floor(Math.random() * 81) + 10 };
+        });
+        await set(rref(this.roomCode, 'teamSecrets'), secretUpdates);
+      }
+      await this._startTeamCluePhase(room);
+      return;
+    }
+
     const tx = allPlayers(room).find(p => p.id === txId);
     const targetMode = room.settings?.targetMode ?? 'random';
 
     if (targetMode === 'choose' && !tx?.isBot) {
-      // Transmitter picks position + clue together in psychic phase
       await this._startPsychicCluePhase(txId);
     } else {
       const target = Math.floor(Math.random() * 81) + 10;
@@ -395,6 +507,151 @@ export class GameEngine {
     }
   }
 
+  async _startTeamCluePhase(room) {
+    const duration = (room.settings?.clueTimer ?? 30) * 1000;
+    await roomUpdate(this.roomCode, { phase: 'psychic' });
+    this._setTimer(duration, async () => {
+      const r = await getRoom(this.roomCode);
+      if (!r || r.phase !== 'psychic') return;
+      // Force-ready all teams that haven't submitted
+      const activeTeamIds = this._activeTeamIds(r);
+      const updates = {};
+      activeTeamIds.forEach(teamId => {
+        if (!r.teamState?.[teamId]?.clueReady) {
+          updates[`rooms/${this.roomCode}/teamState/${teamId}/clue`] = '(sem dica)';
+          updates[`rooms/${this.roomCode}/teamState/${teamId}/clueReady`] = true;
+          updates[`rooms/${this.roomCode}/teamState/${teamId}/timedOut`] = true;
+        }
+      });
+      if (Object.keys(updates).length) await update(ref(db), updates);
+      await this._proceedToTeamVoting();
+    });
+  }
+
+  async _checkAllCluesReady() {
+    const room = await getRoom(this.roomCode);
+    if (!room || room.phase !== 'psychic' || room.settings?.gameMode !== 'survival') return;
+    const activeTeamIds = this._activeTeamIds(room);
+    const allReady = activeTeamIds.every(teamId => room.teamState?.[teamId]?.clueReady === true);
+    if (allReady) {
+      this._clearTimer();
+      await this._proceedToTeamVoting();
+    }
+  }
+
+  async _proceedToTeamVoting() {
+    const room = await getRoom(this.roomCode);
+    if (!room) return;
+    const dur = (room.settings?.voteTimer ?? 60) * 1000;
+    await roomUpdate(this.roomCode, { phase: 'voting' });
+    this._setTimer(dur, () => this._finalizeTeamVoting(true).catch(e => console.error('[Engine] finalizeTeamVoting:', e)));
+  }
+
+  async _checkTeamVoteCompletion(teamVotes) {
+    const room = await getRoom(this.roomCode);
+    if (!room || room.phase !== 'voting' || room.settings?.gameMode !== 'survival') return;
+    const activeTeamIds = this._activeTeamIds(room);
+    const allDone = activeTeamIds.every(teamId => {
+      const navId = room.teamState?.[teamId]?.navigatorId;
+      const calibrators = allPlayers(room).filter(p =>
+        p.teamId === teamId && p.id !== navId && (p.isBot || p.connected !== false)
+      );
+      const votes = teamVotes[teamId] || {};
+      return calibrators.length === 0 || calibrators.every(p => votes[p.id] !== undefined);
+    });
+    if (allDone) {
+      this._clearTimer();
+      await this._finalizeTeamVoting(false).catch(e => console.error('[Engine] finalizeTeamVoting:', e));
+    }
+  }
+
+  async _finalizeTeamVoting(timedOut = false) {
+    if (this._finalizing) return;
+    this._finalizing = true;
+    let lockRef = null;
+    let releaseLockOnError = false;
+    try {
+      const room = await getRoom(this.roomCode);
+      if (!room || room.phase !== 'voting') return;
+
+      lockRef = rref(this.roomCode, 'finalizeLocks', String(room.round || 0));
+      const lockResult = await runTransaction(lockRef, (current) => {
+        if (current) return undefined;
+        return { hostId: this.hostId, round: room.round || 0, ts: Date.now() };
+      });
+      if (!lockResult.committed) return;
+      releaseLockOnError = true;
+
+      const [teamVotesSnap, teamSecretsSnap] = await Promise.all([
+        get(rref(this.roomCode, 'teamVotes')),
+        get(rref(this.roomCode, 'teamSecrets')),
+      ]);
+      const allTeamVotes = teamVotesSnap.val() || {};
+      const allTeamSecrets = teamSecretsSnap.val() || {};
+      const activeTeamIds = this._activeTeamIds(room);
+
+      const teamResults = {};
+      const teamUpdates = {};
+      const highlights = [];
+
+      activeTeamIds.forEach(teamId => {
+        const navId = room.teamState?.[teamId]?.navigatorId;
+        const target = clampPosition(allTeamSecrets[teamId]?.targetPosition ?? 50);
+        const rawVotes = allTeamVotes[teamId] || {};
+        const calibrators = allPlayers(room).filter(p =>
+          p.teamId === teamId && p.id !== navId && (p.isBot || p.connected !== false)
+        );
+
+        const votes = calibrators
+          .filter(p => rawVotes[p.id] !== undefined)
+          .map(p => ({ ...p, vote: rawVotes[p.id] }));
+
+        const positions = votes
+          .map(v => (typeof v.vote?.position === 'number' ? v.vote.position : null))
+          .filter(x => x !== null);
+
+        const avgVote = positions.length
+          ? Math.round(positions.reduce((s, x) => s + x, 0) / positions.length)
+          : target;
+        const avgDiff = Math.abs(avgVote - target);
+
+        const missedBoosts = votes.filter(v => v.vote?.boost && Math.abs(v.vote.position - target) > 25).length;
+        const teamTimedOut = timedOut || (room.teamState?.[teamId]?.timedOut === true);
+        const hpDelta = teamHullChange(avgDiff, missedBoosts, teamTimedOut);
+        const currentHp = room.teams?.[teamId]?.hp ?? TEAM_INITIAL_HP;
+        const newHp = Math.max(0, Math.min(TEAM_INITIAL_HP, currentHp + hpDelta));
+        const eliminated = newHp <= 0;
+
+        teamResults[teamId] = { target, avgVote, avgDiff, hpDelta, newHp, eliminated, timedOut: teamTimedOut };
+        teamUpdates[teamId] = { ...room.teams[teamId], hp: newHp, eliminated };
+        if (eliminated) highlights.push({ type: 'ship_down', teamId, teamName: room.teams[teamId]?.name });
+      });
+
+      const historyKey = push(rref(this.roomCode, 'roundHistory')).key || genId();
+      await update(ref(db), {
+        [`rooms/${this.roomCode}/teams`]: { ...room.teams, ...teamUpdates },
+        [`rooms/${this.roomCode}/teamResults`]: teamResults,
+        [`rooms/${this.roomCode}/roundHistory/${historyKey}`]: {
+          round: room.round,
+          card: room.currentCard ?? null,
+          theme: room.currentTheme ?? null,
+          teamResults,
+          highlights,
+        },
+        [`rooms/${this.roomCode}/phase`]: 'reveal',
+        [`rooms/${this.roomCode}/revealResult`]: { teamResults, highlights, revealUnlockAt: Date.now() + 5000 },
+        [`rooms/${this.roomCode}/revealUnlockAt`]: Date.now() + 5000,
+        [`rooms/${this.roomCode}/timerEnd`]: null,
+      });
+      releaseLockOnError = false;
+    } catch (e) {
+      if (releaseLockOnError && lockRef) await remove(lockRef).catch(() => {});
+      throw e;
+    } finally {
+      this._finalizing = false;
+    }
+  }
+
   async _proceedToVoting() {
     const room = await getRoom(this.roomCode);
     if (!room) return;
@@ -417,6 +674,7 @@ export class GameEngine {
   async _checkVoteCompletion(votes) {
     const room = await getRoom(this.roomCode);
     if (!room || room.phase !== 'voting') return;
+    if (room.settings?.gameMode === 'survival') return; // handled by _checkTeamVoteCompletion
     const voters = allPlayers(room).filter(p => p.id !== room.psychicId && (p.isBot || p.connected !== false));
     if (voters.length > 0 && voters.every(p => votes[p.id] !== undefined)) {
       this._clearTimer();
@@ -476,6 +734,25 @@ export class GameEngine {
 
   async _doNextRound(room) {
     const nextRound = (room.round || 0) + 1;
+
+    if (room.settings?.gameMode === 'survival') {
+      // Check win condition: ≤1 active team
+      const r = await getRoom(this.roomCode);
+      const activeTeams = Object.values(r.teams || {}).filter(t => !t.eliminated);
+      if (activeTeams.length <= 1) {
+        const winner = activeTeams[0] || null;
+        await roomUpdate(this.roomCode, {
+          phase: 'gameover',
+          winner: winner?.id || null,
+          winnerTeamName: winner?.name || null,
+        });
+        return;
+      }
+      await roomUpdate(this.roomCode, { round: nextRound });
+      await this._startRound();
+      return;
+    }
+
     if (nextRound >= (room.settings?.rounds ?? 7)) {
       const scoresSnap = await get(rref(this.roomCode, 'playerScores'));
       const scores = scoresSnap.val() || {};
@@ -531,12 +808,19 @@ export class GameEngine {
     allPlayers(room || {}).forEach(p => {
       if (!p.isBot && p.connected === false) playerRemovals[`rooms/${this.roomCode}/players/${p.id}`] = null;
     });
+    // Reset team HPs and elimination status if in survival mode
+    const teamReset = {};
+    Object.values(room?.teams || {}).forEach(t => {
+      teamReset[t.id] = { ...t, hp: TEAM_INITIAL_HP, eliminated: false, lastNavigatorId: null };
+    });
     await Promise.all([
       roomUpdate(this.roomCode, {
         phase: 'lobby', round: 0,
         psychicId: null, clue: null, revealResult: null,
         currentTheme: null, currentCard: null, timerEnd: null,
-        winner: null, winnerIds: null, startingTransmitterId: null, cardPickOptions: null, revealUnlockAt: null,
+        winner: null, winnerIds: null, winnerTeamName: null,
+        startingTransmitterId: null, cardPickOptions: null, revealUnlockAt: null,
+        ...(Object.keys(teamReset).length ? { teams: teamReset } : {}),
       }),
       remove(rref(this.roomCode, 'roundHistory')),
       remove(rref(this.roomCode, 'votes')),
@@ -546,6 +830,10 @@ export class GameEngine {
       remove(rref(this.roomCode, 'actions')),
       remove(rref(this.roomCode, 'playerScores')),
       remove(rref(this.roomCode, 'finalizeLocks')),
+      remove(rref(this.roomCode, 'teamVotes')),
+      remove(rref(this.roomCode, 'teamSecrets')),
+      remove(rref(this.roomCode, 'teamState')),
+      remove(rref(this.roomCode, 'teamResults')),
       ...(Object.keys(playerRemovals).length ? [update(ref(db), playerRemovals)] : []),
     ]);
   }
@@ -586,12 +874,19 @@ export class GameEngine {
     allPlayers(room || {}).forEach(p => {
       if (!p.isBot && p.connected === false) playerRemovals[`rooms/${this.roomCode}/players/${p.id}`] = null;
     });
+    // Reset team HPs
+    const teamReset = {};
+    Object.values(room?.teams || {}).forEach(t => {
+      teamReset[t.id] = { ...t, hp: TEAM_INITIAL_HP, eliminated: false, lastNavigatorId: null };
+    });
     await roomUpdate(this.roomCode, {
       round: 0,
       winner: null,
       winnerIds: null,
+      winnerTeamName: null,
       startingTransmitterId: activePlayers.some(p => p.id === room?.transmitterId) ? room.transmitterId : this.hostId,
       revealUnlockAt: null,
+      ...(Object.keys(teamReset).length ? { teams: teamReset } : {}),
     });
     await Promise.all([
       remove(rref(this.roomCode, 'roundHistory')),
@@ -600,6 +895,10 @@ export class GameEngine {
       remove(rref(this.roomCode, 'psychicSecret')),
       remove(rref(this.roomCode, 'emojiReactions')),
       remove(rref(this.roomCode, 'finalizeLocks')),
+      remove(rref(this.roomCode, 'teamVotes')),
+      remove(rref(this.roomCode, 'teamSecrets')),
+      remove(rref(this.roomCode, 'teamState')),
+      remove(rref(this.roomCode, 'teamResults')),
       set(rref(this.roomCode, 'playerScores'), {}),
       ...(Object.keys(playerRemovals).length ? [update(ref(db), playerRemovals)] : []),
     ]);
@@ -645,7 +944,67 @@ export class GameEngine {
         if (['random','choose'].includes(data.targetMode)) s.targetMode = data.targetMode;
         if (['themed','livre'].includes(data.cardMode)) s.cardMode = data.cardMode;
         if ([1,3,5].includes(data.cardOptions)) s.cardOptions = data.cardOptions;
+        if (['ffa','survival'].includes(data.gameMode)) s.gameMode = data.gameMode;
+        if ([2,3,4].includes(data.numTeams)) s.numTeams = data.numTeams;
+        if (['fixed','rotating'].includes(data.navigatorMode)) s.navigatorMode = data.navigatorMode;
+
+        const modeChanged = s.gameMode !== undefined && s.gameMode !== room.settings?.gameMode;
+        const numTeamsChanged = s.numTeams !== undefined && s.numTeams !== room.settings?.numTeams;
+        const newMode = s.gameMode ?? room.settings?.gameMode ?? 'ffa';
+        const newNumTeams = s.numTeams ?? room.settings?.numTeams ?? 2;
+
         if (Object.keys(s).length) await update(rref(this.roomCode, 'settings'), s);
+
+        // Rebuild teams if mode or team count changed
+        if (newMode === 'survival' && (modeChanged || numTeamsChanged)) {
+          const teams = this._buildTeams(newNumTeams);
+          // Unassign players that were in teams that no longer exist
+          const playerUpdates = {};
+          allPlayers(room).forEach(p => {
+            if (p.teamId && !teams[p.teamId]) playerUpdates[p.id] = { ...p, teamId: null, teamRole: null };
+          });
+          await roomUpdate(this.roomCode, { teams });
+          if (Object.keys(playerUpdates).length) await update(rref(this.roomCode, 'players'), playerUpdates);
+        } else if (newMode === 'ffa' && modeChanged) {
+          await roomUpdate(this.roomCode, { teams: null });
+        }
+        break;
+      }
+
+      case 'join_team': {
+        if (room.phase !== 'lobby') return;
+        const { teamId, role } = data;
+        if (!room.teams?.[teamId]) return;
+        if (!['navigator', 'calibrator'].includes(role)) return;
+        // If joining as navigator, demote existing navigator in that team
+        if (role === 'navigator') {
+          const existingNav = allPlayers(room).find(p => p.id !== by && p.teamId === teamId && p.teamRole === 'navigator');
+          if (existingNav) {
+            await update(rref(this.roomCode, 'players', existingNav.id), { teamRole: 'calibrator' });
+          }
+        }
+        await update(rref(this.roomCode, 'players', by), { teamId, teamRole: role });
+        break;
+      }
+
+      case 'leave_team': {
+        if (room.phase !== 'lobby') return;
+        await update(rref(this.roomCode, 'players', by), { teamId: null, teamRole: null });
+        break;
+      }
+
+      case 'randomize_teams': {
+        if (!isHost || room.phase !== 'lobby') return;
+        const numTeams = room.settings?.numTeams ?? 2;
+        const active = allPlayers(room).filter(p => p.isBot || p.connected !== false);
+        const shuffled = [...active].sort(() => Math.random() - 0.5);
+        const playerUpdates = {};
+        shuffled.forEach((p, i) => {
+          const teamId = `t${i % numTeams}`;
+          const role = i < numTeams ? 'navigator' : 'calibrator';
+          playerUpdates[p.id] = { ...p, teamId, teamRole: role };
+        });
+        await update(rref(this.roomCode, 'players'), playerUpdates);
         break;
       }
 
@@ -654,6 +1013,17 @@ export class GameEngine {
         if (!isHost || room.phase !== 'lobby') return;
         const activePlayers = allPlayers(room).filter(p => p.isBot || p.connected !== false);
         if (activePlayers.length < 2) return;
+        if (room.settings?.gameMode === 'survival') {
+          const numTeams = room.settings?.numTeams ?? 2;
+          const teams = room.teams || this._buildTeams(numTeams);
+          const activeTeamIds = Object.keys(teams);
+          // Each team must have at least 1 player
+          const valid = activeTeamIds.every(teamId =>
+            activePlayers.some(p => p.teamId === teamId)
+          );
+          if (!valid) return;
+          if (!room.teams) await roomUpdate(this.roomCode, { teams });
+        }
         await this._prepareFreshGame();
         await this._startRound();
         break;
@@ -677,9 +1047,31 @@ export class GameEngine {
       }
 
       case 'submit_clue': {
+        if (room.phase !== 'psychic') return;
+
+        if (room.settings?.gameMode === 'survival') {
+          const myTeamId = actor?.teamId;
+          if (!myTeamId) return;
+          const navId = room.teamState?.[myTeamId]?.navigatorId;
+          if (navId !== by) return;
+          const clue = String(data.clue || '').trim().slice(0, 40);
+          if (!clue) return;
+          if (room.settings?.targetMode === 'choose' && data.position !== undefined) {
+            const pos = clampPosition(data.position, 50, 5, 95);
+            await set(rref(this.roomCode, `teamSecrets/${myTeamId}`), { targetPosition: pos });
+          }
+          const updates = {
+            [`rooms/${this.roomCode}/teamState/${myTeamId}/clue`]: clue,
+            [`rooms/${this.roomCode}/teamState/${myTeamId}/clueReady`]: true,
+          };
+          await update(ref(db), updates);
+          await this._checkAllCluesReady();
+          break;
+        }
+
         const tx = Object.values(room.players || {}).find(p => p.id === room.psychicId);
         const canClue = room.psychicId === by || (by === this.hostId && tx?.isBot);
-        if (room.phase !== 'psychic' || !canClue) return;
+        if (!canClue) return;
         const clue = String(data.clue || '').trim().slice(0, 40);
         if (!clue) return;
         if (room.settings?.targetMode === 'choose' && data.position !== undefined) {
@@ -693,8 +1085,21 @@ export class GameEngine {
       }
 
       case 'submit_vote': {
-        if (room.phase !== 'voting' || by === room.psychicId) return;
+        if (room.phase !== 'voting') return;
         if (actor?.connected === false) return;
+
+        if (room.settings?.gameMode === 'survival') {
+          const myTeamId = actor?.teamId;
+          if (!myTeamId) return;
+          const navId = room.teamState?.[myTeamId]?.navigatorId;
+          if (by === navId) return; // navigator doesn't vote
+          if (room.teams?.[myTeamId]?.eliminated) return;
+          const pos = clampPosition(data.position);
+          await set(rref(this.roomCode, `teamVotes/${myTeamId}/${by}`), { position: pos, boost: !!data.boost });
+          break;
+        }
+
+        if (by === room.psychicId) return;
         const pos = clampPosition(data.position);
         await set(rref(this.roomCode, 'votes', by), { position: pos, boost: !!data.boost });
         break;
@@ -796,15 +1201,37 @@ export class GameEngine {
       await roomUpdate(this.roomCode, { clue:'[DEV]', timerEnd:null });
       await this._proceedToVoting();
     } else if (phase === 'voting') {
-      const voters = allPlayers(room).filter(p => p.id !== room.psychicId);
-      const vSnap  = await get(rref(this.roomCode,'votes'));
-      const existing = vSnap.val() || {};
-      const upd = {};
-      voters.filter(p => existing[p.id] === undefined).forEach(p => {
-        upd[p.id] = { position: Math.round(20+Math.random()*60), boost: false };
-      });
-      if (Object.keys(upd).length) await update(rref(this.roomCode,'votes'), upd);
-      await this._finalizeVoting();
+      if (room.settings?.gameMode === 'survival') {
+        // Fill missing team votes with random positions
+        const activeTeamIds = this._activeTeamIds(room);
+        const tvSnap = await get(rref(this.roomCode, 'teamVotes'));
+        const allTeamVotes = tvSnap.val() || {};
+        const tvUpd = {};
+        activeTeamIds.forEach(teamId => {
+          const navId = room.teamState?.[teamId]?.navigatorId;
+          const calibrators = allPlayers(room).filter(p => p.teamId === teamId && p.id !== navId && (p.isBot || p.connected !== false));
+          calibrators.forEach(p => {
+            if ((allTeamVotes[teamId] || {})[p.id] === undefined) {
+              tvUpd[`teamVotes/${teamId}/${p.id}`] = { position: Math.round(20 + Math.random() * 60), boost: false };
+            }
+          });
+        });
+        if (Object.keys(tvUpd).length) {
+          const fbUpd = Object.fromEntries(Object.entries(tvUpd).map(([k, v]) => [`rooms/${this.roomCode}/${k}`, v]));
+          await update(ref(db), fbUpd);
+        }
+        await this._finalizeTeamVoting(false);
+      } else {
+        const voters = allPlayers(room).filter(p => p.id !== room.psychicId);
+        const vSnap  = await get(rref(this.roomCode,'votes'));
+        const existing = vSnap.val() || {};
+        const upd = {};
+        voters.filter(p => existing[p.id] === undefined).forEach(p => {
+          upd[p.id] = { position: Math.round(20+Math.random()*60), boost: false };
+        });
+        if (Object.keys(upd).length) await update(rref(this.roomCode,'votes'), upd);
+        await this._finalizeVoting();
+      }
     } else if (phase === 'reveal') {
       await this._advanceRound();
     } else if (phase === 'gameover') {

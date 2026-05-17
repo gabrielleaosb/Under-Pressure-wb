@@ -89,6 +89,23 @@ function allPlayers(room) {
   return Object.values(room?.players || {});
 }
 
+// ── Team Survival mode ────────────────────────────────────────────────────────
+
+export const TEAM_INITIAL_HP = 100;
+export const TEAM_COLORS = ['#ff4655', '#00c2ff', '#ffb800', '#00ff88'];
+export const TEAM_NAMES = ['Alpha', 'Beta', 'Gamma', 'Delta'];
+
+export function teamHullChange(avgDiff, missedBoosts = 0, timedOut = false) {
+  let base;
+  if (avgDiff <= 5)       base = 10;
+  else if (avgDiff <= 15) base = 5;
+  else if (avgDiff <= 25) base = -5;
+  else if (avgDiff <= 40) base = -15;
+  else if (avgDiff <= 60) base = -25;
+  else                    base = -35;
+  return base - missedBoosts * 8 - (timedOut ? 10 : 0);
+}
+
 export function resolveRound({
   room,
   rawVotes = {},
@@ -147,7 +164,7 @@ export function resolveRound({
     scoreUpdates[player.id] = (existingScores[player.id] || 0) + (roundScores[player.id] || 0);
   });
 
-  const txName = players.find((player) => player.id === room.psychicId)?.name;
+  const txName = players.find((player) => player.id === room.psychicId)?.name ?? null;
   const revealUnlockAt = now + 5000;
   const visibleHighlights = highlights.slice(0, 5);
   const revealResult = {
@@ -162,8 +179,8 @@ export function resolveRound({
     revealUnlockAt,
   };
   const historyEntry = {
-    round: room.round,
-    transmitterId: room.psychicId,
+    round: room.round ?? 0,
+    transmitterId: room.psychicId ?? null,
     transmitterName: txName,
     theme: room.currentTheme ?? null,
     card: room.currentCard ?? null,

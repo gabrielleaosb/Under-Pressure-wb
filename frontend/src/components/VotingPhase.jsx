@@ -3,6 +3,7 @@ import PressurePanel from './PressurePanel.jsx';
 import { tCard } from '../i18n.js';
 import { EMOJI_REACTIONS } from '../gameData.js';
 import { playVoteSubmit, playTimerTick, playAlarmTick, playClick } from '../sounds.js';
+import { useCooldown } from '../useCooldown.js';
 
 function useCountdown(timerEnd) {
   const [remaining, setRemaining] = useState(0);
@@ -66,9 +67,12 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
     playVoteSubmit();
   };
 
+  const fireEmoji = useCooldown(600);
   const sendEmoji = (emoji) => {
-    send('emoji_reaction', { emoji });
-    playClick();
+    fireEmoji(() => {
+      send('emoji_reaction', { emoji });
+      playClick();
+    });
   };
 
   return (

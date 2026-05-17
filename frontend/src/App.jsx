@@ -20,6 +20,7 @@ import RouletteStyleLab2 from './components/RouletteStyleLab2.jsx';
 import GaugeLab from './components/GaugeLab.jsx';
 import BackgroundLab from './components/BackgroundLab.jsx';
 import { RankingSidebar, RankingTopBar } from './components/RankingSidebar.jsx';
+import TeamHUD from './components/TeamHUD.jsx';
 import { t, tCard } from './i18n.js';
 import { playPhaseChange, playVotingStart, playError as playSoundError } from './sounds.js';
 
@@ -69,7 +70,23 @@ export default function App() {
   const gameState = useMemo(() => (rawRoom ? normalizeRoom(rawRoom) : null), [rawRoom]);
   const me = gameState?.players?.find((player) => player.id === myId);
   const isHost = rawRoom?.hostId === myId;
-  const activeTransmitterId = gameState?.psychicId || gameState?.transmitterId;
+
+  // In survival mode, project team-specific data into the shape FFA components expect
+  const effectiveGameState = useMemo(() => {
+    if (!gameState || !gameState.isSurvival) return gameState;
+    const myTeamId = me?.teamId;
+    const myTeamState = myTeamId ? (gameState.teamState?.[myTeamId] || {}) : {};
+    const myTeamVotes = myTeamId ? (gameState.teamVotes?.[myTeamId] || {}) : {};
+    return {
+      ...gameState,
+      psychicId: myTeamState.navigatorId ?? null,
+      clue: myTeamState.clue ?? null,
+      votes: ['reveal', 'gameover'].includes(gameState.phase) ? myTeamVotes : null,
+      submittedVotes: Object.keys(myTeamVotes),
+    };
+  }, [gameState, me?.teamId]);
+
+  const activeTransmitterId = effectiveGameState?.psychicId || effectiveGameState?.transmitterId;
   const activeTransmitter = gameState?.players?.find((player) => player.id === activeTransmitterId);
   const phaseLabel = gameState
     ? ({
@@ -271,7 +288,8 @@ export default function App() {
     try {
       sessionStorage.setItem('up_pid', myId);
       const code = await generateRoomCode();
-      await createRoom(code, myId, playerName, loadout);
+      const { gameMode, ...shipLoadout } = loadout;
+      await createRoom(code, myId, playerName, shipLoadout, gameMode || 'ffa');
       sessionStorage.setItem('up_room', code);
       setRoomCode(code);
     } catch (err) {
@@ -296,7 +314,7 @@ export default function App() {
     setRoomCode(upper);
   };
 
-  const sharedProps = { gameState, myId, lang, send, isHost, me };
+  const sharedProps = { gameState: effectiveGameState, myId, lang, send, isHost, me };
 
   const hideIntro = useCallback(() => setShowRoundIntro(false), []);
 
@@ -409,6 +427,10 @@ export default function App() {
               <div className="game-mobile-topbar">
                 <RankingTopBar {...sharedProps} onSettings={() => setShowSettings(true)} />
               </div>
+
+              {gameState?.isSurvival && (
+                <TeamHUD gameState={gameState} myId={myId} />
+              )}
 
               <div className="game-frame">
                 <aside className="game-rail">

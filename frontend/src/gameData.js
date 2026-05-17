@@ -194,6 +194,10 @@ export function normalizeRoom(raw) {
   const emojiReactions = Object.values(raw.emojiReactions || {}).slice(-15);
   const votes          = raw.votes || {};
   const submittedVotes = Object.keys(votes);
+  const teams          = raw.teams ? Object.values(raw.teams) : [];
+  const teamState      = raw.teamState || {};
+  const teamVotes      = raw.teamVotes || {};
+  const teamResults    = raw.teamResults || {};
 
   return {
     ...raw,
@@ -205,5 +209,10 @@ export function normalizeRoom(raw) {
     votes: ['reveal','gameover'].includes(raw.phase) ? votes : null,
     submittedVotes,
     totalRounds: raw.settings?.rounds ?? 7,
+    teams,
+    teamState,
+    teamVotes,
+    teamResults,
+    isSurvival: raw.settings?.gameMode === 'survival',
   };
 }
