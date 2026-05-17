@@ -371,57 +371,60 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
           </section>
 
           <section className="lobby-brief-bar panel bevel">
-            <div className="lobby-brief-bar__status">
-              <span className="t-title text-dim" style={{ fontSize: 7 }}>{lang === 'pt' ? 'BRIEFING' : 'BRIEFING'}</span>
-              <span className={`lobby-brief-bar__ready t-title${canStart ? ' glow-text-mint' : ' glow-text-amber'}`}>
-                {missionReadyLabel}
-              </span>
-            </div>
-            <div className="lobby-brief-bar__chips">
-              <span className="lobby-brief-chip">
-                <span className="t-title text-dim">{lang === 'pt' ? 'TRIPULAÇÃO' : 'CREW'}</span>
-                <strong className="t-read">{players.length}</strong>
-              </span>
-              {!isSurvival && (
-                <span className="lobby-brief-chip">
-                  <span className="t-title text-dim">{t('rounds', lang)}</span>
-                  <strong className="t-read">{settings.rounds}</strong>
-                </span>
-              )}
-              {isSurvival && (
-                <span className="lobby-brief-chip">
-                  <span className="t-title text-dim">{lang === 'pt' ? 'EQUIPES' : 'TEAMS'}</span>
-                  <strong className="t-read">{teams.length}</strong>
-                </span>
-              )}
-              <span className="lobby-brief-chip">
-                <span className="t-title text-dim">{lang === 'pt' ? 'MODO' : 'MODE'}</span>
-                <strong className="t-read">{settings.cardMode === 'livre' ? (lang === 'pt' ? 'Livre' : 'Free') : (lang === 'pt' ? 'Tema' : 'Theme')}</strong>
-              </span>
-              <span className="lobby-brief-chip">
-                <span className="t-title text-dim">{lang === 'pt' ? 'DICA' : 'CLUE'}</span>
-                <strong className="t-read">{settings.clueTimer}s</strong>
-              </span>
-              <span className="lobby-brief-chip">
-                <span className="t-title text-dim">{lang === 'pt' ? 'VOTO' : 'VOTE'}</span>
-                <strong className="t-read">{settings.voteTimer}s</strong>
-              </span>
-              {!isSurvival && (
-                <span className="lobby-brief-chip">
-                  <span className="t-title text-dim">{lang === 'pt' ? 'NAV' : 'NAV'}</span>
-                  <strong className="t-read" style={{ fontSize: 13 }}>{transmitter?.name || '?'}</strong>
-                </span>
-              )}
-            </div>
+            {/* Player identity */}
             {me && (
               <button
-                className="lobby-brief-bar__ship"
+                className="lobby-brief-pilot"
                 onClick={() => { playClick(); setPickerOpen(true); }}
                 title={lang === 'pt' ? 'Trocar nave' : 'Change ship'}
               >
-                <ShipIcon ship={me.ship || 'nova_01'} color={me.shipColor || 'blue'} accent={me.shipAccent || 'cyan'} pixel={3} glow />
+                <ShipIcon ship={me.ship || 'nova_01'} color={me.shipColor || 'blue'} accent={me.shipAccent || 'cyan'} pixel={3.5} glow />
+                <div className="lobby-brief-pilot__info">
+                  <span className="lobby-brief-pilot__label t-title text-dim">{lang === 'pt' ? 'PILOTO' : 'PILOT'}</span>
+                  <span className="lobby-brief-pilot__name">{me.name}</span>
+                </div>
               </button>
             )}
+
+            <div className="lobby-brief-sep" />
+
+            {/* Stats row */}
+            <div className="lobby-brief-stats">
+              <div className="lobby-brief-stat">
+                <span className="lobby-brief-stat__label t-title">{lang === 'pt' ? 'MODO' : 'MODE'}</span>
+                <span className="lobby-brief-stat__val t-title" style={{ color: isSurvival ? 'var(--neon-coral)' : 'var(--neon-cyan)' }}>
+                  {isSurvival ? (lang === 'pt' ? 'NAVES' : 'SHIPS') : 'FFA'}
+                </span>
+              </div>
+              <div className="lobby-brief-stat">
+                <span className="lobby-brief-stat__label t-title">{isSurvival ? (lang === 'pt' ? 'EQUIPES' : 'TEAMS') : (lang === 'pt' ? 'RODADAS' : 'ROUNDS')}</span>
+                <span className="lobby-brief-stat__val t-read">{isSurvival ? teams.length : settings.rounds}</span>
+              </div>
+              <div className="lobby-brief-stat">
+                <span className="lobby-brief-stat__label t-title">{lang === 'pt' ? 'DICA' : 'CLUE'}</span>
+                <span className="lobby-brief-stat__val t-read">{settings.clueTimer}s</span>
+              </div>
+              <div className="lobby-brief-stat">
+                <span className="lobby-brief-stat__label t-title">{lang === 'pt' ? 'VOTO' : 'VOTE'}</span>
+                <span className="lobby-brief-stat__val t-read">{settings.voteTimer}s</span>
+              </div>
+              <div className="lobby-brief-stat">
+                <span className="lobby-brief-stat__label t-title">{lang === 'pt' ? 'TRIPULAÇÃO' : 'CREW'}</span>
+                <span className="lobby-brief-stat__val t-read">{players.length}</span>
+              </div>
+              {!isSurvival && transmitter && (
+                <div className="lobby-brief-stat">
+                  <span className="lobby-brief-stat__label t-title">NAV</span>
+                  <span className="lobby-brief-stat__val t-read" style={{ fontSize: 14 }}>{transmitter.name}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Status badge */}
+            <div className={`lobby-brief-badge${canStart ? ' lobby-brief-badge--go' : ''}`}>
+              <div className="lobby-brief-badge__dot" />
+              <span className="lobby-brief-badge__text t-title">{missionReadyLabel.toUpperCase()}</span>
+            </div>
           </section>
 
           <section className="lobby-section-head">

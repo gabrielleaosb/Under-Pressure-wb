@@ -947,62 +947,122 @@ body::before {
   border-color: rgba(0,255,255,.18);
 }
 
-/* lobby-brief-bar — briefing strip */
+/* ── Briefing bar ── */
 .lobby-brief-bar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 18px;
+  gap: 0;
+  padding: 0;
   background:
-    linear-gradient(90deg, rgba(0,255,255,.06), rgba(4,7,20,.7)),
-    radial-gradient(circle at 0% 50%, rgba(0,255,255,.08), transparent 40%);
-  border-color: rgba(0,255,255,.22);
-  flex-wrap: wrap;
+    linear-gradient(90deg, rgba(0,255,255,.05), rgba(4,7,20,.68)),
+    radial-gradient(circle at 0% 50%, rgba(0,255,255,.07), transparent 38%);
+  border-color: rgba(0,255,255,.2);
+  overflow: hidden;
 }
 
-.lobby-brief-bar__status {
+/* Pilot identity — left zone */
+.lobby-brief-pilot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: rgba(0,255,255,.04);
+  border: none;
+  border-right: 1px solid rgba(255,255,255,.07);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s;
+  text-align: left;
+  outline: none;
+}
+.lobby-brief-pilot:hover { background: rgba(0,255,255,.08); }
+.lobby-brief-pilot:focus-visible { outline: none; }
+
+.lobby-brief-pilot__info {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
+}
+.lobby-brief-pilot__label { font-size: 7px; }
+.lobby-brief-pilot__name {
+  font-family: var(--f-body);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--ink);
+  white-space: nowrap;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Thin separator */
+.lobby-brief-sep {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(255,255,255,.07);
   flex-shrink: 0;
 }
 
-.lobby-brief-bar__ready {
-  font-size: 11px;
-  letter-spacing: .5px;
-}
-
-.lobby-brief-bar__chips {
+/* Stats — center zone */
+.lobby-brief-stats {
   display: flex;
+  align-items: stretch;
   flex-wrap: wrap;
-  gap: 10px;
   flex: 1;
   min-width: 0;
 }
 
-.lobby-brief-chip {
+.lobby-brief-stat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 4px;
-  padding: 7px 13px;
+  justify-content: center;
+  gap: 3px;
+  padding: 12px 14px;
+  border-right: 1px solid rgba(255,255,255,.06);
 }
 
-.lobby-brief-chip .t-title { font-size: 7px; letter-spacing: .5px; }
-.lobby-brief-chip .t-read  { font-size: 22px; line-height: 1.1; }
+.lobby-brief-stat__label {
+  font-size: 7px;
+  color: var(--ink-dim);
+  letter-spacing: .06em;
+}
+.lobby-brief-stat__val {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink);
+}
 
-.lobby-brief-bar__ship {
-  background: none;
-  border: none;
-  padding: 2px;
-  cursor: pointer;
+/* Status badge — right zone */
+.lobby-brief-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 12px 18px;
   flex-shrink: 0;
-  opacity: .85;
-  transition: opacity .15s, transform .15s;
+  border-left: 1px solid rgba(255,255,255,.07);
 }
-.lobby-brief-bar__ship:hover { opacity: 1; transform: scale(1.08); }
+.lobby-brief-badge__dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--neon-amber);
+  box-shadow: 0 0 6px var(--neon-amber);
+  flex-shrink: 0;
+  animation: badge-pulse 1.8s ease-in-out infinite;
+}
+.lobby-brief-badge--go .lobby-brief-badge__dot {
+  background: var(--neon-mint);
+  box-shadow: 0 0 8px var(--neon-mint);
+  animation: none;
+}
+.lobby-brief-badge__text {
+  font-size: 8px;
+  letter-spacing: .08em;
+  color: var(--neon-amber);
+}
+.lobby-brief-badge--go .lobby-brief-badge__text {
+  color: var(--neon-mint);
+}
+@keyframes badge-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
 .lobby-section-head {
   display: flex;
@@ -3365,12 +3425,10 @@ body::before {
   .lobby-command-actions {
     justify-content: flex-start;
   }
-  .lobby-brief-bar {
-    gap: 8px;
-  }
-  .lobby-brief-bar__chips {
-    gap: 5px;
-  }
+  .lobby-brief-pilot { padding: 10px 12px; }
+  .lobby-brief-stat  { padding: 10px 10px; }
+  .lobby-brief-badge { padding: 10px 12px; }
+  .lobby-brief-stat__val { font-size: 17px; }
   .ship-showroom {
     width: calc(100% - 28px);
     max-width: 1360px;
