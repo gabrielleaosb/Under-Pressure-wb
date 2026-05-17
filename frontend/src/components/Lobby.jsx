@@ -3,6 +3,7 @@ import { t } from '../i18n.js';
 import { playClick } from '../sounds.js';
 import { ShipIcon, ShipPicker } from './ShipRoster.jsx';
 import { useCooldown } from '../useCooldown.js';
+import GearIcon from './GearIcon.jsx';
 
 function TeamCard({ team, players, me, lang, send, onPickShip }) {
   const teamPlayers = players.filter(p => p.teamId === team.id);
@@ -363,8 +364,8 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
               <button className={`btn btn-sm ${copied ? 'btn-green' : 'btn-yellow'}`} onClick={copyLink}>
                 {copied ? t('copied', lang) : t('copy_link', lang)}
               </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => { playClick(); onSettings?.(); }}>
-                {lang === 'pt' ? 'AJUSTES' : 'SETTINGS'}
+              <button className="btn btn-ghost btn-icon-only" onClick={() => { playClick(); onSettings?.(); }} title={lang === 'pt' ? 'Ajustes' : 'Settings'} aria-label={lang === 'pt' ? 'Ajustes' : 'Settings'}>
+                <GearIcon size={15} />
               </button>
             </div>
           </section>

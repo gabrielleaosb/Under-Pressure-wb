@@ -409,6 +409,7 @@ export default function App() {
           onCreate={handleCreate}
           onJoin={handleJoin}
           inviteCode={INVITE_ROOM}
+          onSettings={() => setShowSettings(true)}
         />
       )}
 

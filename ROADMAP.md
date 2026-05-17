@@ -6,25 +6,44 @@ Under Pressure deve ser um party game online de calibragem, blefe leve e caos so
 
 ## Estado Atual
 
-O projeto ja tem uma fatia vertical funcional:
+O projeto esta em alpha jogavel com dois modos funcionais.
 
+**Infraestrutura:**
 - App React/Vite com Firebase Realtime Database.
-- Salas online com codigo, lobby, entrada de jogadores e presenca.
 - Engine host-authoritative no navegador do host.
-- Fluxo de rodada: roleta/selecao de carta, navegador, voto, revelacao e fim de jogo.
-- Modo FFA com pontuacao individual, streak e BOOST (alto risco/alta recompensa).
-- Sistema de dano removido — pontuacao negativa substitui penalidade por erro grande.
-- Painel de pressao interativo com identificacao de votos por ranking.
-- Naves pixel art com cor e accent, seletor de nave, ranking, sons e efeitos visuais.
-- Modo LIVRE: navegador escolhe entre N cartas estilo Wavelength em vez de roleta tematica.
-- Dev mode com bots para testar fluxo solo.
-- Desconexao de navegador pula a rodada automaticamente; votantes desconectados sao ignorados.
-- Regras do Firebase endurecidas por caminho: sala, jogadores, acoes, votos, placar, historico e locks tem validacao explicita.
-- Host heartbeat com troca de host quando o navegador autoridade fica stale.
-- Timer de reveal/proxima rodada corrigido com `revealUnlockAt` e finalizacao de voto idempotente por `finalizeLocks`.
-- Dependencias auditadas apos upgrade do Firebase; `npm audit --omit=dev` sem vulnerabilidades conhecidas.
+- Salas online com codigo, lobby, presenca e heartbeat de host.
+- Regras Firebase granulares por caminho; finalizacao idempotente com `finalizeLocks`.
+- Dev mode com bots (?dev), laboratorios visuais (?gauge, ?shipyard, etc.).
 
-O projeto esta em alpha jogavel. Precisa consolidar segredo real do alvo, panes mecanicas e playtest real.
+**Modo FFA:**
+- Pontuacao individual, navegador rotativo, BOOST (alto risco/recompensa).
+- Cartas modo LIVRE (46 cartas abertas, escolha pelo navegador).
+- Deck TEMATICO disponivel no codigo, desabilitado na UI por ora.
+- Revelacao em cascata com sons de tensao.
+- Tela de fim de jogo com podio 2 colunas, placar e destaques.
+
+**Modo Sobrevivencia (equipes):**
+- 2 a 4 equipes configuravel no lobby (ex: 2v2, 3v3, ou assimetrico).
+- Cada equipe tem HP (100) que decai com erros de calibragem.
+- Ultima nave de pe vence; sem numero fixo de rodadas.
+- Todas as equipes jogam simultaneamente — cada equipe tem seu navegador e calibradores.
+- Navegador fixo ou rotativo configuravel.
+- Aleatorizar equipes inclui bots do dev mode.
+- Selecao de equipe e papel (NAV/CAL) direto nos cards da tripulacao no lobby.
+- HP com animacao pulsante em estados critico/alerta no TeamHUD.
+- Formula de dano: distancia do alvo + boosts perdidos + timer esgotado.
+
+**UX / Performance:**
+- Botao de settings substituido por icone de engrenagem em todos os lugares + home.
+- Briefing bar do lobby mais legivel; codigo da sala sem efeito de hover.
+- Tela de vitoria 2 colunas (podio + placar), bloco de vencedor removido por redundancia.
+- Modo de selecao na home antes de criar sala (FFA vs Naves).
+- `backdrop-filter: blur()` removido de todos os paineis persistentes (principal causa de lag).
+- Hover de botoes migrado de `filter: brightness()` para `opacity ::after` (GPU puro).
+- Buraco negro do background com paleta Interestelar (ambar/laranja/branco), contagem de particulas reduzida ~35%.
+- Anti-spam com `useCooldown` em aleatorizar equipes e reacoes emoji.
+
+O projeto precisa de playtest real com 4+ pessoas e do segredo do alvo protegido por backend.
 
 ## URGENTE - Roadmap Real Recomendado
 
@@ -209,8 +228,8 @@ Tarefas:
 - ~~Adicionar configuracao de modo de cartas no lobby.~~ ✓ (TEMATICO / LIVRE, opcoes 1/3/5)
 - ~~Modo FFA competitivo.~~ ✓ (implementado e refinado)
 - Criar modo cooperativo sobrevivencia.
-- Avaliar modo equipes se playtest pedir.
-- ~~Tela de resumo com destaques no fim de partida.~~ ✓ (GameOver com destaques e placar)
+- ~~Modo de equipes com HP e ultima nave de pe.~~ ✓ (Modo Sobrevivencia: 2–4 equipes, dano por erro, TeamHUD)
+- ~~Tela de resumo com destaques no fim de partida.~~ ✓ (GameOver 2 colunas com podio, placar e destaques)
 - Rejoin de jogador que saiu durante partida em andamento. (base feita: jogador desconectado pode recuperar slot por mesmo nome; UX dedicada ainda pendente)
 
 Criterio de pronto:
@@ -245,7 +264,7 @@ Criterio de pronto:
 
 - Corrigir exposicao do alvo secreto.
 - ~~Fechar escrita publica ampla do Firebase.~~ feito (regras granulares por caminho; ainda sem segredo real)
-- ~~Consolidar FFA vs equipes.~~ ✓
+- ~~Consolidar FFA vs equipes.~~ ✓ (dois modos funcionais: FFA e Sobrevivencia)
 - Playtestar com 4+ pessoas.
 - ~~Transformar overdrive em mecanica de decisao real.~~ ✓ (BOOST com risco/recompensa)
 - ~~Corrigir jargao e textos confusos na UI.~~ ✓ (navegador, calibrador, labels claros)

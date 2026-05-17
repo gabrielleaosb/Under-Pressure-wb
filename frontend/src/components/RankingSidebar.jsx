@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import { ShipIcon } from './ShipRoster.jsx';
+import GearIcon from './GearIcon.jsx';
 
 function PlayerRow({ p, rank, compact, lang, transmitterId }) {
   const isTx = p.id === transmitterId;
@@ -113,9 +114,8 @@ export function RankingSidebar({ gameState, myId, lang, onSettings }) {
             </span>
           </div>
         </div>
-        <button onClick={onSettings} className="btn btn-ghost btn-icon"
-          style={{ minHeight:38, height:38, width:86, padding:0, fontSize:8 }}>
-          {lang === 'pt' ? 'AJUSTES' : 'SETTINGS'}
+        <button onClick={onSettings} className="btn btn-ghost btn-icon-only" title={lang === 'pt' ? 'Ajustes' : 'Settings'} aria-label={lang === 'pt' ? 'Ajustes' : 'Settings'}>
+          <GearIcon size={16} />
         </button>
       </div>
 

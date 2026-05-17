@@ -1,5 +1,6 @@
 import React from 'react';
 import { t } from '../i18n.js';
+import GearIcon from './GearIcon.jsx';
 
 export default function ScoreBoard({ gameState, myId, lang, onSettings }) {
   if (!gameState) return null;
@@ -59,8 +60,9 @@ export default function ScoreBoard({ gameState, myId, lang, onSettings }) {
         <span style={{ fontFamily:'var(--f-vt)', fontSize:24, color:'var(--neon-cyan)', textShadow:'0 0 8px var(--neon-cyan)', lineHeight:1 }}>
           {round+1}/{totalRounds}
         </span>
-        <button onClick={onSettings} className="btn btn-ghost" style={{ fontSize:13, padding:'2px 6px', minHeight:26, height:26, marginTop:2 }}
-          title={lang === 'pt' ? 'Ajustes' : 'Settings'}>{lang === 'pt' ? 'AJUSTES' : 'SETTINGS'}</button>
+        <button onClick={onSettings} className="btn btn-ghost btn-icon-only" style={{ minHeight:28, height:28, width:28, marginTop:2 }} title={lang === 'pt' ? 'Ajustes' : 'Settings'} aria-label={lang === 'pt' ? 'Ajustes' : 'Settings'}>
+          <GearIcon size={14} />
+        </button>
       </div>
     </div>
   );

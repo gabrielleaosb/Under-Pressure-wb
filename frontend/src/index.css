@@ -363,6 +363,12 @@ body::before {
 .btn-lg   { font-size: 11px; padding: 14px 26px; }
 .btn-full { width: 100%; }
 .btn-icon { width: 44px; min-width: 44px; padding: 0; }
+.btn-icon-only {
+  width: 36px; min-width: 36px; min-height: 36px;
+  padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-icon-only svg { display: block; }
 
 /* ── Inputs ── */
 .pixel-input, .input {
@@ -894,13 +900,12 @@ body::before {
   padding: 6px 10px 6px 0;
   border-radius: 4px;
   cursor: pointer;
-  transition: background .15s;
   text-align: left;
   background: none;
   border: none;
+  outline: none;
 }
-.lobby-room-readout--btn:hover { background: rgba(255,224,0,.06); }
-.lobby-room-readout--btn:hover .lobby-room-copy-hint { opacity: 1; }
+.lobby-room-readout--btn:focus-visible { outline: none; }
 .lobby-room-readout--btn.is-copied strong {
   color: var(--neon-mint) !important;
   text-shadow: 0 0 14px rgba(0,255,136,.55) !important;
@@ -912,9 +917,7 @@ body::before {
   font-family: var(--f-title);
   font-size: 6px;
   letter-spacing: .1em;
-  color: var(--neon-amber);
-  opacity: 0;
-  transition: opacity .15s;
+  color: rgba(255,224,0,.4);
   pointer-events: none;
 }
 .lobby-room-readout--btn.is-copied .lobby-room-copy-hint {
@@ -944,12 +947,12 @@ body::before {
   border-color: rgba(0,255,255,.18);
 }
 
-/* lobby-brief-bar — compact single-row briefing strip */
+/* lobby-brief-bar — briefing strip */
 .lobby-brief-bar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
+  gap: 16px;
+  padding: 14px 18px;
   background:
     linear-gradient(90deg, rgba(0,255,255,.06), rgba(4,7,20,.7)),
     radial-gradient(circle at 0% 50%, rgba(0,255,255,.08), transparent 40%);
@@ -960,19 +963,19 @@ body::before {
 .lobby-brief-bar__status {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   flex-shrink: 0;
 }
 
 .lobby-brief-bar__ready {
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: .5px;
 }
 
 .lobby-brief-bar__chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
   min-width: 0;
 }
@@ -980,15 +983,15 @@ body::before {
 .lobby-brief-chip {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
   background: rgba(255,255,255,.05);
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 4px;
-  padding: 5px 9px;
+  padding: 7px 13px;
 }
 
-.lobby-brief-chip .t-title { font-size: 6px; letter-spacing: .5px; }
-.lobby-brief-chip .t-read  { font-size: 18px; line-height: 1.1; }
+.lobby-brief-chip .t-title { font-size: 7px; letter-spacing: .5px; }
+.lobby-brief-chip .t-read  { font-size: 22px; line-height: 1.1; }
 
 .lobby-brief-bar__ship {
   background: none;
@@ -2994,7 +2997,151 @@ body::before {
 .emoji-float { position:fixed; font-size:30px; animation:emoji-fly 2s ease forwards; pointer-events:none; z-index:200; }
 
 /* ── Game over ── */
+/* legacy — keep for safety */
 .gameover-screen { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; gap:24px; }
+
+/* ── GameOver redesign ── */
+.go-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  zoom: 1.2;
+}
+
+.go-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.go-title { font-size: clamp(13px, 3.5vw, 20px); }
+.go-title-sub { font-size: 15px; }
+
+.go-section-label {
+  font-size: 7px;
+  letter-spacing: .1em;
+  margin-bottom: 12px;
+}
+
+/* 2-column layout */
+.go-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.go-left, .go-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Podium */
+.go-podium-panel { padding: 18px 16px 14px; }
+
+.go-podium {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.go-podium__slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.go-podium__name {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.go-podium__block {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px 6px;
+}
+.go-podium__rank { line-height: 1; }
+.go-podium__pts  { font-size: 12px; color: var(--ink-dim); }
+.go-podium__pts small { font-size: 10px; }
+
+/* Highlights */
+.go-highlights { padding: 14px 16px; }
+.go-highlights__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.go-highlight-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.go-highlight-card__label { font-size: 7px; }
+.go-highlight-card__name  { font-size: 22px; line-height: 1.1; }
+
+/* Leaderboard */
+.go-leaderboard { padding: 14px 16px; flex: 1; }
+.go-lb-list { display: flex; flex-direction: column; gap: 5px; }
+
+.go-lb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.02);
+}
+.go-lb-row--win {
+  border-color: var(--neon-mint);
+  background: rgba(0,255,136,.06);
+}
+.go-lb-row--me { border-color: var(--pc); background: color-mix(in srgb, var(--pc) 8%, transparent); }
+
+.go-lb-rank  { font-size: 16px; min-width: 28px; }
+.go-lb-name  { flex: 1; min-width: 0; font-family: var(--f-body); font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.go-lb-score { font-size: 26px; line-height: 1; flex-shrink: 0; }
+
+/* Actions */
+.go-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Non-host waiting */
+.go-waiting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-color: rgba(255,224,0,.28);
+  background: rgba(255,224,0,.04);
+}
+.go-waiting__icon { font-size: 20px; flex-shrink: 0; }
+.go-waiting__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Mobile: stack columns */
+@media (max-width: 600px) {
+  .go-body { grid-template-columns: 1fr; }
+}
 .confetti-piece  { position:fixed; width:9px; height:9px; border-radius:2px; animation:confetti-fall linear forwards; pointer-events:none; z-index:50; }
 
 /* ── Avatar ── */

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { t } from '../i18n.js';
 import { playClick, playJoin } from '../sounds.js';
 import { ShipIcon, ShipPicker } from './ShipRoster.jsx';
+import GearIcon from './GearIcon.jsx';
 
 function PixelLogo() {
   return (
@@ -19,7 +20,7 @@ function PixelLogo() {
   );
 }
 
-export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode = '' }) {
+export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode = '', onSettings }) {
   const [mode, setMode] = useState(() => (inviteCode ? 'join' : null));
   const [gameMode, setGameMode] = useState('ffa');
   const [name, setName] = useState('');
@@ -254,6 +255,17 @@ export default function HomeScreen({ lang, setLang, onCreate, onJoin, inviteCode
                   </button>
                 ))}
               </div>
+              {onSettings && (
+                <button
+                  className="btn btn-ghost btn-icon-only"
+                  onClick={() => { playClick(); onSettings(); }}
+                  title={lang === 'pt' ? 'Ajustes' : 'Settings'}
+                  aria-label={lang === 'pt' ? 'Ajustes' : 'Settings'}
+                  style={{ minHeight: 32, width: 32, padding: 0 }}
+                >
+                  <GearIcon size={14} />
+                </button>
+              )}
             </div>
           </div>
 

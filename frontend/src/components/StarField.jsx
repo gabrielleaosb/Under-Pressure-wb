@@ -7,17 +7,17 @@ const MAX_CANVAS_HEIGHT = 950;
 const MAX_CANVAS_AREA = 1350000;
 const BG_SPEED = 1.65;
 const GRAVITY_PULSE_PERIOD = 220;
-const STAR_COUNT = 230;
-const DUST_COUNT = 86;
-const NEBULA_STREAM_COUNT = 170;
-const NEBULA_RING_COUNT = 130;
-const GALAXY_SPRITE_COUNT = 660;
-const GALAXY_DUST_LANE_COUNT = 175;
-const GALAXY_HALO_COUNT = 160;
-const ACCRETION_SPRITE_COUNT = 360;
-const LENSING_STAR_COUNT = 76;
-const GRAVITY_FILAMENT_COUNT = 54;
-const SOLAR_RAY_COUNT = 24;
+const STAR_COUNT = 150;
+const DUST_COUNT = 52;
+const NEBULA_STREAM_COUNT = 95;
+const NEBULA_RING_COUNT = 65;
+const GALAXY_SPRITE_COUNT = 380;
+const GALAXY_DUST_LANE_COUNT = 95;
+const GALAXY_HALO_COUNT = 85;
+const ACCRETION_SPRITE_COUNT = 190;
+const LENSING_STAR_COUNT = 38;
+const GRAVITY_FILAMENT_COUNT = 26;
+const SOLAR_RAY_COUNT = 14;
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => Math.floor(rnd(a, b));
@@ -553,12 +553,12 @@ function StarField({ variant = 'menu' }) {
         let r;
         let g;
         let b;
-        if (ratio < 0.24) {
-          r = 214; g = 255; b = 220 + ratio * 90;
-        } else if (ratio < 0.56) {
-          r = 46; g = 236; b = 184;
+        if (ratio < 0.18) {
+          r = 255; g = 252; b = 210;        // inner — bright white-yellow (ISCO)
+        } else if (ratio < 0.46) {
+          r = 255; g = 148; b = 38;         // mid   — orange amber
         } else {
-          r = 14; g = 118; b = 106;
+          r = 190; g = 62; b = 14;          // outer — dim red-orange
         }
 
         discPixels.push({
@@ -1059,13 +1059,13 @@ function StarField({ variant = 'menu' }) {
         [0.58, 'rgba(80,145,255,.052)'],
         [1, 'rgba(0,0,0,0)'],
       ], 0.86);
-      glow(bhX, bhY, Math.min(width, height) * 0.25, [
+      glow(bhX, bhY, Math.min(width, height) * 0.28, [
         [0, 'rgba(0,0,0,1)'],
-        [0.16, 'rgba(0,0,0,.78)'],
-        [0.31, 'rgba(66,255,205,.14)'],
-        [0.54, 'rgba(16,126,112,.105)'],
+        [0.14, 'rgba(0,0,0,.88)'],
+        [0.28, 'rgba(255,160,40,.22)'],
+        [0.50, 'rgba(200,70,10,.10)'],
         [1, 'rgba(0,0,0,0)'],
-      ], 0.9);
+      ], 0.92);
 
       for (const cloud of nebulaStream) {
         const flow = (cloud.t + Math.sin(frame * 0.003 + cloud.off) * 0.018 + cloud.drift) % 1;
@@ -1402,9 +1402,9 @@ function StarField({ variant = 'menu' }) {
         const dy = ringY(Math.sin(orbit) * radius * (point.tilt + bhTopView * 0.4) + Math.sin(frame * 0.035 + point.phase) * 0.8, 0.95);
         const heat = clamp(point.heat + Math.sin(frame * 0.028 + point.phase) * 0.12, 0, 1);
         const br = (0.38 + heat * 0.78) * point.front * (point.doppler ** 1.12);
-        const r = clamp(28 + heat * 118, 0, 255);
-        const g = clamp(120 + heat * 132, 0, 255);
-        const b = clamp(92 + heat * 96 + Math.max(0, point.doppler - 1) * 76, 0, 255);
+        const r = clamp(200 + heat * 55, 0, 255);
+        const g = clamp(80 + heat * 148, 0, 255);
+        const b = clamp(10 + heat * 90 + Math.max(0, point.doppler - 1) * 40, 0, 255);
         drawBhPx(dx, dy, r * br, g * br, b * br, 0.88, point.width);
       }
 
@@ -1422,20 +1422,20 @@ function StarField({ variant = 'menu' }) {
       for (const arc of lensArcs) {
         const phase = 0.5 + 0.5 * Math.sin(frame * 0.04 + arc.a * 3);
         const pulse = 1 + Math.sin(frame * 0.025 + arc.a) * 0.08;
-        drawBhScaledPx(ringX(arc.dx, 0.82), ringY(arc.dy, 0.82), 180 * phase, 255 * phase, 220 * phase, 0.86, blackHole.scale * pulse);
+        drawBhScaledPx(ringX(arc.dx, 0.82), ringY(arc.dy, 0.82), 255 * phase, 180 * phase, 55 * phase, 0.84, blackHole.scale * pulse);
       }
 
       for (const point of photonRing) {
         const angle = point.angle + blackHole.rot * 0.22;
         const flicker = 0.48 + 0.52 * Math.sin(frame * 0.07 + point.off);
         const radius = bhRadius + 1.4 + point.wobble * flicker;
-        drawBhPx(ringX(Math.cos(angle) * radius * 2.25, 1), ringY(Math.sin(angle) * radius * 0.86, 1), 210 * flicker, 255 * flicker, 224 * flicker, 0.86);
+        drawBhPx(ringX(Math.cos(angle) * radius * 2.25, 1), ringY(Math.sin(angle) * radius * 0.86, 1), 255 * flicker, 218 * flicker, 130 * flicker, 0.94);
       }
 
       const orbitalBands = [
-        { radius: bhRadius + 4.2, spin: 0.045, tint: [186, 255, 220], alpha: 0.32, tilt: 0.92 },
-        { radius: bhRadius + 7.4, spin: -0.034, tint: [42, 230, 184], alpha: 0.24, tilt: 0.68 },
-        { radius: bhRadius + 10.8, spin: 0.02, tint: [20, 120, 110], alpha: 0.18, tilt: 0.5 },
+        { radius: bhRadius + 3.8, spin: 0.045, tint: [255, 240, 180], alpha: 0.42, tilt: 0.92 },
+        { radius: bhRadius + 7.0, spin: -0.034, tint: [255, 140, 45], alpha: 0.30, tilt: 0.68 },
+        { radius: bhRadius + 11.2, spin: 0.02, tint: [200, 70, 18], alpha: 0.18, tilt: 0.5 },
       ];
       for (const band of orbitalBands) {
         for (let a = 0; a < Math.PI * 2; a += 0.2) {
@@ -1468,9 +1468,9 @@ function StarField({ variant = 'menu' }) {
         drawBhScaledPx(
           ringX(Math.round(Math.cos(a + blackHole.rot * 0.28) * (bhRadius * 2.05)), 0.72),
           ringY(Math.round(Math.sin(a + blackHole.rot * 0.28) * (bhRadius * 0.94)), 0.72),
-          104 * shim,
           255 * shim,
           210 * shim,
+          120 * shim,
         );
       }
       }

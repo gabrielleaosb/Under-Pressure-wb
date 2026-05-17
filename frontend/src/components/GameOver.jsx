@@ -14,11 +14,11 @@ function useConfetti(active) {
   useEffect(() => {
     if (!active) return;
     const colors = ['#00ffff','#ff3355','#ffe000','#00ff88','#b066ff','#ff8800'];
-    setPieces(Array.from({length:60}, (_,i) => ({
+    setPieces(Array.from({length:48}, (_,i) => ({
       id:i, x:Math.random()*100,
       color:colors[i%colors.length],
-      delay:Math.random()*3,
-      dur:3+Math.random()*3,
+      delay:Math.random()*2.4,
+      dur:2.8+Math.random()*2.4,
     })));
     return () => setPieces([]);
   }, [active]);
@@ -26,15 +26,15 @@ function useConfetti(active) {
 }
 
 export default function GameOver({ gameState, myId, lang, send, isHost, onLeave }) {
-  const { players, playerScores, winner, winnerIds, settings } = gameState;
+  const { players, playerScores, winner, winnerIds } = gameState;
   const soundPlayed = useRef(false);
 
   const ranked = [...players].sort((a,b) => (playerScores[b.id]||0) - (playerScores[a.id]||0));
-  const topScore   = playerScores[ranked[0]?.id] || 0;
-  const iAmWinner  = winnerIds?.includes(myId);
-  const isTie      = (winnerIds?.length || 0) > 1;
-  const pieces     = useConfetti(iAmWinner);
-  const podium = ranked.slice(0, 3);
+  const iAmWinner = winnerIds?.includes(myId);
+  const isTie     = (winnerIds?.length || 0) > 1;
+  const pieces    = useConfetti(iAmWinner);
+  const podium    = ranked.slice(0, 3);
+  const hostName  = players.find(p => p.isHost)?.name;
 
   useEffect(() => {
     if (soundPlayed.current) return;
@@ -42,20 +42,16 @@ export default function GameOver({ gameState, myId, lang, send, isHost, onLeave 
     setTimeout(() => { iAmWinner ? playWin() : playLose(); }, 300);
   }, []);
 
-  // Stats from roundHistory
   const stats = useMemo(() => {
     const hist = gameState.roundHistory || [];
     if (!hist.length) return null;
-
-    // Best navigator: average group miss when they transmitted.
     const txDiffs = {};
     hist.forEach(r => {
       if (!r.transmitterId) return;
       if (!txDiffs[r.transmitterId]) txDiffs[r.transmitterId] = { name:r.transmitterName, diffs:[] };
       const avgDiff = r.avgDiff ?? (
         Number.isFinite(Number(r.averageVote)) && Number.isFinite(Number(r.target))
-          ? Math.abs(Number(r.averageVote) - Number(r.target))
-          : null
+          ? Math.abs(Number(r.averageVote) - Number(r.target)) : null
       );
       if (avgDiff !== null) txDiffs[r.transmitterId].diffs.push(avgDiff);
     });
@@ -65,8 +61,6 @@ export default function GameOver({ gameState, myId, lang, send, isHost, onLeave 
       const avg = diffs.reduce((a,b)=>a+b,0)/diffs.length;
       if (avg < bestTxAvg) { bestTxAvg=avg; bestTxId=id; }
     });
-
-    // Best single vote (closest to target)
     let bestVote=null, bestDiff=Infinity;
     hist.forEach(r => {
       Object.entries(r.votes||{}).forEach(([pid,vote]) => {
@@ -79,15 +73,17 @@ export default function GameOver({ gameState, myId, lang, send, isHost, onLeave 
         }
       });
     });
-
     return {
       bestTx: bestTxId ? { name: txDiffs[bestTxId].name, avg: Math.round(bestTxAvg) } : null,
       bestVote,
     };
   }, [gameState.roundHistory]);
 
+  const podiumOrder = [podium[1], podium[0], podium[2]];
+  const podiumHeights = [70, 100, 54];
+
   return (
-    <div className="gameover-screen">
+    <div className="go-screen">
       {pieces.map(p => (
         <div key={p.id} className="confetti-piece" style={{
           left:`${p.x}%`, top:'-10px', background:p.color,
@@ -95,169 +91,147 @@ export default function GameOver({ gameState, myId, lang, send, isHost, onLeave 
         }}/>
       ))}
 
-      {/* Title */}
-      <h1 className="pixel-title glow-text-cyan" style={{ fontSize:'clamp(14px,5vw,22px)' }}>
-        {t('gameover_title', lang)}
-      </h1>
-
-      <div className="panel bevel glow-cyan" style={{ width:'100%', maxWidth:620, padding:'18px 16px 14px' }}>
-        <div className="label mb-12" style={{ color:'var(--ink-dim)', textAlign:'center' }}>
-          PODIUM
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:10, alignItems:'end' }}>
-          {[podium[1], podium[0], podium[2]].map((p, slot) => {
-            if (!p) return <div key={slot} />;
-            const rank = ranked.findIndex((player) => player.id === p.id) + 1;
-            const score = playerScores[p.id] || 0;
-            const isWin = winnerIds?.includes(p.id);
-            const height = rank === 1 ? 98 : rank === 2 ? 74 : 58;
-            return (
-              <div key={p.id} style={{ textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
-                <ShipIcon
-                  ship={p.ship || 'nova_01'}
-                  color={p.shipColor || 'blue'}
-                  accent={p.shipAccent || 'cyan'}
-                  pixel={rank === 1 ? 6 : 5}
-                  glow={isWin}
-                />
-                <div className="t-title" style={{ fontSize: rank === 1 ? 10 : 8, color: isWin ? 'var(--neon-mint)' : 'var(--ink)' }}>
-                  {p.name}
-                </div>
-                <div
-                  style={{
-                    width:'100%',
-                    minHeight:height,
-                    border:'1px solid var(--metal-2)',
-                    borderTop:`3px solid ${isWin ? 'var(--neon-mint)' : p.color}`,
-                    background:isWin ? 'rgba(0,255,136,.07)' : 'rgba(255,255,255,.025)',
-                    display:'flex',
-                    flexDirection:'column',
-                    alignItems:'center',
-                    justifyContent:'center',
-                    gap:3,
-                  }}
-                >
-                  <div className="t-read" style={{ fontSize:28, color:isWin ? 'var(--neon-mint)' : p.color }}>
-                    #{rank}
-                  </div>
-                  <div className="t-mono" style={{ fontSize:13, color:'var(--ink-dim)' }}>
-                    {score} PTS
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      <div className="go-header">
+        <h1 className="go-title pixel-title glow-text-cyan">
+          {t('gameover_title', lang)}
+        </h1>
+        {isTie && (
+          <span className="go-title-sub t-mono glow-text-amber">
+            {t('tie', lang)} — {winnerIds?.map(id => players.find(p=>p.id===id)?.name).join(' · ')}
+          </span>
+        )}
       </div>
 
-      {/* Winner or Tie */}
-      {isTie ? (
-        <div className="panel bevel glow-amber p-20 text-center">
-          <div className="pixel-title glow-text-amber" style={{ fontSize:'clamp(11px,3vw,16px)' }}>
-            {t('tie', lang)}
+      <div className="go-body">
+        {/* ── Left: Podium + Highlights ── */}
+        <div className="go-left">
+          <div className="panel bevel glow-cyan go-podium-panel">
+            <div className="go-section-label t-title text-dim">
+              {lang==='pt' ? 'PÓDIO' : 'PODIUM'}
+            </div>
+            <div className="go-podium">
+              {podiumOrder.map((p, slot) => {
+                if (!p) return <div key={slot} className="go-podium__slot" />;
+                const rank = ranked.findIndex(pl => pl.id === p.id) + 1;
+                const score = playerScores[p.id] || 0;
+                const isWin = winnerIds?.includes(p.id);
+                const isMe  = p.id === myId;
+                const h = podiumHeights[slot];
+                return (
+                  <div key={p.id} className="go-podium__slot">
+                    <ShipIcon
+                      ship={p.ship || 'nova_01'}
+                      color={p.shipColor || 'blue'}
+                      accent={p.shipAccent || 'cyan'}
+                      pixel={rank === 1 ? 5 : 4}
+                      glow={isWin}
+                    />
+                    <div className="go-podium__name t-title" style={{
+                      fontSize: rank === 1 ? 9 : 7,
+                      color: isWin ? 'var(--neon-mint)' : isMe ? 'var(--neon-cyan)' : 'var(--ink)',
+                      maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {p.name}
+                    </div>
+                    <div className="go-podium__block" style={{
+                      height: h,
+                      borderTop: `3px solid ${isWin ? 'var(--neon-mint)' : p.color}`,
+                      background: isWin ? 'rgba(0,255,136,.08)' : `${p.color}18`,
+                    }}>
+                      <span className="t-read go-podium__rank" style={{
+                        fontSize: rank === 1 ? 32 : 24,
+                        color: isWin ? 'var(--neon-mint)' : p.color,
+                      }}>#{rank}</span>
+                      <span className="t-mono go-podium__pts">{score}<small> pts</small></span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div style={{ fontFamily:'var(--f-vt)', fontSize:24, color:'var(--ink-dim)', marginTop:8 }}>
-            {winnerIds?.map(id=>players.find(p=>p.id===id)?.name).join(' · ')} — {topScore} pts
-          </div>
-        </div>
-      ) : (
-        <div className="panel bevel glow-mint p-20 text-center" style={{ animation:'theme-pop 0.5s cubic-bezier(0.34,1.56,0.64,1)' }}>
-          <div className="pixel-title" style={{ fontSize:10, color:'var(--neon-mint)', marginBottom:8 }}>
-            {lang==='pt'?'VENCEDOR':'WINNER'}
-          </div>
-          <div style={{ fontFamily:'var(--f-vt)', fontSize:40, color:'var(--neon-mint)', textShadow:'0 0 16px var(--neon-mint)', lineHeight:1 }}>
-            {players.find(p=>p.id===winner)?.name ?? '?'}
-          </div>
-          <div style={{ fontFamily:'var(--f-vt)', fontSize:28, color:'var(--neon-amber)', marginTop:8 }}>
-            {topScore} pts
-          </div>
-        </div>
-      )}
 
-      {/* Full leaderboard */}
-      <div className="panel bevel p-16" style={{ width:'100%', maxWidth:460 }}>
-        <div className="label mb-12" style={{ color:'var(--ink-dim)' }}>
-          {lang==='pt'?'PLACAR FINAL':'FINAL SCORE'}
+          {stats && (stats.bestTx || stats.bestVote) && (
+            <div className="panel bevel go-highlights">
+              <div className="go-section-label t-title text-dim">
+                {lang==='pt' ? 'DESTAQUES' : 'HIGHLIGHTS'}
+              </div>
+              <div className="go-highlights__grid">
+                {stats.bestTx && (
+                  <div className="go-highlight-card">
+                    <span className="go-highlight-card__label t-title text-dim">{t('best_psychic', lang)}</span>
+                    <span className="go-highlight-card__name t-read glow-text-cyan">{stats.bestTx.name}</span>
+                    <span className="t-mono text-dim" style={{ fontSize:12 }}>~±{stats.bestTx.avg}</span>
+                  </div>
+                )}
+                {stats.bestVote && (
+                  <div className="go-highlight-card">
+                    <span className="go-highlight-card__label t-title text-dim">{t('best_hit', lang)}</span>
+                    <span className="go-highlight-card__name t-read glow-text-mint">{stats.bestVote.name}</span>
+                    <span className="t-mono text-dim" style={{ fontSize:12 }}>±{stats.bestVote.diff} · "{stats.bestVote.clue}"</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-        <div className="t-mono" style={{ color:'var(--ink-dim)', fontSize:12, marginBottom:10, textAlign:'center' }}>
-          {lang === 'pt' ? 'Mais pontos vence. Empates são possíveis.' : 'Most points wins. Ties are possible.'}
-        </div>
-        <div className="flex-col gap-6">
-          {ranked.map((p, i) => {
-            const score  = playerScores[p.id] || 0;
-            const isWin  = winnerIds?.includes(p.id);
-            const isMe   = p.id === myId;
-            return (
-              <div key={p.id} style={{
-                display:'flex', alignItems:'center', gap:10,
-                padding:'8px 12px', borderRadius:4,
-                border:`1.5px solid ${isWin ? 'var(--neon-mint)' : isMe ? p.color : 'rgba(255,255,255,0.07)'}`,
-                background: isWin ? 'rgba(0,255,136,0.07)' : isMe ? `${p.color}12` : 'transparent',
-              }}>
-                <span style={{ fontFamily:'var(--f-vt)', fontSize:24, color:'var(--ink-dim)', minWidth:28 }}>
-                  #{i+1}
-                </span>
-                <div style={{ width:36, height:36, borderRadius:'50%', background:`${p.color}22`, border:`2px solid ${p.color}`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--f-pixel)', fontSize:9, color:p.color, flexShrink:0 }}>
-                  {p.name.slice(0,2).toUpperCase()}
+
+        {/* ── Right: Leaderboard + Actions ── */}
+        <div className="go-right">
+          <div className="panel bevel go-leaderboard">
+            <div className="go-section-label t-title text-dim">
+              {lang==='pt' ? 'PLACAR FINAL' : 'FINAL SCORE'}
+            </div>
+            <div className="go-lb-list">
+              {ranked.map((p, i) => {
+                const score = playerScores[p.id] || 0;
+                const isWin = winnerIds?.includes(p.id);
+                const isMe  = p.id === myId;
+                return (
+                  <div key={p.id} className={`go-lb-row${isWin ? ' go-lb-row--win' : ''}${isMe ? ' go-lb-row--me' : ''}`}
+                    style={{ '--pc': p.color }}>
+                    <span className="go-lb-rank t-mono text-dim">#{i+1}</span>
+                    <ShipIcon ship={p.ship||'nova_01'} color={p.shipColor||'blue'} accent={p.shipAccent||'cyan'} pixel={2.5} />
+                    <span className="go-lb-name">{p.name}</span>
+                    {isMe && <span className="badge badge-you" style={{ fontSize:6 }}>{t('you', lang)}</span>}
+                    <span className="go-lb-score t-read">{score}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="go-actions">
+            {isHost ? (
+              <>
+                <button className="btn btn-primary" onClick={() => { playClick(); send('new_game'); }}>
+                  {t('new_mission', lang)}
+                </button>
+                <button className="btn btn-ghost" onClick={() => { playClick(); send('back_to_lobby'); }}>
+                  {t('new_crew', lang)}
+                </button>
+              </>
+            ) : (
+              <div className="go-waiting panel bevel">
+                <span className="go-waiting__icon">⏳</span>
+                <div className="go-waiting__text">
+                  <span className="t-title" style={{ fontSize:8, color:'var(--ink-dim)' }}>
+                    {lang==='pt' ? 'AGUARDANDO ANFITRIÃO' : 'WAITING FOR HOST'}
+                  </span>
+                  {hostName && (
+                    <span className="t-mono" style={{ fontSize:13 }}>
+                      {lang==='pt' ? `${hostName} decide o próximo passo` : `${hostName} decides what's next`}
+                    </span>
+                  )}
                 </div>
-                <span style={{ flex:1, fontFamily:'var(--f-body)', fontWeight:800, fontSize:14, color: isMe ? p.color : 'var(--ink)' }}>
-                  {p.name}
-                </span>
-                <span style={{ fontFamily:'var(--f-vt)', fontSize:28, color:isWin?'var(--neon-mint)':p.color, lineHeight:1 }}>
-                  {score}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Stats */}
-      {stats && (stats.bestTx || stats.bestVote) && (
-        <div className="panel bevel p-16" style={{ width:'100%', maxWidth:460 }}>
-          <div className="label mb-12" style={{ color:'var(--ink-dim)' }}>
-            {lang==='pt'?'DESTAQUES':'HIGHLIGHTS'}
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            {stats.bestTx && (
-              <div className="text-center">
-                <div className="label mb-6" style={{ color:'var(--ink-dim)' }}>{t('best_psychic', lang)}</div>
-                <div style={{ fontFamily:'var(--f-vt)', fontSize:24, color:'var(--neon-cyan)' }}>{stats.bestTx.name}</div>
-                <div style={{ fontFamily:'var(--f-vt)', fontSize:18, color:'var(--ink-dim)' }}>~±{stats.bestTx.avg}</div>
               </div>
             )}
-            {stats.bestVote && (
-              <div className="text-center">
-                <div className="label mb-6" style={{ color:'var(--ink-dim)' }}>{t('best_hit', lang)}</div>
-                <div style={{ fontFamily:'var(--f-vt)', fontSize:24, color:'var(--neon-mint)' }}>{stats.bestVote.name}</div>
-                <div style={{ fontFamily:'var(--f-vt)', fontSize:18, color:'var(--ink-dim)' }}>±{stats.bestVote.diff} · "{stats.bestVote.clue}"</div>
-              </div>
+            {onLeave && (
+              <button className="btn btn-ghost" onClick={() => { playClick(); onLeave(); }}>
+                {lang === 'pt' ? 'SAIR DA SALA' : 'LEAVE ROOM'}
+              </button>
             )}
           </div>
         </div>
-      )}
-
-      {/* Buttons */}
-      <div style={{ display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center' }}>
-        {isHost ? (
-          <>
-            <button className="btn btn-primary btn-lg" onClick={() => { playClick(); send('new_game'); }}>
-              {t('new_mission', lang)}
-            </button>
-            <button className="btn btn-ghost" onClick={() => { playClick(); send('back_to_lobby'); }}>
-              {t('new_crew', lang)}
-            </button>
-          </>
-        ) : (
-          <div style={{ fontFamily:'var(--f-body)', fontSize:14, color:'var(--ink-dim)' }}>
-            {lang==='pt'?'Aguardando capitao...':'Waiting for captain...'}
-          </div>
-        )}
-        {onLeave && (
-          <button className="btn btn-ghost" onClick={() => { playClick(); onLeave(); }}>
-            {lang === 'pt' ? 'SAIR DA SALA' : 'LEAVE ROOM'}
-          </button>
-        )}
       </div>
     </div>
   );
