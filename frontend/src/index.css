@@ -2015,6 +2015,49 @@ body::before {
   box-shadow:0 0 8px rgba(0,255,255,.35);
 }
 
+.game-rail-axes {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.game-rail-axis {
+  display: grid;
+  grid-template-columns: 16px 1fr 16px 1fr;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--f-body);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.game-rail-axis__tag {
+  font-family: var(--f-pixel);
+  font-size: 7px;
+  color: var(--ink-faint);
+  line-height: 1;
+}
+
+.game-rail-axis__sep {
+  font-size: 11px;
+  color: var(--ink-faint);
+  text-align: center;
+  line-height: 1;
+}
+
+.game-rail-axis__pole {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-rail-axis__pole--r {
+  text-align: right;
+}
+
 .game-rail-clue {
   margin-top: 10px;
   font-family: var(--f-vt);
@@ -3312,6 +3355,13 @@ body::before {
     margin-top: 8px;
     font-size: 13px;
   }
+  .game-rail-axes {
+    margin-top: 8px;
+    gap: 6px;
+  }
+  .game-rail-axis {
+    font-size: 12px;
+  }
   .game-rail-clue {
     font-size: 24px;
   }
@@ -3848,3 +3898,230 @@ body::before {
 
 /* glow-red utility */
 .glow-red { box-shadow:var(--glow-r); border-color:var(--red) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   GRID 2D — Coordinate field
+   ══════════════════════════════════════════════════════════════ */
+
+.grid2d-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 4px 0;
+}
+
+/* Middle row: X-left label | field | X-right label */
+.grid2d-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.grid2d-field {
+  position: relative;
+  flex: 1;
+  aspect-ratio: 1;
+  border: 1px solid var(--metal-2);
+  background: rgba(0, 8, 18, 0.75);
+  border-radius: 3px;
+  overflow: hidden;
+  min-width: 160px;
+}
+
+.grid2d-field--interactive {
+  cursor: crosshair;
+}
+
+.grid2d-field--interactive:hover {
+  border-color: rgba(0, 255, 255, 0.35);
+  box-shadow: 0 0 16px rgba(0,255,255,0.08);
+}
+
+/* Grid lines */
+.grid2d-line--v {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(255,255,255,0.05);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.grid2d-line--h {
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: rgba(255,255,255,0.05);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.grid2d-line--mid {
+  background: rgba(255,255,255,0.14);
+}
+
+/* Pole labels (X left/right, Y top/bottom) */
+.grid2d-pole {
+  font-family: var(--f-pixel);
+  font-size: 7px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1.3;
+}
+
+/* Y poles: centered above/below, amber */
+.grid2d-pole--y {
+  color: var(--neon-amber);
+  justify-content: center;
+  flex-direction: row;
+  white-space: nowrap;
+}
+
+/* X poles: flanking the field, cyan — never shrink, never wrap */
+.grid2d-pole--x {
+  color: var(--neon-cyan);
+  flex-direction: column;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.grid2d-pole--x-left  { align-items: flex-end; }
+.grid2d-pole--x-right { align-items: flex-start; }
+
+.grid2d-pole__arrow {
+  font-size: 9px;
+  opacity: 0.7;
+  line-height: 1;
+}
+
+.grid2d-pole__text {
+  white-space: nowrap;
+}
+
+/* Axis tick numbers inside the field */
+.grid2d-tick {
+  position: absolute;
+  font-family: var(--f-pixel);
+  font-size: 6px;
+  color: rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+  line-height: 1;
+  user-select: none;
+}
+
+/* Target marker — navigator sees this */
+.grid2d-target {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.grid2d-target__ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--neon-mint);
+  border-radius: 50%;
+  box-shadow: 0 0 14px rgba(0,255,136,0.7);
+  animation: grid2d-pulse 2s ease-in-out infinite;
+}
+
+.grid2d-target__cross {
+  position: absolute;
+  background: var(--neon-mint);
+  opacity: 0.7;
+}
+.grid2d-target__cross--h { left: -8px; right: -8px; top: 50%; height: 1px; transform: translateY(-50%); }
+.grid2d-target__cross--v { top: -8px; bottom: -8px; left: 50%; width: 1px; transform: translateX(-50%); }
+
+.grid2d-target__dot {
+  position: absolute;
+  width: 7px; height: 7px;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--neon-mint);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--neon-mint);
+}
+
+@keyframes grid2d-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.45); opacity: 0.5; }
+}
+
+/* My vote cursor */
+.grid2d-cursor {
+  position: absolute;
+  width: 20px; height: 20px;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--neon-cyan);
+  border-radius: 50%;
+  background: rgba(0,255,255,0.18);
+  box-shadow: 0 0 12px rgba(0,255,255,0.65);
+  pointer-events: none;
+  transition: left 0.07s, top 0.07s;
+}
+
+/* Other players' vote dots (reveal) */
+.grid2d-vote-dot {
+  position: absolute;
+  width: 14px; height: 14px;
+  transform: translate(-50%, -50%);
+  background: var(--dot-color, var(--ink-dim));
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow: 0 0 7px var(--dot-color, transparent);
+  pointer-events: none;
+  animation: cascade-slide-in 0.28s ease-out;
+}
+
+/* Grid scan overlay shown during spinning phase */
+.grid-scan-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 28px;
+  text-align: center;
+  width: min(480px, 100%);
+  animation: theme-pop 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.grid-scan-axis {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--f-pixel);
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+
+.grid-scan-axis__tag {
+  color: var(--ink-faint);
+}
+
+.grid-scan-axis__poles {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--f-body);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.grid-scan-axis--x .grid-scan-axis__poles { color: var(--neon-cyan); }
+.grid-scan-axis--y .grid-scan-axis__poles { color: var(--neon-amber); }
+
+/* On very narrow screens, reduce font slightly — labels still single-line */
+@media (max-width: 400px) {
+  .grid2d-pole { font-size: 6px; }
+}

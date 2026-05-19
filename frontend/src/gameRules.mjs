@@ -106,6 +106,142 @@ export function teamHullChange(avgDiff, missedBoosts = 0, timedOut = false) {
   return base - missedBoosts * 8 - (timedOut ? 10 : 0);
 }
 
+// ── Grid (2D coordinates) mode ────────────────────────────────────────────────
+
+export function scoreFromDist2D(dist) {
+  if (dist <= 1)   return 8;
+  if (dist <= 2)   return 5;
+  if (dist <= 3.5) return 4;
+  if (dist <= 5)   return 3;
+  if (dist <= 7)   return 1;
+  if (dist <= 9)   return 0;
+  if (dist <= 11)  return -1;
+  return -2;
+}
+
+export function boostBonus2D(dist) {
+  if (dist <= 2)   return 4;
+  if (dist <= 3.5) return 1;
+  return -4;
+}
+
+export function transmitterScore2D(voters, votes, targetX, targetY) {
+  const submitted = voters.filter(p => votes[p.id] !== undefined);
+  const dist = (p) => Math.sqrt((votes[p.id].x - targetX) ** 2 + (votes[p.id].y - targetY) ** 2);
+  const hitters = submitted.filter(p => dist(p) <= 3.5);
+  const strongHits = hitters.filter(p => dist(p) <= 1.5);
+  const cleanSweep = voters.length > 0 && submitted.length === voters.length && hitters.length === voters.length;
+  const cleanSweepBonus = cleanSweep ? Math.ceil(voters.length / 2) : 0;
+  return {
+    points: hitters.length * 2 + strongHits.length + cleanSweepBonus,
+    hits: hitters.length,
+    strongHits: strongHits.length,
+    submitted: submitted.length,
+    expected: voters.length,
+    cleanSweep,
+    cleanSweepBonus,
+  };
+}
+
+export function resolveRoundGrid({ room, rawVotes = {}, targetX, targetY, now = Date.now() }) {
+  const players = allPlayers(room);
+  const safeTX = Math.max(0, Math.min(10, Math.round(Number(targetX ?? 5))));
+  const safeTY = Math.max(0, Math.min(10, Math.round(Number(targetY ?? 5))));
+
+  const eligibleVoters = players.filter(p =>
+    p.id !== room.psychicId &&
+    (p.isBot || p.connected !== false || rawVotes[p.id] !== undefined),
+  );
+
+  const votes = Object.fromEntries(
+    eligibleVoters
+      .filter(p => rawVotes[p.id] !== undefined)
+      .map(p => {
+        const raw = rawVotes[p.id];
+        const x = Math.max(0, Math.min(10, Math.round(Number(raw?.x ?? 5))));
+        const y = Math.max(0, Math.min(10, Math.round(Number(raw?.y ?? 5))));
+        return [p.id, { x, y, boost: !!(raw?.boost) }];
+      }),
+  );
+
+  const roundScores = {};
+  const highlights = [];
+
+  eligibleVoters.forEach(p => {
+    const vote = votes[p.id];
+    if (!vote) return;
+    const dist = Math.sqrt((vote.x - safeTX) ** 2 + (vote.y - safeTY) ** 2);
+    const baseScore = scoreFromDist2D(dist);
+    const bonus = vote.boost ? boostBonus2D(dist) : 0;
+    roundScores[p.id] = baseScore + bonus;
+    if (dist <= 1) highlights.push(buildHighlight('perfect', p.id, p.name, Math.round(dist * 10) / 10));
+    else if (vote.boost && dist <= 3.5) highlights.push(buildHighlight('boost_hit', p.id, p.name, baseScore + bonus));
+    else if (vote.boost && dist > 3.5) highlights.push(buildHighlight('boost_miss', p.id, p.name, bonus));
+  });
+
+  const voteXs = Object.values(votes).map(v => v.x);
+  const voteYs = Object.values(votes).map(v => v.y);
+  const avgX = voteXs.length ? Math.round(voteXs.reduce((s, x) => s + x, 0) / voteXs.length) : safeTX;
+  const avgY = voteYs.length ? Math.round(voteYs.reduce((s, y) => s + y, 0) / voteYs.length) : safeTY;
+  const avgDist = Math.round(Math.sqrt((avgX - safeTX) ** 2 + (avgY - safeTY) ** 2) * 10) / 10;
+
+  const txScore2D = transmitterScore2D(eligibleVoters, votes, safeTX, safeTY);
+  const txPoints = txScore2D.points;
+
+  if (room.psychicId) {
+    roundScores[room.psychicId] = txPoints;
+    const tx = players.find(p => p.id === room.psychicId);
+    if (txScore2D.cleanSweep && eligibleVoters.length >= 2) {
+      highlights.push(buildHighlight('clean_tx', room.psychicId, tx?.name || '?', txPoints));
+    }
+  }
+
+  const scoreUpdates = {};
+  const existingScores = room.playerScores || {};
+  players.forEach(p => {
+    scoreUpdates[p.id] = (existingScores[p.id] || 0) + (roundScores[p.id] || 0);
+  });
+
+  const txName = players.find(p => p.id === room.psychicId)?.name ?? null;
+  const revealUnlockAt = now + 5000;
+  const visibleHighlights = highlights.slice(0, 5);
+
+  const revealResult = {
+    isGrid: true,
+    targetX: safeTX,
+    targetY: safeTY,
+    votes,
+    avgX,
+    avgY,
+    avgDist,
+    roundScores,
+    highlights: visibleHighlights,
+    transmitterScore: txPoints,
+    transmitterScoreBreakdown: txScore2D,
+    revealUnlockAt,
+  };
+  const historyEntry = {
+    round: room.round ?? 0,
+    transmitterId: room.psychicId ?? null,
+    transmitterName: txName,
+    cardX: room.currentCardX ?? null,
+    cardY: room.currentCardY ?? null,
+    clue: room.clue ?? null,
+    targetX: safeTX,
+    targetY: safeTY,
+    avgX,
+    avgY,
+    avgDist,
+    votes,
+    roundScores,
+    highlights: visibleHighlights,
+    transmitterScore: txPoints,
+    isGrid: true,
+  };
+
+  return { eligibleVoters, votes, targetX: safeTX, targetY: safeTY, avgX, avgY, avgDist, roundScores, scoreUpdates, revealResult, historyEntry };
+}
+
 export function resolveRound({
   room,
   rawVotes = {},

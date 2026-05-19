@@ -57,6 +57,7 @@ export default function App() {
   const [myId, setMyId] = useState(getOrCreatePlayerId);
   const [roomCode, setRoomCode] = useState(() => sessionStorage.getItem('up_room'));
   const [myTargetPos, setMyTargetPos] = useState(null);
+  const [myGridTarget, setMyGridTarget] = useState(null);
   const [error, setError] = useState(null);
   const [scanFlash, setScanFlash] = useState(false);
   const [, setStatus] = useState('idle');
@@ -189,11 +190,19 @@ export default function App() {
       prevPhase.current = raw.phase;
       prevRoom.current = raw;
 
-      if (raw.psychicId === myId && raw.psychicSecret?.targetPosition !== undefined) {
-        setMyTargetPos(raw.psychicSecret.targetPosition);
+      if (raw.psychicId === myId) {
+        if (raw.settings?.gameMode === 'grid') {
+          const { targetX, targetY } = raw.psychicSecret || {};
+          if (targetX !== undefined && targetY !== undefined) {
+            setMyGridTarget({ x: targetX, y: targetY });
+          }
+        } else if (raw.psychicSecret?.targetPosition !== undefined) {
+          setMyTargetPos(raw.psychicSecret.targetPosition);
+        }
       }
       if (!['psychic', 'voting', 'reveal'].includes(raw.phase)) {
         setMyTargetPos(null);
+        setMyGridTarget(null);
       }
     });
 
@@ -314,7 +323,7 @@ export default function App() {
     setRoomCode(upper);
   };
 
-  const sharedProps = { gameState: effectiveGameState, myId, lang, send, isHost, me };
+  const sharedProps = { gameState: effectiveGameState, myId, lang, send, isHost, me, myGridTarget };
 
   const hideIntro = useCallback(() => setShowRoundIntro(false), []);
 
@@ -457,11 +466,37 @@ export default function App() {
                     <div className="game-rail-action">{phaseActionLabel}</div>
                   </div>
 
-                  <div className={`game-rail-card game-rail-card--intel panel bevel${publicTheme ? ' glow-cyan' : ''}`}>
+                  <div className={`game-rail-card game-rail-card--intel panel bevel${(publicTheme || (gameState.isGrid && gameState.currentCardX)) ? ' glow-cyan' : ''}`}>
                     <div className="t-title text-dim" style={{ fontSize: 9 }}>
-                      {lang === 'pt' ? 'DADOS DA RODADA' : 'ROUND DATA'}
+                      {gameState.isGrid
+                        ? (lang === 'pt' ? 'COORDENADAS' : 'COORDINATES')
+                        : (lang === 'pt' ? 'DADOS DA RODADA' : 'ROUND DATA')}
                     </div>
-                    {publicTheme ? (
+
+                    {/* Grid mode — always show axes once cards are set */}
+                    {gameState.isGrid && gameState.currentCardX && gameState.currentCardY && (
+                      <div className="game-rail-axes">
+                        {[
+                          { tag: 'X', sep: '↔', card: gameState.currentCardX },
+                          { tag: 'Y', sep: '↕', card: gameState.currentCardY },
+                        ].map(({ tag, sep, card }) => (
+                          <div key={tag} className="game-rail-axis">
+                            <span className="game-rail-axis__tag">{tag}</span>
+                            <span className="game-rail-axis__pole">{card[lang === 'en' ? 'lE' : 'lP']}</span>
+                            <span className="game-rail-axis__sep">{sep}</span>
+                            <span className="game-rail-axis__pole game-rail-axis__pole--r">{card[lang === 'en' ? 'rE' : 'rP']}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {gameState.isGrid && !gameState.currentCardX && (
+                      <div className="game-rail-sealed">
+                        <b>{lang === 'pt' ? 'CAMPO OCULTO' : 'FIELD HIDDEN'}</b>
+                      </div>
+                    )}
+
+                    {/* FFA / Survival mode */}
+                    {!gameState.isGrid && publicTheme && (
                       <>
                         <div className="game-rail-theme" style={{ color: publicTheme.color }}>
                           {lang === 'en' ? publicTheme.shortEN : publicTheme.shortPT}
@@ -470,7 +505,8 @@ export default function App() {
                           {lang === 'en' ? publicTheme.nameEN : publicTheme.namePT}
                         </div>
                       </>
-                    ) : (
+                    )}
+                    {!gameState.isGrid && !publicTheme && (
                       <div className="game-rail-sealed">
                         <b>{lang === 'pt' ? 'SINAL SELADO' : 'SIGNAL SEALED'}</b>
                         <span>{lang === 'pt' ? 'Tema oculto ate a roleta travar.' : 'Theme hidden until the wheel locks.'}</span>
@@ -478,7 +514,7 @@ export default function App() {
                     )}
                   </div>
 
-                  {publicCard && (
+                  {!gameState.isGrid && publicCard && (
                     <div className="game-rail-card game-rail-card--spectrum panel bevel">
                       <div className="t-title text-dim" style={{ fontSize: 9 }}>
                         {lang === 'pt' ? 'ESPECTRO' : 'SPECTRUM'}
@@ -506,10 +542,43 @@ export default function App() {
                     {!showRoundIntro && gameState.phase === 'pick_card' && (
                       <CardPicker {...sharedProps} />
                     )}
-                    {!showRoundIntro && (gameState.phase === 'roulette' || gameState.phase === 'spinning') && gameState.settings?.cardMode !== 'livre' && (
+                    {!showRoundIntro && (gameState.phase === 'roulette' || gameState.phase === 'spinning') && gameState.isGrid && (
+                      <div className="phase-shell" style={{ alignItems: 'center' }}>
+                        <div className="grid-scan-panel panel bevel glow-cyan">
+                          <div className="t-title text-dim" style={{ fontSize: 9, letterSpacing: 2 }}>
+                            {lang === 'pt' ? 'CAMPO DE COORDENADAS' : 'COORDINATE FIELD'}
+                          </div>
+                          {gameState.currentCardX && gameState.currentCardY ? (
+                            <>
+                              <div className="grid-scan-axis grid-scan-axis--x">
+                                <span className="grid-scan-axis__tag">X</span>
+                                <div className="grid-scan-axis__poles">
+                                  <span>{lang === 'en' ? gameState.currentCardX.lE : gameState.currentCardX.lP}</span>
+                                  <span style={{ color: 'var(--ink-faint)' }}>↔</span>
+                                  <span>{lang === 'en' ? gameState.currentCardX.rE : gameState.currentCardX.rP}</span>
+                                </div>
+                              </div>
+                              <div className="grid-scan-axis grid-scan-axis--y">
+                                <span className="grid-scan-axis__tag">Y</span>
+                                <div className="grid-scan-axis__poles">
+                                  <span>{lang === 'en' ? gameState.currentCardY.lE : gameState.currentCardY.lP}</span>
+                                  <span style={{ color: 'var(--ink-faint)' }}>↕</span>
+                                  <span>{lang === 'en' ? gameState.currentCardY.rE : gameState.currentCardY.rP}</span>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="t-title glow-text-cyan" style={{ fontSize: 10 }}>
+                              {lang === 'pt' ? 'CALCULANDO...' : 'CALCULATING...'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {!showRoundIntro && (gameState.phase === 'roulette' || gameState.phase === 'spinning') && !gameState.isGrid && gameState.settings?.cardMode !== 'livre' && (
                       <Roulette {...sharedProps} spinning={gameState.phase === 'spinning'} />
                     )}
-                    {gameState.phase === 'spinning' && gameState.settings?.cardMode === 'livre' && gameState.currentCard && (
+                    {gameState.phase === 'spinning' && !gameState.isGrid && gameState.settings?.cardMode === 'livre' && gameState.currentCard && (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, paddingBottom: 20, width: '100%' }}>
                         <div className="panel bevel glow-cyan" style={{
                           padding: '20px 28px', textAlign: 'center', width: 'min(520px, 100%)',
@@ -531,7 +600,7 @@ export default function App() {
                       </div>
                     )}
                     {!showRoundIntro && gameState.phase === 'psychic' && (
-                      <PsychicPhase {...sharedProps} myTargetPos={myTargetPos} />
+                      <PsychicPhase {...sharedProps} myTargetPos={myTargetPos} myGridTarget={myGridTarget} />
                     )}
                     {!showRoundIntro && gameState.phase === 'voting' && <VotingPhase {...sharedProps} />}
                     {!showRoundIntro && gameState.phase === 'reveal' && <RevealPhase {...sharedProps} />}

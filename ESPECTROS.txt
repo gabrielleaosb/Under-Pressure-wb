@@ -1,0 +1,191 @@
+══════════════════════════════════════════════════════════════════════
+  UNDER PRESSURE — CATÁLOGO DE ESPECTROS
+  Gerado em 2026-05-19
+══════════════════════════════════════════════════════════════════════
+
+  Legenda: [ID] Esquerda (PT) / Esquerda (EN)  ←→  Direita (PT) / Direita (EN)
+
+──────────────────────────────────────────────────────────────────────
+  MODO TEMÁTICO — 68 cartas divididas em 13 temas
+  (disponível no código, desabilitado na UI por ora)
+──────────────────────────────────────────────────────────────────────
+
+  FILMES & SÉRIES (Movies & TV) ── 5 cartas
+  ─────────────────────────────────────────────
+  [ 0]  Previsível / Predictable          ←→  Surpreendente / Surprising
+  [ 1]  Lento / Slow-paced                ←→  Frenético / Action-packed
+  [ 2]  Sério / Serious                   ←→  Cômico / Comedic
+  [ 3]  Clássico / Classic                ←→  Contemporâneo / Contemporary
+  [ 4]  Arthouse / Arthouse               ←→  Blockbuster / Blockbuster
+
+  COMIDA & BEBIDA (Food & Drinks) ── 5 cartas
+  ─────────────────────────────────────────────
+  [ 5]  Saudável / Healthy                ←→  Indulgente / Indulgent
+  [ 6]  Suave / Mild                      ←→  Apimentado / Spicy
+  [ 7]  Doce / Sweet                      ←→  Amargo / Bitter
+  [ 8]  Barato / Budget                   ←→  Sofisticado / Gourmet
+  [ 9]  Cru / Raw                         ←→  Muito Cozido / Overcooked
+
+  CIÊNCIA & TECH (Science & Tech) ── 5 cartas
+  ─────────────────────────────────────────────
+  [10]  Comprovado / Proven               ←→  Teórico / Theoretical
+  [11]  Simples / Simple                  ←→  Complexo / Complex
+  [12]  Seguro / Safe                     ←→  Perigoso / Dangerous
+  [13]  Analógico / Analog                ←→  Digital / Digital
+  [14]  Obsoleto / Obsolete               ←→  Futurístico / Futuristic
+
+  ESPORTES (Sports) ── 5 cartas
+  ─────────────────────────────────────────────
+  [15]  Individual / Solo                 ←→  Coletivo / Team
+  [16]  Físico / Physical                 ←→  Mental / Mental
+  [17]  Devagar / Slow                    ←→  Veloz / Fast
+  [18]  Amador / Amateur                  ←→  Profissional / Professional
+  [19]  Seguro / Safe                     ←→  Radical / Extreme
+
+  MÚSICA (Music) ── 5 cartas
+  ─────────────────────────────────────────────
+  [20]  Calmo / Calm                      ←→  Agitado / Intense
+  [21]  Simples / Simple                  ←→  Elaborado / Complex
+  [22]  Melancólico / Melancholic         ←→  Animado / Upbeat
+  [23]  Acústico / Acoustic               ←→  Eletrônico / Electronic
+  [24]  Old-school / Old-school           ←→  Contemporâneo / Contemporary
+
+  NATUREZA & ANIMAIS (Nature & Animals) ── 5 cartas
+  ─────────────────────────────────────────────
+  [25]  Doméstico / Domestic              ←→  Selvagem / Wild
+  [26]  Microscópico / Microscopic        ←→  Gigantesco / Gigantic
+  [27]  Dócil / Gentle                    ←→  Feroz / Fierce
+  [28]  Terrestre / Land                  ←→  Aquático / Aquatic
+  [29]  Raro / Rare                       ←→  Comum / Common
+
+  HISTÓRIA (History) ── 5 cartas
+  ─────────────────────────────────────────────
+  [30]  Antigo / Ancient                  ←→  Moderno / Modern
+  [31]  Local / Local                     ←→  Global / Global
+  [32]  Pacífico / Peaceful               ←→  Conflituoso / Conflict-torn
+  [33]  Esquecido / Forgotten             ←→  Famoso / Renowned
+  [34]  Pequena Nação / Small Nation      ←→  Império / Empire
+
+  VIDEOGAMES (Video Games) ── 5 cartas
+  ─────────────────────────────────────────────
+  [35]  Casual / Casual                   ←→  Hardcore / Hardcore
+  [36]  Solo / Singleplayer               ←→  Multiplayer / Multiplayer
+  [37]  Fácil / Easy                      ←→  Impossível / Impossible
+  [38]  Curto / Short                     ←→  Interminável / Endless
+  [39]  Realista / Realistic              ←→  Fantasioso / Fantasy
+
+  TRABALHO & CARREIRA (Work & Career) ── 5 cartas
+  ─────────────────────────────────────────────
+  [40]  Criativo / Creative               ←→  Técnico / Technical
+  [41]  Estressante / Stressful           ←→  Tranquilo / Relaxed
+  [42]  Bem Pago / Well-paid              ←→  Explorado / Underpaid
+  [43]  Solitário / Solitary              ←→  Social / Social
+  [44]  Manual / Manual                   ←→  Intelectual / Intellectual
+
+  FILOSOFIA & EMOÇÕES (Philosophy & Emotions) ── 5 cartas
+  ─────────────────────────────────────────────
+  [45]  Otimista / Optimistic             ←→  Pessimista / Pessimistic
+  [46]  Racional / Rational               ←→  Emocional / Emotional
+  [47]  Egoísta / Selfish                 ←→  Altruísta / Altruistic
+  [48]  Medo / Fear                       ←→  Coragem / Courage
+  [49]  Caos / Chaos                      ←→  Ordem / Order
+
+  ESPAÇO & FICÇÃO (Space & Sci-Fi) ── 5 cartas
+  ─────────────────────────────────────────────
+  [50]  Próximo / Near                    ←→  Infinito / Infinite
+  [51]  Habitável / Habitable             ←→  Hostil / Hostile
+  [52]  Descoberto / Discovered           ←→  Misterioso / Mysterious
+  [53]  Micro / Small-scale               ←→  Cósmico / Cosmic
+  [54]  Real / Real                       ←→  Ficção / Fiction
+
+  CULTURA POP (Pop Culture) ── 5 cartas
+  ─────────────────────────────────────────────
+  [55]  Cult / Cult                       ←→  Mainstream / Mainstream
+  [56]  Nostálgico / Nostalgic            ←→  Atual / Current
+  [57]  Sério / Serious                   ←→  Irônico / Ironic
+  [58]  Nicho / Niche                     ←→  Universal / Universal
+  [59]  Underground / Underground         ←→  Viral / Viral
+
+  AMIGOS & CAOS (Friends & Chaos) ── 8 cartas
+  ─────────────────────────────────────────────
+  [60]  Perdoável / Forgivable            ←→  Imperdoável / Unforgivable
+  [61]  Privado / Private                 ←→  Exposto / Exposed
+  [62]  Faria sozinho / Would do solo     ←→  Chamaria todos / Invite everyone
+  [63]  Vergonha leve / Mild shame        ←→  Vergonha eterna / Eternal shame
+  [64]  Amigo confiável / Trustworthy     ←→  Agente do caos / Chaos agent
+  [65]  Boa desculpa / Good excuse        ←→  Sem defesa / No defense
+  [66]  Mandaria no grupo / Group chat    ←→  Apagaria depois / Delete later
+  [67]  Pouco suspeito / Barely suspicious ←→ Muito suspeito / Very suspicious
+
+
+──────────────────────────────────────────────────────────────────────
+  MODO LIVRE / GRID — 46 cartas abertas (estilo Wavelength)
+  (usado no FFA modo LIVRE e em todo o modo GRID)
+──────────────────────────────────────────────────────────────────────
+
+  [100]  Subestimado / Underrated          ←→  Superestimado / Overrated
+  [101]  Básico / Basic                    ←→  Diferentão / Hipster
+  [102]  Burro / Stupid                    ←→  Genial / Brilliant
+  [103]  Inútil / Useless                  ←→  Essencial / Essential
+  [104]  Culpa secreta / Guilty pleasure   ←→  Orgulho público / Openly love
+  [105]  Feio de falar / Ugly word         ←→  Bonito de falar / Beautiful word
+  [106]  Faz mal / Feels bad               ←→  Faz bem / Feels good
+  [107]  Perda de tempo / Waste of time    ←→  Bem aproveitado / Good use of time
+  [108]  Irrazoável / Unreasonable         ←→  Razoável / Reasonable
+  [109]  Sem arte / Not art                ←→  Arte pura / Definitely art
+  [110]  Fama imerecida / Undeserved fame  ←→  Fama merecida / Deserved fame
+  [111]  Esquecível / Forgettable          ←→  Inesquecível / Unforgettable
+  [112]  Pura sorte / Pure luck            ←→  Pura habilidade / Pure skill
+  [113]  Todo mundo odeia / Everyone hates ←→  Todo mundo ama / Everyone loves
+  [114]  Antiquado / Outdated              ←→  Na moda / Trendy
+  [115]  Infantil / Childish               ←→  Maduro / Mature
+  [116]  Nerd / Nerdy                      ←→  Descolado / Cool
+  [117]  Desnecessário / Unnecessary       ←→  Indispensável / Indispensable
+  [118]  Muito específico / Very niche     ←→  Todo mundo conhece / Everyone knows
+  [119]  Insignificante / Insignificant    ←→  Mudou o mundo / Changed the world
+  [120]  Careta / Uncool                   ←→  Ousado / Daring
+  [121]  Supersticioso / Superstitious     ←→  Científico / Scientific
+  [122]  Revoltante / Revolting            ←→  Delicioso / Delightful
+  [123]  Pior tarefa / Worst chore         ←→  Melhor tarefa / Best chore
+  [124]  Assustador demais / Too scary     ←→  Nem um pouco / Not at all scary
+  [125]  Mau hábito / Bad habit            ←→  Bom hábito / Good habit
+  [127]  Impossível / Impossible           ←→  Fácil demais / Way too easy
+  [128]  Introvertido / Introverted        ←→  Extrovertido / Extroverted
+  [129]  Melhor presente / Best gift       ←→  Pior presente / Worst gift
+  [130]  Viciante / Addictive              ←→  Entediante / Boring
+  [131]  Todo mundo tem / Everyone has it  ←→  Quase ninguém tem / Almost nobody has
+  [132]  Parte do cotidiano / Everyday     ←→  Uma vez na vida / Once in a lifetime
+  [133]  Você faria / You'd do it          ←→  Jamais faria / You'd never do it
+  [134]  Faria com qualquer um / Anyone    ←→  Só com pessoas próximas / Close people only
+  [135]  Você evita / You avoid it         ←→  Você busca / You seek it
+  [136]  Raro de encontrar / Hard to find  ←→  Todo lugar tem / Everywhere
+  [137]  Pior ano da história / Worst year ←→  Melhor ano da história / Best year
+  [138]  Impossível de sentar / Can't sit  ←→  Perfeito para sentar / Perfect to sit on
+  [139]  Difícil de lembrar / Hard to remember ←→ Fácil de lembrar / Easy to remember
+  [140]  Matéria difícil / Hard subject    ←→  Matéria fácil / Easy subject
+  [141]  Mole / Soft                       ←→  Duro / Hard
+  [142]  Irritante / Annoying              ←→  Divertido / Fun
+  [143]  Brincadeira / Lighthearted        ←→  Coisa séria / Serious
+  [144]  Silencioso / Silent               ←→  Barulhento / Loud
+  [145]  Frágil / Fragile                  ←→  Inquebrável / Unbreakable
+  [146]  Vergonha alheia / Cringe          ←→  Legal / Cool
+
+
+══════════════════════════════════════════════════════════════════════
+  RESUMO
+══════════════════════════════════════════════════════════════════════
+
+  Temático  →  68 cartas  /  13 temas  /  5 cartas por tema (exceto Amigos & Caos: 8)
+  Livre     →  46 cartas  /  IDs 100–146 (sem ID 126 — vago intencional ou bug?)
+  Total     →  114 cartas
+
+  OBSERVAÇÕES PARA REVISÃO
+  ─────────────────────────
+  • ID 126 está faltando na lista LIVRE (pulo de 125 para 127) — verificar se foi removido.
+  • Carta [12] e [19] têm o mesmo polo esquerdo "Seguro" em temas diferentes (Ciência e Esportes).
+  • Carta [21] "Simples ←→ Elaborado" (Música) duplica o polo "Simples" da carta [11] (Ciência).
+  • Cartas [101] "Básico ←→ Diferentão" e [116] "Nerd ←→ Descolado" cobrem território parecido.
+  • Cartas [127] "Impossível ←→ Fácil demais" e [37] "Fácil ←→ Impossível" são idênticas entre os dois decks.
+  • Cartas [138] e [140] parecem específicas demais para um jogo de festa ("impossível de sentar", "matéria difícil").
+
+══════════════════════════════════════════════════════════════════════

@@ -6,7 +6,7 @@
  * Streaks and BOOST create round-to-round pressure.
  */
 import { db, ref, get, set, update, remove, push, onValue, onChildAdded, runTransaction } from './firebase.js';
-import { PLAYER_COLORS, selectCard, selectOpenCards, genId } from './gameData.js';
+import { PLAYER_COLORS, selectCard, selectOpenCards, selectTwoOpenCards, genId } from './gameData.js';
 import {
   DEFAULT_ROOM_TTL_MS,
   TEAM_COLORS,
@@ -16,6 +16,7 @@ import {
   findRejoinPlayer,
   isRoomExpired,
   resolveRound,
+  resolveRoundGrid,
   roomExpiresAt,
   teamHullChange,
 } from './gameRules.mjs';
@@ -287,6 +288,11 @@ export class GameEngine {
       return;
     }
 
+    if (room.settings?.gameMode === 'grid') {
+      await this._startGridRound(room);
+      return;
+    }
+
     const players = allPlayers(room).filter(p => p.isBot || p.connected !== false);
     if (players.length < 2) return;
 
@@ -398,6 +404,38 @@ export class GameEngine {
     }
   }
 
+  async _startGridRound(room) {
+    const players = allPlayers(room).filter(p => p.isBot || p.connected !== false);
+    if (players.length < 2) return;
+
+    const startId = room.startingTransmitterId || room.transmitterId || this.hostId;
+    const startIndex = Math.max(0, players.findIndex(p => p.id === startId));
+    const tx = players[(startIndex + (room.round || 0)) % players.length] || players[0];
+    const roundIntroUntil = Date.now() + ROUND_INTRO_DURATION_MS;
+
+    const usedIds = Object.keys(room.usedCardIds || {}).map(Number);
+    const [cardX, cardY] = selectTwoOpenCards(usedIds);
+
+    await Promise.all([
+      roomUpdate(this.roomCode, {
+        psychicId: tx.id, transmitterId: tx.id,
+        clue: null, revealResult: null, currentTheme: null, currentCard: null,
+        currentCardX: { id: cardX.id, lP: cardX.lP, lE: cardX.lE, rP: cardX.rP, rE: cardX.rE },
+        currentCardY: { id: cardY.id, lP: cardY.lP, lE: cardY.lE, rP: cardY.rP, rE: cardY.rE },
+        timerEnd: null, cardPickOptions: null, roundIntroUntil, revealUnlockAt: null,
+        phase: 'spinning',
+      }),
+      remove(rref(this.roomCode, 'votes')),
+      remove(rref(this.roomCode, 'psychicSecret')),
+      remove(rref(this.roomCode, 'emojiReactions')),
+    ]);
+    await Promise.all([
+      set(rref(this.roomCode, 'usedCardIds', String(cardX.id)), true),
+      set(rref(this.roomCode, 'usedCardIds', String(cardY.id)), true),
+    ]);
+    setTimeout(() => this._activatePsychic(tx.id), ROUND_INTRO_DURATION_MS + 1200);
+  }
+
   async _autoSpinForBot() {
     const room = await getRoom(this.roomCode);
     if (!room || room.phase !== 'roulette') return;
@@ -450,6 +488,14 @@ export class GameEngine {
     const room = await getRoom(this.roomCode);
     if (!room || !['spinning', 'pick_card'].includes(room.phase)) return;
 
+    if (room.settings?.gameMode === 'grid') {
+      const targetX = Math.floor(Math.random() * 11);
+      const targetY = Math.floor(Math.random() * 11);
+      await set(rref(this.roomCode, 'psychicSecret'), { targetX, targetY });
+      await this._startPsychicCluePhase(txId);
+      return;
+    }
+
     if (room.settings?.gameMode === 'survival') {
       // Generate a random secret per active team (targetMode='choose' deferred to clue phase)
       const activeTeamIds = this._activeTeamIds(room);
@@ -488,8 +534,18 @@ export class GameEngine {
         const r = await getRoom(this.roomCode);
         if (!r || r.phase !== 'psychic') return;
         const s = await get(rref(this.roomCode, 'psychicSecret'));
-        const t2 = s.val()?.targetPosition ?? 50;
-        const clue = t2 < 35 ? (r.currentCard?.lP || 'esquerda') : t2 > 65 ? (r.currentCard?.rP || 'direita') : 'meio';
+        let clue;
+        if (r.settings?.gameMode === 'grid') {
+          const { targetX = 5, targetY = 5 } = s.val() || {};
+          clue = targetX > 6 ? (r.currentCardX?.rP || 'direita')
+               : targetX < 4 ? (r.currentCardX?.lP || 'esquerda')
+               : targetY > 6 ? (r.currentCardY?.rP || 'alto')
+               : targetY < 4 ? (r.currentCardY?.lP || 'baixo')
+               : 'centro';
+        } else {
+          const t2 = s.val()?.targetPosition ?? 50;
+          clue = t2 < 35 ? (r.currentCard?.lP || 'esquerda') : t2 > 65 ? (r.currentCard?.rP || 'direita') : 'meio';
+        }
         await roomUpdate(this.roomCode, { clue, timerEnd: null });
         await this._proceedToVoting();
       }, 2000);
@@ -662,8 +718,11 @@ export class GameEngine {
     const botVoters = allPlayers(room).filter(p => p.isBot && p.id !== room.psychicId);
     if (botVoters.length > 0) {
       const autoVotes = {};
+      const isGrid = room.settings?.gameMode === 'grid';
       botVoters.forEach(b => {
-        autoVotes[b.id] = { position: Math.round(15 + Math.random() * 70), boost: Math.random() > 0.8 };
+        autoVotes[b.id] = isGrid
+          ? { x: Math.round(Math.random() * 10), y: Math.round(Math.random() * 10), boost: Math.random() > 0.8 }
+          : { position: Math.round(15 + Math.random() * 70), boost: Math.random() > 0.8 };
       });
       await update(rref(this.roomCode, 'votes'), autoVotes);
     }
@@ -705,12 +764,21 @@ export class GameEngine {
       ]);
       const rawVotes = votesSnap.val() || {};
       const existing = (await get(rref(this.roomCode, 'playerScores'))).val() || {};
-      const resolved = resolveRound({
-        room: { ...room, playerScores: existing },
-        rawVotes,
-        target: secretSnap.val()?.targetPosition,
-        now: Date.now(),
-      });
+      const isGrid = room.settings?.gameMode === 'grid';
+      const resolved = isGrid
+        ? resolveRoundGrid({
+            room: { ...room, playerScores: existing },
+            rawVotes,
+            targetX: secretSnap.val()?.targetX,
+            targetY: secretSnap.val()?.targetY,
+            now: Date.now(),
+          })
+        : resolveRound({
+            room: { ...room, playerScores: existing },
+            rawVotes,
+            target: secretSnap.val()?.targetPosition,
+            now: Date.now(),
+          });
       const { scoreUpdates, revealResult, historyEntry } = resolved;
       const historyKey = push(rref(this.roomCode, 'roundHistory')).key || genId();
       await update(ref(db), {
@@ -944,7 +1012,7 @@ export class GameEngine {
         if (['random','choose'].includes(data.targetMode)) s.targetMode = data.targetMode;
         if (['themed','livre'].includes(data.cardMode)) s.cardMode = data.cardMode;
         if ([1,3,5].includes(data.cardOptions)) s.cardOptions = data.cardOptions;
-        if (['ffa','survival'].includes(data.gameMode)) s.gameMode = data.gameMode;
+        if (['ffa','survival','grid'].includes(data.gameMode)) s.gameMode = data.gameMode;
         if ([2,3,4].includes(data.numTeams)) s.numTeams = data.numTeams;
         if (['fixed','rotating'].includes(data.navigatorMode)) s.navigatorMode = data.navigatorMode;
 
@@ -965,7 +1033,7 @@ export class GameEngine {
           });
           await roomUpdate(this.roomCode, { teams });
           if (Object.keys(playerUpdates).length) await update(rref(this.roomCode, 'players'), playerUpdates);
-        } else if (newMode === 'ffa' && modeChanged) {
+        } else if ((newMode === 'ffa' || newMode === 'grid') && modeChanged) {
           await roomUpdate(this.roomCode, { teams: null });
         }
         break;
@@ -1088,6 +1156,14 @@ export class GameEngine {
         if (room.phase !== 'voting') return;
         if (actor?.connected === false) return;
 
+        if (room.settings?.gameMode === 'grid') {
+          if (by === room.psychicId) return;
+          const gx = Math.max(0, Math.min(10, Math.round(Number(data.x) || 0)));
+          const gy = Math.max(0, Math.min(10, Math.round(Number(data.y) || 0)));
+          await set(rref(this.roomCode, 'votes', by), { x: gx, y: gy, boost: !!data.boost });
+          break;
+        }
+
         if (room.settings?.gameMode === 'survival') {
           const myTeamId = actor?.teamId;
           if (!myTeamId) return;
@@ -1201,7 +1277,17 @@ export class GameEngine {
       await roomUpdate(this.roomCode, { clue:'[DEV]', timerEnd:null });
       await this._proceedToVoting();
     } else if (phase === 'voting') {
-      if (room.settings?.gameMode === 'survival') {
+      if (room.settings?.gameMode === 'grid') {
+        const voters = allPlayers(room).filter(p => p.id !== room.psychicId);
+        const vSnap = await get(rref(this.roomCode, 'votes'));
+        const existing = vSnap.val() || {};
+        const upd = {};
+        voters.filter(p => existing[p.id] === undefined).forEach(p => {
+          upd[p.id] = { x: Math.round(Math.random() * 10), y: Math.round(Math.random() * 10), boost: false };
+        });
+        if (Object.keys(upd).length) await update(rref(this.roomCode, 'votes'), upd);
+        await this._finalizeVoting();
+      } else if (room.settings?.gameMode === 'survival') {
         // Fill missing team votes with random positions
         const activeTeamIds = this._activeTeamIds(room);
         const tvSnap = await get(rref(this.roomCode, 'teamVotes'));

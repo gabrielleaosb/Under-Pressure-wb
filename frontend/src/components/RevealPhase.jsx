@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import PressurePanel from './PressurePanel.jsx';
+import Grid2D from './Grid2D.jsx';
 import {
   playPerfect, playGoodResult, playDamageHit, playClick,
   playTensionBuild, playVoteReveal, playTargetLock, playScorePop,
@@ -13,6 +14,15 @@ function gradeFromDiff(diff, lang) {
   if (diff <= 25) return { label: lang === 'pt' ? 'PERTO'     : 'CLOSE',      color: 'var(--neon-amber)' };
   if (diff <= 40) return { label: lang === 'pt' ? 'RAZOAVEL'  : 'REASONABLE', color: 'var(--orange)' };
   if (diff <= 60) return { label: lang === 'pt' ? 'LONGE'     : 'FAR',        color: 'var(--neon-coral)' };
+  return { label: lang === 'pt' ? 'ERROU' : 'MISS', color: 'var(--ink-faint)' };
+}
+
+function gradeFromDist(dist, lang) {
+  if (dist <= 1)   return { label: lang === 'pt' ? 'PERFEITO'    : 'PERFECT',    color: 'var(--neon-mint)' };
+  if (dist <= 2)   return { label: lang === 'pt' ? 'MUITO PERTO' : 'VERY CLOSE', color: 'var(--neon-cyan)' };
+  if (dist <= 3.5) return { label: lang === 'pt' ? 'PERTO'       : 'CLOSE',      color: 'var(--neon-amber)' };
+  if (dist <= 5)   return { label: lang === 'pt' ? 'RAZOAVEL'    : 'REASONABLE', color: 'var(--orange)' };
+  if (dist <= 7)   return { label: lang === 'pt' ? 'LONGE'       : 'FAR',        color: 'var(--neon-coral)' };
   return { label: lang === 'pt' ? 'ERROU' : 'MISS', color: 'var(--ink-faint)' };
 }
 
@@ -39,8 +49,9 @@ function boostLabel(diff, lang) {
 }
 
 export default function RevealPhase({ gameState, myId, lang, send }) {
-  const result  = gameState.revealResult;
-  const psychic = gameState.players.find(p => p.id === gameState.psychicId);
+  const result   = gameState.revealResult;
+  const isGrid   = result?.isGrid;
+  const psychic  = gameState.players.find(p => p.id === gameState.psychicId);
 
   const [cascadePhase, setCascadePhase]           = useState('idle');
   const [revealedVoteCount, setRevealedVoteCount] = useState(0);
@@ -53,7 +64,9 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
   const startedAtRef       = useRef(null);
 
   const revealKey = result
-    ? `${gameState.round}:${gameState.psychicId}:${result.target}:${result.averageVote}`
+    ? isGrid
+      ? `${gameState.round}:${gameState.psychicId}:${result.targetX},${result.targetY}`
+      : `${gameState.round}:${gameState.psychicId}:${result.target}:${result.averageVote}`
     : null;
 
   const allVotes    = result?.votes       || {};
@@ -61,20 +74,23 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
   const txScore     = result?.transmitterScore ?? 0;
   const txBreakdown = result?.transmitterScoreBreakdown;
   const isPsychic   = gameState.psychicId === myId;
-  const myVote      = votePosition(allVotes[myId]);
-  const averageVote = result?.averageVote ?? result?.target ?? 50;
+  const myVote      = isGrid ? allVotes[myId] : votePosition(allVotes[myId]);
+  const averageVote = isGrid ? null : (result?.averageVote ?? result?.target ?? 50);
+  const myDist      = isGrid && myVote
+    ? Math.round(Math.sqrt((myVote.x - result.targetX) ** 2 + (myVote.y - result.targetY) ** 2) * 10) / 10
+    : null;
 
   const voters = useMemo(
     () => gameState.players.filter(p => p.id !== gameState.psychicId),
     [gameState.players, gameState.psychicId],
   );
 
-  // Vote reveal order: by position (left → right sweep on gauge)
+  // Vote reveal order: by position for FFA, by x for grid
   const voteOrder = useMemo(
-    () => [...voters].sort((a, b) =>
-      (votePosition(allVotes[a.id]) ?? 50) - (votePosition(allVotes[b.id]) ?? 50)
-    ),
-    [voters, allVotes],
+    () => isGrid
+      ? [...voters].sort((a, b) => ((allVotes[a.id]?.x ?? 5) + (allVotes[a.id]?.y ?? 5)) - ((allVotes[b.id]?.x ?? 5) + (allVotes[b.id]?.y ?? 5)))
+      : [...voters].sort((a, b) => (votePosition(allVotes[a.id]) ?? 50) - (votePosition(allVotes[b.id]) ?? 50)),
+    [voters, allVotes, isGrid],
   );
 
   // Score reveal order: worst → best (all players, navigator included)
@@ -87,21 +103,26 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
     });
   }, [result, gameState.players, gameState.psychicId, txScore, roundScores]);
 
-  // Votes shown as dots on gauge during cascade
+  // Votes shown as dots during cascade
   const visibleVoteDots = useMemo(
-    () => voteOrder.slice(0, revealedVoteCount).map(p => ({
-      playerId: p.id,
-      position: votePosition(allVotes[p.id]) ?? 50,
-    })),
-    [voteOrder, revealedVoteCount, allVotes],
+    () => voteOrder.slice(0, revealedVoteCount).map(p => {
+      if (isGrid) {
+        const v = allVotes[p.id];
+        return v ? { playerId: p.id, x: v.x, y: v.y } : null;
+      }
+      return { playerId: p.id, position: votePosition(allVotes[p.id]) ?? 50 };
+    }).filter(Boolean),
+    [voteOrder, revealedVoteCount, allVotes, isGrid],
   );
 
-  // All votes for gauge after target reveal
+  // All votes after target reveal
   const allVotesDots = useMemo(
-    () => Object.entries(allVotes)
-      .map(([id, v]) => ({ playerId: id, position: votePosition(v) }))
-      .filter(v => v.position !== null),
-    [allVotes],
+    () => Object.entries(allVotes).map(([id, v]) => {
+      if (isGrid) return v ? { playerId: id, x: v.x, y: v.y } : null;
+      const pos = votePosition(v);
+      return pos !== null ? { playerId: id, position: pos } : null;
+    }).filter(Boolean),
+    [allVotes, isGrid],
   );
 
   // Rank map (only relevant after target reveal)
@@ -160,14 +181,26 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
       setShowTargetOnGauge(true);
       playTargetLock();
       // Personal result sound after impact
-      const myV = votePosition(result.votes?.[myId]);
-      if (myV !== null) {
-        const d = Math.abs(myV - result.target);
-        setTimeout(() => {
-          if (d <= 5)       playPerfect();
-          else if (d <= 25) playGoodResult();
-          else if (d > 40)  playDamageHit(d > 60);
-        }, 430);
+      if (result.isGrid) {
+        const mv = result.votes?.[myId];
+        if (mv) {
+          const d = Math.sqrt((mv.x - result.targetX) ** 2 + (mv.y - result.targetY) ** 2);
+          setTimeout(() => {
+            if (d <= 1)   playPerfect();
+            else if (d <= 3.5) playGoodResult();
+            else if (d > 7)    playDamageHit(d > 11);
+          }, 430);
+        }
+      } else {
+        const myV = votePosition(result.votes?.[myId]);
+        if (myV !== null) {
+          const d = Math.abs(myV - result.target);
+          setTimeout(() => {
+            if (d <= 5)       playPerfect();
+            else if (d <= 25) playGoodResult();
+            else if (d > 40)  playDamageHit(d > 60);
+          }, 430);
+        }
       }
     }, afterVotesAt + TARGET_PAUSE);
 
@@ -209,18 +242,23 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
 
   if (!result) return null;
 
-  const myDiff   = myVote !== null
-    ? Math.abs(myVote - result.target)
-    : Math.abs(averageVote - result.target);
-  const headline = gradeFromDiff(isPsychic ? Math.abs(averageVote - result.target) : myDiff, lang);
+  const myDiff = !isGrid
+    ? (myVote !== null ? Math.abs(myVote - result.target) : Math.abs(averageVote - result.target))
+    : null;
+  const effectiveDist = isGrid
+    ? (isPsychic ? result.avgDist : (myDist ?? result.avgDist))
+    : null;
+  const headline = isGrid
+    ? gradeFromDist(effectiveDist ?? 0, lang)
+    : gradeFromDiff(isPsychic ? Math.abs(averageVote - result.target) : myDiff, lang);
 
-  // Gauge props (change per phase)
-  const gaugeValue       = isPsychic ? averageVote : (myVote ?? averageVote);
+  // Gauge/grid props (change per phase)
+  const gaugeValue       = !isGrid ? (isPsychic ? averageVote : (myVote ?? averageVote)) : null;
   const gaugeOtherVotes  = isPostTarget ? allVotesDots : visibleVoteDots;
   const gaugePlayers     = isPostTarget ? rankedPlayers : [];
-  const gaugeShowTarget  = showTargetOnGauge ? result.target : null;
-  const gaugeShowNeedle  = isPostTarget && !isPsychic && myVote !== null;
-  const gaugeShowMyVote  = isPostTarget && !isPsychic && myVote !== null ? myVote : null;
+  const gaugeShowTarget  = !isGrid && showTargetOnGauge ? result.target : null;
+  const gaugeShowNeedle  = !isGrid && isPostTarget && !isPsychic && myVote !== null;
+  const gaugeShowMyVote  = !isGrid && isPostTarget && !isPsychic && myVote !== null ? myVote : null;
 
   return (
     <div className="phase-shell phase-shell--reveal">
@@ -238,7 +276,7 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
         </div>
       </div>
 
-      {/* ── Gauge ── */}
+      {/* ── Gauge / Grid ── */}
       <div className={`reveal-gauge-panel panel bevel glow-cyan${cascadePhase === 'target' ? ' reveal-gauge-panel--locked' : ''}`}>
         {cascadePhase === 'intro' && (
           <div className="cascade-scan-overlay">
@@ -251,21 +289,35 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
             </div>
           </div>
         )}
-        <PressurePanel
-          card={gameState.currentCard}
-          lang={lang}
-          value={gaugeValue}
-          onChange={() => {}}
-          disabled
-          showTarget={gaugeShowTarget}
-          showNeedle={gaugeShowNeedle}
-          showMyVote={gaugeShowMyVote}
-          readoutLabel={isPsychic
-            ? (lang === 'pt' ? 'MEDIA' : 'AVERAGE')
-            : (lang === 'pt' ? 'SEU PALPITE' : 'YOUR GUESS')}
-          otherVotes={gaugeOtherVotes}
-          players={gaugePlayers}
-        />
+        {isGrid ? (
+          <Grid2D
+            cardX={gameState.currentCardX}
+            cardY={gameState.currentCardY}
+            lang={lang}
+            showTarget={showTargetOnGauge}
+            targetX={result.targetX}
+            targetY={result.targetY}
+            otherVotes={gaugeOtherVotes}
+            players={gaugePlayers.length ? gaugePlayers : gameState.players}
+            disabled
+          />
+        ) : (
+          <PressurePanel
+            card={gameState.currentCard}
+            lang={lang}
+            value={gaugeValue}
+            onChange={() => {}}
+            disabled
+            showTarget={gaugeShowTarget}
+            showNeedle={gaugeShowNeedle}
+            showMyVote={gaugeShowMyVote}
+            readoutLabel={isPsychic
+              ? (lang === 'pt' ? 'MEDIA' : 'AVERAGE')
+              : (lang === 'pt' ? 'SEU PALPITE' : 'YOUR GUESS')}
+            otherVotes={gaugeOtherVotes}
+            players={gaugePlayers}
+          />
+        )}
         {cascadePhase === 'target' && <div className="cascade-target-flash" />}
       </div>
 
@@ -299,7 +351,7 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
               {lang === 'pt' ? '▣  ALVO CONFIRMADO' : '▣  TARGET CONFIRMED'}
             </div>
             <div className="t-read" style={{ color: 'var(--neon-mint)', fontSize: 48, textShadow: '0 0 22px rgba(0,255,136,0.85)', lineHeight: 1 }}>
-              {result.target}
+              {isGrid ? `(${result.targetX}, ${result.targetY})` : result.target}
             </div>
           </div>
         </div>
@@ -327,8 +379,15 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
                 ? (lang === 'pt' ? 'MEDIA / ALVO' : 'AVG / TARGET')
                 : (lang === 'pt' ? 'PALPITE / ALVO' : 'GUESS / TARGET')}
             </div>
-            <div className="t-read glow-text-mint" style={{ fontSize: 34 }}>
-              {isPsychic ? averageVote : (myVote ?? '--')} / {result.target}
+            <div className="t-read glow-text-mint" style={{ fontSize: isGrid ? 22 : 34 }}>
+              {isGrid
+                ? isPsychic
+                  ? `avg ±${result.avgDist}`
+                  : myVote
+                    ? `(${myVote.x},${myVote.y}) / (${result.targetX},${result.targetY})`
+                    : '--'
+                : `${isPsychic ? averageVote : (myVote ?? '--')} / ${result.target}`
+              }
             </div>
           </div>
           <div style={{ width: 1, height: 36, background: 'var(--metal-2)' }} />
@@ -337,7 +396,7 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
               {headline.label}
             </div>
             <div className="t-mono" style={{ fontSize: 17, marginTop: 6, color: headline.color }}>
-              ±{Math.round(myDiff)} · {signed(isPsychic ? txScore : (roundScores[myId] ?? 0))}
+              {isGrid ? `±${effectiveDist}` : `±${Math.round(myDiff)}`} · {signed(isPsychic ? txScore : (roundScores[myId] ?? 0))}
             </div>
           </div>
         </div>
@@ -350,8 +409,9 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
             {scoreRevealOrder.slice(0, revealedScoreCount).map((player) => {
               const isNavigator = player.id === gameState.psychicId;
               const rawVote     = allVotes[player.id];
-              const vote        = isNavigator ? null : votePosition(rawVote);
-              const diff        = vote !== null ? Math.abs(vote - result.target) : null;
+              const vote        = isNavigator ? null : isGrid ? rawVote : votePosition(rawVote);
+              const diff        = !isGrid && vote !== null ? Math.abs(vote - result.target) : null;
+              const dist2d      = isGrid && vote ? Math.round(Math.sqrt((vote.x - result.targetX) ** 2 + (vote.y - result.targetY) ** 2) * 10) / 10 : null;
               const points      = isNavigator ? txScore : (roundScores[player.id] ?? 0);
               const usedBoost   = rawVote?.boost;
               const isMe        = player.id === myId;
@@ -377,7 +437,9 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
                       {isNavigator
                         ? `${lang === 'pt' ? 'NAVEGADOR' : 'NAVIGATOR'} · ${navigatorSummary(txBreakdown, lang)}`
                         : vote !== null
-                          ? `${lang === 'pt' ? 'palpite' : 'guess'} ${vote} · ±${diff}`
+                          ? isGrid
+                            ? `(${vote.x},${vote.y}) · ±${dist2d}`
+                            : `${lang === 'pt' ? 'palpite' : 'guess'} ${vote} · ±${diff}`
                           : (lang === 'pt' ? 'sem voto' : 'no vote')}
                     </div>
                     {isNavigator && txBreakdown?.cleanSweep && (
@@ -386,7 +448,7 @@ export default function RevealPhase({ gameState, myId, lang, send }) {
                       </div>
                     )}
                     {!isNavigator && usedBoost && (
-                      <div className={`reveal-score-tag${diff !== null && diff > 25 ? ' reveal-score-tag--danger' : ''}`}>
+                      <div className={`reveal-score-tag${isGrid ? (dist2d !== null && dist2d > 3.5 ? ' reveal-score-tag--danger' : '') : (diff !== null && diff > 25 ? ' reveal-score-tag--danger' : '')}`}>
                         {boostLabel(diff, lang)}
                       </div>
                     )}

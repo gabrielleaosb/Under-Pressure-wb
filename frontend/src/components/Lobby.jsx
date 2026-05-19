@@ -55,6 +55,7 @@ function TeamCard({ team, players, me, lang, send, onPickShip }) {
 
 function MissionDock({ teams, players, me, lang, isHost, send, onPickShip, settings }) {
   const isSurvival = settings?.gameMode === 'survival';
+  const isGrid = settings?.gameMode === 'grid';
   const numTeams = settings?.numTeams ?? 2;
   const fireRandomize = useCooldown(500);
 
@@ -68,8 +69,8 @@ function MissionDock({ teams, players, me, lang, isHost, send, onPickShip, setti
           <span className="mdock__col-label t-title text-dim">{lang === 'pt' ? 'CONFIG' : 'CONFIG'}</span>
           <SettingRow
             label={lang === 'pt' ? 'PARTIDA' : 'MATCH'}
-            options={['ffa', 'survival']}
-            labels={['FFA', lang === 'pt' ? 'NAVES' : 'SHIPS']}
+            options={['ffa', 'survival', 'grid']}
+            labels={['FFA', lang === 'pt' ? 'NAVES' : 'SHIPS', 'GRID']}
             value={settings.gameMode ?? 'ffa'}
             onChange={(v) => { playClick(); send('update_settings', { ...settings, gameMode: v }); }}
           />
@@ -115,19 +116,23 @@ function MissionDock({ teams, players, me, lang, isHost, send, onPickShip, setti
             custom={{ min: 15, max: 120 }}
             onChange={(v) => { playClick(); send('update_settings', { ...settings, voteTimer: v }); }}
           />
-          <SettingRow
-            label={lang === 'pt' ? 'BAROMETRO' : 'BAROMETER'}
-            options={['random', 'choose']}
-            labels={lang === 'pt' ? ['ALEATORIO', 'LIVRE'] : ['RANDOM', 'FREE']}
-            value={settings.targetMode ?? 'random'}
-            onChange={(v) => { playClick(); send('update_settings', { ...settings, targetMode: v }); }}
-          />
-          <SettingRow
-            label={lang === 'pt' ? 'OPÇÕES' : 'OPTIONS'}
-            options={[1, 3, 5]}
-            value={settings.cardOptions ?? 3}
-            onChange={(v) => { playClick(); send('update_settings', { ...settings, cardOptions: v }); }}
-          />
+          {!isGrid && (
+            <>
+              <SettingRow
+                label={lang === 'pt' ? 'BAROMETRO' : 'BAROMETER'}
+                options={['random', 'choose']}
+                labels={lang === 'pt' ? ['ALEATORIO', 'LIVRE'] : ['RANDOM', 'FREE']}
+                value={settings.targetMode ?? 'random'}
+                onChange={(v) => { playClick(); send('update_settings', { ...settings, targetMode: v }); }}
+              />
+              <SettingRow
+                label={lang === 'pt' ? 'OPÇÕES' : 'OPTIONS'}
+                options={[1, 3, 5]}
+                value={settings.cardOptions ?? 3}
+                onChange={(v) => { playClick(); send('update_settings', { ...settings, cardOptions: v }); }}
+              />
+            </>
+          )}
         </div>
       )}
 
@@ -290,6 +295,7 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
   const transmitterId = gameState.transmitterId || gameState.hostId;
   const transmitter = players.find((player) => player.id === transmitterId) || players[0];
   const isSurvival = settings?.gameMode === 'survival';
+  const isGrid = settings?.gameMode === 'grid';
   const teams = gameState.teams || [];
 
   const canStart = isSurvival
@@ -392,13 +398,13 @@ export default function Lobby({ gameState, myId, lang, setLang, send, isHost, on
             <div className="lobby-brief-stats">
               <div className="lobby-brief-stat">
                 <span className="lobby-brief-stat__label t-title">{lang === 'pt' ? 'MODO' : 'MODE'}</span>
-                <span className="lobby-brief-stat__val t-title" style={{ color: isSurvival ? 'var(--neon-coral)' : 'var(--neon-cyan)' }}>
-                  {isSurvival ? (lang === 'pt' ? 'NAVES' : 'SHIPS') : 'FFA'}
+                <span className="lobby-brief-stat__val t-title" style={{ color: isGrid ? 'var(--neon-amber)' : isSurvival ? 'var(--neon-coral)' : 'var(--neon-cyan)' }}>
+                  {isGrid ? 'GRID' : isSurvival ? (lang === 'pt' ? 'NAVES' : 'SHIPS') : 'FFA'}
                 </span>
               </div>
               <div className="lobby-brief-stat">
                 <span className="lobby-brief-stat__label t-title">{isSurvival ? (lang === 'pt' ? 'EQUIPES' : 'TEAMS') : (lang === 'pt' ? 'RODADAS' : 'ROUNDS')}</span>
-                <span className="lobby-brief-stat__val t-read">{isSurvival ? teams.length : settings.rounds}</span>
+                <span className="lobby-brief-stat__val t-read">{isSurvival ? teams.length : isGrid ? settings.rounds : settings.rounds}</span>
               </div>
               <div className="lobby-brief-stat">
                 <span className="lobby-brief-stat__label t-title">{lang === 'pt' ? 'DICA' : 'CLUE'}</span>

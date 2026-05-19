@@ -158,6 +158,14 @@ export function selectOpenCards(count, usedIds = []) {
   return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
+export function selectTwoOpenCards(usedIds = []) {
+  const usedSet = new Set(usedIds);
+  let available = OPEN_CARDS.filter(c => !usedSet.has(c.id));
+  if (available.length < 2) available = [...OPEN_CARDS];
+  const shuffled = [...available].sort(() => Math.random() - 0.5);
+  return [shuffled[0], shuffled[1]];
+}
+
 export const EMOJI_REACTIONS = ['OK','GG','!!','??','+1'];
 
 export const PLAYER_COLORS = [
@@ -214,5 +222,6 @@ export function normalizeRoom(raw) {
     teamVotes,
     teamResults,
     isSurvival: raw.settings?.gameMode === 'survival',
+    isGrid: raw.settings?.gameMode === 'grid',
   };
 }

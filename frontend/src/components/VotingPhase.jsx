@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PressurePanel from './PressurePanel.jsx';
+import Grid2D from './Grid2D.jsx';
 import { tCard } from '../i18n.js';
 import { EMOJI_REACTIONS } from '../gameData.js';
 import { playVoteSubmit, playTimerTick, playAlarmTick, playClick } from '../sounds.js';
@@ -18,9 +19,12 @@ function useCountdown(timerEnd) {
 }
 
 export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
+  const isGrid = gameState.isGrid;
   const [position, setPosition] = useState(50);
+  const [gridPos, setGridPos] = useState({ x: 5, y: 5 });
   const [confirmedOnce, setConfirmedOnce] = useState(false);
   const [lastVoted, setLastVoted] = useState(null);
+  const [lastVotedGrid, setLastVotedGrid] = useState(null);
   const [boost, setBoost] = useState(false);
   const [floatingEmojis, setFloatingEmojis] = useState([]);
   const lastTickRef = useRef(null);
@@ -61,8 +65,13 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
   }, []);
 
   const handleConfirm = () => {
-    send('submit_vote', { position, boost });
-    setLastVoted(position);
+    if (isGrid) {
+      send('submit_vote', { x: gridPos.x, y: gridPos.y, boost });
+      setLastVotedGrid({ ...gridPos });
+    } else {
+      send('submit_vote', { position, boost });
+      setLastVoted(position);
+    }
     setConfirmedOnce(true);
     playVoteSubmit();
   };
@@ -78,28 +87,48 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
   return (
     <div className="phase-shell phase-shell--voting">
       <div className="vote-clue-card panel bevel glow-cyan">
-        <div className="vote-clue-card__theme t-title" style={{ color: gameState.currentTheme?.color }}>
-          {lang === 'en' ? gameState.currentTheme?.shortEN : gameState.currentTheme?.shortPT}
-        </div>
+        {!isGrid && (
+          <div className="vote-clue-card__theme t-title" style={{ color: gameState.currentTheme?.color }}>
+            {lang === 'en' ? gameState.currentTheme?.shortEN : gameState.currentTheme?.shortPT}
+          </div>
+        )}
         <div className="vote-clue-card__clue t-title glow-text-amber">
           "{gameState.clue || '...'}"
         </div>
-        <div className="vote-clue-card__spectrum t-mono text-dim">
-          {tCard(gameState.currentCard, 'left', lang)} &lt;- -&gt; {tCard(gameState.currentCard, 'right', lang)}
-        </div>
+        {!isGrid && (
+          <div className="vote-clue-card__spectrum t-mono text-dim">
+            {tCard(gameState.currentCard, 'left', lang)} &lt;- -&gt; {tCard(gameState.currentCard, 'right', lang)}
+          </div>
+        )}
+        {isGrid && gameState.currentCardX && gameState.currentCardY && (
+          <div className="vote-clue-card__spectrum t-mono text-dim" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span>X: {lang === 'en' ? gameState.currentCardX.lE : gameState.currentCardX.lP} ↔ {lang === 'en' ? gameState.currentCardX.rE : gameState.currentCardX.rP}</span>
+            <span>Y: {lang === 'en' ? gameState.currentCardY.lE : gameState.currentCardY.lP} ↕ {lang === 'en' ? gameState.currentCardY.rE : gameState.currentCardY.rP}</span>
+          </div>
+        )}
       </div>
 
       {canVote && (
         <>
           <div className="vote-pressure-card panel bevel glow-cyan">
-            <PressurePanel
-              card={gameState.currentCard}
-              lang={lang}
-              value={position}
-              onChange={setPosition}
-              disabled={false}
-              readoutLabel={lang === 'pt' ? 'CALIBRAGEM' : 'CALIBRATION'}
-            />
+            {isGrid ? (
+              <Grid2D
+                cardX={gameState.currentCardX}
+                cardY={gameState.currentCardY}
+                lang={lang}
+                value={gridPos}
+                onChange={(x, y) => setGridPos({ x, y })}
+              />
+            ) : (
+              <PressurePanel
+                card={gameState.currentCard}
+                lang={lang}
+                value={position}
+                onChange={setPosition}
+                disabled={false}
+                readoutLabel={lang === 'pt' ? 'CALIBRAGEM' : 'CALIBRATION'}
+              />
+            )}
           </div>
 
           <div className="vote-action-panel panel bevel">
@@ -142,19 +171,33 @@ export default function VotingPhase({ gameState, myId, lang, send, isHost }) {
 
           {!confirmedOnce ? (
             <button className="btn btn-primary btn-lg vote-confirm-btn" onClick={handleConfirm}>
-              {lang === 'pt' ? 'CONFIRMAR' : 'CONFIRM'} - {Math.round(position)}{boost ? ' - BOOST' : ''}
+              {lang === 'pt' ? 'CONFIRMAR' : 'CONFIRM'}{' '}
+              {isGrid ? `(${gridPos.x}, ${gridPos.y})` : Math.round(position)}
+              {boost ? ' · BOOST' : ''}
             </button>
           ) : (
             <div className="vote-confirmed-stack">
               <div className="vote-confirmed-card panel bevel glow-mint">
                 <span className="t-title glow-text-mint">OK</span>
-                <div className="t-read glow-text-amber">{lastVoted}{boost ? ' BOOST' : ''}</div>
+                <div className="t-read glow-text-amber">
+                  {isGrid
+                    ? `(${lastVotedGrid?.x ?? gridPos.x}, ${lastVotedGrid?.y ?? gridPos.y})`
+                    : lastVoted}
+                  {boost ? ' BOOST' : ''}
+                </div>
               </div>
-              {Math.round(position) !== lastVoted && (
-                <button className="btn btn-yellow vote-adjust-btn" onClick={handleConfirm}>
-                  {lang === 'pt' ? 'AJUSTAR' : 'ADJUST'} - {Math.round(position)}{boost ? ' - BOOST' : ''}
-                </button>
-              )}
+              {isGrid
+                ? (gridPos.x !== lastVotedGrid?.x || gridPos.y !== lastVotedGrid?.y) && (
+                    <button className="btn btn-yellow vote-adjust-btn" onClick={handleConfirm}>
+                      {lang === 'pt' ? 'AJUSTAR' : 'ADJUST'} ({gridPos.x}, {gridPos.y}){boost ? ' · BOOST' : ''}
+                    </button>
+                  )
+                : Math.round(position) !== lastVoted && (
+                    <button className="btn btn-yellow vote-adjust-btn" onClick={handleConfirm}>
+                      {lang === 'pt' ? 'AJUSTAR' : 'ADJUST'} - {Math.round(position)}{boost ? ' · BOOST' : ''}
+                    </button>
+                  )
+              }
             </div>
           )}
         </>

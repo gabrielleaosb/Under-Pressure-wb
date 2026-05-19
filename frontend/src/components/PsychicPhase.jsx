@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PressurePanel from './PressurePanel.jsx';
+import Grid2D from './Grid2D.jsx';
 import { t, tCard } from '../i18n.js';
 import { playTimerTick, playAlarmTick, playClick } from '../sounds.js';
 
@@ -15,12 +16,13 @@ function useCountdown(timerEnd) {
   return remaining;
 }
 
-export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos, isHost }) {
+export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos, myGridTarget, isHost }) {
   const [clue, setClue] = useState('');
   const [chosenPos, setChosenPos] = useState(50);
   const psychicPlayer = gameState.players?.find(p => p.id === gameState.psychicId);
   const isPsychic = gameState.psychicId === myId;
   const chooseMode = gameState.settings?.targetMode === 'choose';
+  const isGrid = gameState.isGrid;
   const remaining = useCountdown(gameState.timerEnd);
   const total = gameState.settings.clueTimer;
   const pct = total > 0 ? remaining / total : 0;
@@ -41,7 +43,9 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
     else send('submit_clue', { clue: trimmed });
   };
 
-  const spectrumLabel = `${tCard(gameState.currentCard, 'left', lang)} <- -> ${tCard(gameState.currentCard, 'right', lang)}`;
+  const spectrumLabel = isGrid
+    ? null
+    : `${tCard(gameState.currentCard, 'left', lang)} <- -> ${tCard(gameState.currentCard, 'right', lang)}`;
 
   return (
     <div className="phase-shell">
@@ -49,15 +53,29 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
         <div className="phase-kicker t-title text-dim">
           {psychicPlayer?.name || '?'} / {roleLabel}
         </div>
-        <div className="t-title glow-text-amber" style={{ fontSize: 'clamp(18px, 3vw, 28px)' }}>
-          {lang === 'en' ? gameState.currentTheme?.shortEN : gameState.currentTheme?.shortPT}
-        </div>
-        <div className="t-mono text-dim" style={{ fontSize: 16, marginTop: 8 }}>
-          {spectrumLabel}
-        </div>
+        {!isGrid && (
+          <div className="t-title glow-text-amber" style={{ fontSize: 'clamp(18px, 3vw, 28px)' }}>
+            {lang === 'en' ? gameState.currentTheme?.shortEN : gameState.currentTheme?.shortPT}
+          </div>
+        )}
+        {isGrid && gameState.currentCardX && gameState.currentCardY && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 6 }}>
+            <div className="t-mono" style={{ fontSize: 11, color: 'var(--neon-cyan)' }}>
+              X: {lang === 'en' ? gameState.currentCardX.lE : gameState.currentCardX.lP} ↔ {lang === 'en' ? gameState.currentCardX.rE : gameState.currentCardX.rP}
+            </div>
+            <div className="t-mono" style={{ fontSize: 11, color: 'var(--neon-amber)' }}>
+              Y: {lang === 'en' ? gameState.currentCardY.lE : gameState.currentCardY.lP} ↕ {lang === 'en' ? gameState.currentCardY.rE : gameState.currentCardY.rP}
+            </div>
+          </div>
+        )}
+        {!isGrid && spectrumLabel && (
+          <div className="t-mono text-dim" style={{ fontSize: 16, marginTop: 8 }}>
+            {spectrumLabel}
+          </div>
+        )}
       </div>
 
-      {isPsychic && chooseMode && (
+      {isPsychic && chooseMode && !isGrid && (
         <>
           <div className="phase-card panel bevel glow-cyan">
             <div className="phase-kicker t-title text-dim">
@@ -72,16 +90,11 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
               readoutLabel={lang === 'pt' ? 'POSICAO ALVO' : 'TARGET POSITION'}
             />
           </div>
-          <ClueEntry
-            lang={lang}
-            clue={clue}
-            setClue={setClue}
-            onSubmit={handleSubmit}
-          />
+          <ClueEntry lang={lang} clue={clue} setClue={setClue} onSubmit={handleSubmit} />
         </>
       )}
 
-      {isPsychic && myTargetPos !== null && !chooseMode && (
+      {isPsychic && myTargetPos !== null && !chooseMode && !isGrid && (
         <>
           <div className="phase-card panel bevel glow-cyan">
             <PressurePanel
@@ -94,17 +107,34 @@ export default function PsychicPhase({ gameState, myId, lang, send, myTargetPos,
               readoutLabel={t('target_label', lang)}
             />
           </div>
-
-          <ClueEntry
-            lang={lang}
-            clue={clue}
-            setClue={setClue}
-            onSubmit={handleSubmit}
-          />
+          <ClueEntry lang={lang} clue={clue} setClue={setClue} onSubmit={handleSubmit} />
         </>
       )}
 
-      {isPsychic && myTargetPos === null && !chooseMode && (
+      {isPsychic && myGridTarget && isGrid && (
+        <>
+          <div className="phase-card panel bevel glow-cyan">
+            <Grid2D
+              cardX={gameState.currentCardX}
+              cardY={gameState.currentCardY}
+              lang={lang}
+              showTarget
+              targetX={myGridTarget.x}
+              targetY={myGridTarget.y}
+              disabled
+            />
+          </div>
+          <ClueEntry lang={lang} clue={clue} setClue={setClue} onSubmit={handleSubmit} />
+        </>
+      )}
+
+      {isPsychic && !myGridTarget && isGrid && (
+        <div className="phase-card panel bevel glow-cyan text-center">
+          <div className="t-title glow-text-cyan" style={{ fontSize: 13 }}>...</div>
+        </div>
+      )}
+
+      {isPsychic && myTargetPos === null && !chooseMode && !isGrid && (
         <div className="phase-card panel bevel glow-cyan text-center">
           <div className="t-title glow-text-cyan" style={{ fontSize: 13 }}>
             ...
