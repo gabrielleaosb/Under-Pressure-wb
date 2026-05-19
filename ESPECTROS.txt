@@ -20,7 +20,7 @@
 
   COMIDA & BEBIDA (Food & Drinks) ── 5 cartas
   ─────────────────────────────────────────────
-  [ 5]  Saudável / Healthy                ←→  Indulgente / Indulgent
+  [ 5]  Saudável / Healthy                ←→  Indulgente / Indulgent ## Nocivo
   [ 6]  Suave / Mild                      ←→  Apimentado / Spicy
   [ 7]  Doce / Sweet                      ←→  Amargo / Bitter
   [ 8]  Barato / Budget                   ←→  Sofisticado / Gourmet
