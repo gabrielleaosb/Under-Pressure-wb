@@ -1,0 +1,5 @@
+Tirar contador de rodadas do modo time.
+Corrigir bug que ninguem escreve
+Corrigir sistema de pontos no modo time/tela de podio
+Mudar a tela da direita pra alguma outra(pensar)
+Aumentar a barra de vida do time. 
